@@ -1,0 +1,6 @@
+{
+  "appId": "com.marcaribe.ocr",
+  "appName": "MAR Caribe — OCR",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

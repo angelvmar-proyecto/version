@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MAR Caribe — OCR Tablas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background: #f0f4f8; max-width: 100%; min-height: 100vh; padding-bottom: 70px; }
+    header { background: linear-gradient(135deg, #0a3d62, #3c6382); color: white; padding: 16px; text-align: center; }
+    h1 { font-size: 1.2rem; }
+    .tabs { display: flex; background: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .tab { flex: 1; padding: 12px 8px; text-align: center; color: #636e72; font-weight: 600; font-size: 0.85rem; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab.active { color: #3c6382; border-bottom-color: #3c6382; background: #f8f9fa; }
+    .tab-content { display: none; padding: 12px; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .upload-box { border: 3px dashed #3c6382; border-radius: 16px; padding: 30px 20px; text-align: center; background: white; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+    .upload-box:active { background: #e8f0f5; transform: scale(0.98); }
+    .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-text { font-size: 1rem; color: #3c6382; margin-bottom: 4px; }
+    .upload-sub { color: #636e72; font-size: 0.8rem; }
+    input[type="file"] { display: none; }
+    .preview-container { background: white; border-radius: 12px; padding: 12px; margin-bottom: 12px; display: none; position: relative; }
+    .preview-img { max-width: 100%; border-radius: 8px; display: block; margin: 0 auto; max-height: 350px; }
+    .btn { background: #3c6382; color: white; border: none; padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; width: 100%; margin: 6px 0; transition: all 0.2s; }
+    .btn:disabled { background: #b2bec3; cursor: not-allowed; transform: none; }
+    .btn-success { background: #00C853; }
+    .btn-whatsapp { background: #25D366; }
+    .btn-danger { background: #e53935; }
+    .btn-primary { background: #3c6382; }
+    .btn-excel { background: #217346; }
+    .btn-csv { background: #f39c12; }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; }
+    .btn:active { transform: scale(0.98); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .btn-group .btn { flex: 1; min-width: 70px; font-size: 0.8rem; padding: 8px 12px; margin: 0; }
+    .progress-container { width: 100%; height: 28px; background: #e0e0e0; border-radius: 14px; overflow: hidden; margin: 12px 0; display: none; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #3c6382, #60a3bc); width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: bold; }
+    .status { padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; font-weight: 600; display: none; font-size: 0.85rem; }
+    .status.info { background: #e3f2fd; color: #0d47a1; display: block; }
+    .status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .status.error { background: #ffebee; color: #c62828; display: block; }
+    .status.warning { background: #fff3e0; color: #e65100; display: block; }
+    .result-section { background: white; border-radius: 12px; padding: 12px; margin-top: 12px; display: none; }
+    .result-section.show { display: block; }
+    .result-title { font-size: 0.95rem; font-weight: bold; color: #0a3d62; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .badge-info { font-size: 0.65rem; font-weight: normal; color: #636e72; background: #f0f4f8; padding: 2px 10px; border-radius: 12px; }
+    .texto-ocr { white-space: pre-wrap; font-family: monospace; font-size: 0.75rem; line-height: 1.4; color: #2d3436; max-height: 300px; overflow-y: auto; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+    .footer { text-align: center; padding: 12px; color: #636e72; font-size: 0.7rem; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e0e0e0; z-index: 100; }
+    .badge { display: inline-block; background: #00C853; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; margin-left: 6px; }
+    .badge-whatsapp { background: #25D366; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; margin-left: 6px; }
+    .search-box { display: flex; gap: 6px; margin: 8px 0; }
+    .search-box input { flex: 1; padding: 6px 10px; border: 1px solid #d1d8e0; border-radius: 6px; font-size: 0.8rem; }
+    .search-box .btn { flex: 0 1 auto; padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; }
+    .empty-state { text-align: center; padding: 30px; color: #636e72; }
+    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+    .toolbar .btn { flex: 0 1 auto; padding: 6px 12px; font-size: 0.75rem; width: auto; margin: 0; }
+    .notificacion-compartir { background: #e3f2fd; border: 2px solid #3c6382; border-radius: 12px; padding: 12px; margin-bottom: 12px; text-align: center; display: none; }
+    .notificacion-compartir .icono { font-size: 1.5rem; margin-bottom: 4px; }
+    .notificacion-compartir .texto { color: #0a3d62; font-weight: bold; font-size: 0.9rem; }
+    .info-extra { background: #f8f9fa; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: 0.75rem; color: #636e72; }
+    .tabla-wrapper { max-height: 450px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; }
+    .tabla-resultado { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+    .tabla-resultado th, .tabla-resultado td { border: 1px solid #d1d8e0; padding: 4px 6px; text-align: left; min-width: 50px; }
+    .tabla-resultado th { background: #3c6382; color: white; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .tabla-resultado tr:nth-child(even) { background: #f8f9fa; }
+    .tabla-resultado tr:hover { background: #e3f2fd; }
+    .tabla-resultado td[contenteditable="true"]:focus { outline: 2px solid #3c6382; background: #fff8e1; }
+    .tabla-resultado td.vacio { color: #b2bec3; font-style: italic; }
+    .col-badge { display: inline-block; background: #3c6382; color: white; padding: 1px 6px; border-radius: 3px; font-size: 0.55rem; margin-left: 4px; }
+  </style>
+</head>
+<body>
+<header><h1>📊 MAR Caribe — OCR Tablas <span class="badge-whatsapp">WhatsApp</span></h1></header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="ocr">📷 OCR</div>
+  <div class="tab" data-tab="tabla">📊 Tabla <span class="badge" id="badgeTabla" style="display:none;">Nueva</span></div>
+  <div class="tab" data-tab="historial">📋 Historial</div>
+</div>
+
+<div class="tab-content active" id="tab-ocr">
+  <div class="notificacion-compartir" id="notificacionCompartir">
+    <div class="icono">📷</div>
+    <div class="texto">¡Imagen recibida desde WhatsApp!</div>
+    <div style="font-size:0.8rem;color:#636e72;margin-top:2px;">Procesando automáticamente...</div>
+  </div>
+
+  <div class="upload-box" id="dropZone">
+    <div class="upload-icon">📷</div>
+    <p class="upload-text">Toca para seleccionar imagen</p>
+    <p class="upload-sub">ML Kit Nativo · Detección por coordenadas · Offline</p>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <div class="preview-container" id="previewContainer">
+    <img id="imgPreview" class="preview-img" alt="Vista previa">
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary btn-sm" id="btnCamera">📷 Cámara</button>
+    <button class="btn btn-success btn-sm" id="btnOCR">📄 Escanear</button>
+    <button class="btn btn-danger btn-sm" id="btnLimpiar">🗑️ Limpiar</button>
+  </div>
+
+  <div class="progress-container" id="progressWrapper">
+    <div class="progress-bar" id="progressFill">0%</div>
+    <div id="progressStep" style="font-size:0.75rem;color:#636e72;text-align:center;margin-top:2px;"></div>
+  </div>
+
+  <div id="statusText" class="status info">📷 Carga una imagen o comparte desde WhatsApp</div>
+
+  <div class="result-section" id="resultadoTexto">
+    <p class="result-title">📝 Texto Extraído <span class="badge-info" id="lineCount"></span></p>
+    <div class="texto-ocr" id="textoOCR"></div>
+    <div class="btn-group">
+      <button class="btn btn-whatsapp" id="btnCompartirWA">📤 WhatsApp</button>
+      <button class="btn btn-primary" id="btnCopiarTexto">📋 Copiar</button>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-tabla">
+  <div id="contenidoTabla">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="🔍 Buscar en tabla...">
+      <button class="btn btn-primary btn-sm" onclick="filtrarMatriz()">Buscar</button>
+      <button class="btn btn-danger btn-sm" onclick="limpiarFiltro()">X</button>
+    </div>
+    <div id="tableWrapper">
+      <div class="empty-state">📊 Esperando extracción de texto...</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary btn-sm" id="btnCopiarTabla">📋 Copiar</button>
+      <button class="btn btn-csv btn-sm" id="btnExportarCSV">📊 CSV</button>
+      <button class="btn btn-excel btn-sm" id="btnExportarExcel">📈 Excel</button>
+    </div>
+    <div class="info-extra" id="infoExtra">📊 0 filas · 0 columnas · 0 celdas</div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-historial">
+  <div id="listaHistorial"></div>
+</div>
+
+<div class="footer">MAR Caribe v2.0 · ML Kit Nativo · Detección por coordenadas</div>
+
+<script>
+const esCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform());
+let rutaImagenActual = null;
+let matrizDatos = [];
+let palabrasDetectadas = [];
+let numColumnasDetectadas = 0;
+let tiposColumnas = [];
+let procesando = false;
+
+function setProgreso(porcentaje, pasoTexto) {
+  var wrapper = document.getElementById('progressWrapper');
+  if (wrapper) wrapper.style.display = 'block';
+  var fill = document.getElementById('progressFill');
+  if (fill) { fill.style.width = porcentaje + '%'; fill.textContent = porcentaje + '%'; }
+  var step = document.getElementById('progressStep');
+  if (step) step.innerText = pasoTexto;
+  var st = document.getElementById('statusText');
+  if (st) st.innerText = '[' + porcentaje + '%] ' + pasoTexto;
+}
+
+function ocultarProgreso() {
+  var wrapper = document.getElementById('progressWrapper');
+  if (wrapper) wrapper.style.display = 'none';
+}
+
+function mostrarStatus(texto, tipo) {
+  var st = document.getElementById('statusText');
+  if (st) { st.innerText = texto; st.className = 'status ' + (tipo || 'info'); }
+}
+
+function capturarImagen() {
+  try {
+    if (esCapacitor && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera) {
+      var Camera = window.Capacitor.Plugins.Camera;
+      Camera.getPhoto({ quality: 90, allowEditing: false, resultType: 'uri', source: 'PROMPT' }).then(function(photo) {
+        var path = photo.webPath;
+        if (window.Capacitor && window.Capacitor.convertFileSrc && photo.path) { path = window.Capacitor.convertFileSrc(photo.path); }
+        cargarEnCanvas(path);
+      }).catch(function() { document.getElementById('fileInput').click(); });
+    } else { document.getElementById('fileInput').click(); }
+  } catch (e) { document.getElementById('fileInput').click(); }
+}
+
+function cargarDesdeInput(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) { cargarEnCanvas(e.target.result); };
+  reader.readAsDataURL(file);
+}
+
+function cargarEnCanvas(src) {
+  rutaImagenActual = src;
+  var img = document.getElementById('imgPreview');
+  if (img) {
+    img.src = src;
+    img.onload = function() {
+      document.getElementById('previewContainer').style.display = 'block';
+      mostrarStatus('✅ Imagen cargada. Lista para escanear.', 'success');
+    };
+  }
+}
+
+async function saveImageToFile(base64Data) {
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  if (!Filesystem) throw new Error('Plugin Filesystem no encontrado');
+  var fileName = 'ocr_image_' + Date.now() + '.jpg';
+  await Filesystem.writeFile({ path: fileName, data: base64Data, directory: 'CACHE', recursive: true });
+  return fileName;
+}
+
+async function extraerConMLKit(base64Image) {
+  var TextRecognition = window.Capacitor.Plugins.TextRecognition;
+  if (!TextRecognition) throw new Error('TextRecognition no disponible');
+  var imagePath = await saveImageToFile(base64Image);
+  var Filesystem = window.Capacitor.Plugins.Filesystem;
+  var uri = await Filesystem.getUri({ path: imagePath, directory: 'CACHE' });
+  var resultado = await TextRecognition.processImage({ path: uri.uri });
+  try { await Filesystem.deleteFile({ path: imagePath, directory: 'CACHE' }); } catch (e) {}
+  return resultado;
+}
+
+function inicializarClusters(datos, k) {
+  if (datos.length === 0) return [];
+  datos.sort(function(a, b) { return a - b; });
+  var clusters = [];
+  var step = Math.floor(datos.length / Math.min(k, datos.length));
+  if (step < 1) step = 1;
+  for (var i = 0; i < Math.min(k, datos.length); i++) {
+    clusters.push({ centro: datos[Math.min(i * step, datos.length - 1)], puntos: [] });
+  }
+  while (clusters.length < 2 && datos.length > 0) {
+    clusters.push({ centro: datos[datos.length - 1], puntos: [] });
+  }
+  return clusters;
+}
+
+function asignarYActualizarClusters(datos, clusters) {
+  if (clusters.length === 0 || datos.length === 0) return clusters;
+  for (var c = 0; c < clusters.length; c++) { clusters[c].puntos = []; }
+  for (var d = 0; d < datos.length; d++) {
+    var cercano = clusters[0];
+    var minDist = Math.abs(datos[d] - clusters[0].centro);
+    for (var i = 1; i < clusters.length; i++) {
+      var dist = Math.abs(datos[d] - clusters[i].centro);
+      if (dist < minDist) { minDist = dist; cercano = clusters[i]; }
+    }
+    cercano.puntos.push(datos[d]);
+  }
+  return clusters.map(function(c) {
+    if (c.puntos.length === 0) return c;
+    var suma = c.puntos.reduce(function(a, b) { return a + b; }, 0);
+    return { centro: suma / c.puntos.length, puntos: [] };
+  });
+}
+
+function detectarTipoColumna(valores) {
+  if (!valores || valores.length === 0) return 'texto';
+  var esNumero = 0, esFecha = 0, esHora = 0, esMoneda = 0;
+  for (var i = 0; i < valores.length; i++) {
+    var v = valores[i];
+    if (!v || v.trim() === '') continue;
+    var t = v.trim();
+    if (/^[\d,\.]+$/.test(t)) esNumero++;
+    else if (/\d{1,2}[\/\-]\d{1,2}/.test(t)) esFecha++;
+    else if (/\d{1,2}[:\.]\d{2}/.test(t)) esHora++;
+    else if (/[USD|MXN|\$]/.test(t)) esMoneda++;
+  }
+  var total = 0;
+  for (var j = 0; j < valores.length; j++) { if (valores[j] && valores[j].trim()) total++; }
+  if (total === 0) return 'texto';
+  if (esNumero/total > 0.6) return 'numero';
+  if (esFecha/total > 0.6) return 'fecha';
+  if (esHora/total > 0.6) return 'hora';
+  if (esMoneda/total > 0.6) return 'moneda';
+  return 'texto';
+}
+
+function aplicarReglasFuzzy(valRaw, tipo) {
+  if (!valRaw) return '';
+  var t = valRaw.replace(/[|¦\\]/g, '').trim();
+  switch(tipo) {
+    case 'numero': return t.replace(/[^0-9]/g, '');
+    case 'decimal': return t.replace(/[^0-9.]/g, '');
+    case 'fecha':
+      var fechaMatch = t.match(/(\d{1,2})[\/\-](\d{1,2})/);
+      return fechaMatch ? fechaMatch[0] : t;
+    case 'hora':
+      var horaMatch = t.match(/(\d{1,2})[:\.](\d{2})/);
+      return horaMatch ? horaMatch[0] : t;
+    case 'moneda':
+      if (/USD|US|\$/i.test(t)) return 'USD';
+      if (/MXN|MX|PESO/i.test(t)) return 'MXN';
+      return t;
+    default: return t;
+  }
+}
+
+function renderizarMatriz() {
+  var wrapper = document.getElementById('tableWrapper');
+  if (!wrapper) return;
+  if (!matrizDatos || matrizDatos.length === 0) {
+    wrapper.innerHTML = '<div class="empty-state">📊 No hay datos procesados.</div>';
+    return;
+  }
+  var numCols = matrizDatos[0] ? matrizDatos[0].length : 0;
+  var html = '<div class="tabla-wrapper"><table class="tabla-resultado">';
+  html += '<thead><tr>';
+  for (var j = 0; j < numCols; j++) {
+    var tipo = tiposColumnas[j] || 'texto';
+    html += '<th>Col ' + (j+1) + ' <span class="col-badge">' + tipo + '</span></th>';
+  }
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < matrizDatos.length; i++) {
+    html += '<tr>';
+    for (var j2 = 0; j2 < matrizDatos[i].length; j2++) {
+      var valor = matrizDatos[i][j2] || '';
+      html += '<td contenteditable="true" data-row="' + i + '" data-col="' + j2 + '" class="' + (!valor ? 'vacio' : '') + '">' + valor + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  wrapper.innerHTML = html;
+
+  var celdas = document.querySelectorAll('#tableWrapper td[contenteditable="true"]');
+  for (var c = 0; c < celdas.length; c++) {
+    (function(celda) {
+      celda.addEventListener('input', function() {
+        var row = parseInt(this.dataset.row);
+        var col = parseInt(this.dataset.col);
+        if (matrizDatos[row] && matrizDatos[row][col] !== undefined) {
+          matrizDatos[row][col] = this.innerText.trim();
+        }
+      });
+    })(celdas[c]);
+  }
+  actualizarInfoExtra();
+  mostrarStatus('✅ Tabla renderizada: ' + matrizDatos.length + ' filas, ' + numCols + ' columnas', 'success');
+}
+
+function actualizarInfoExtra() {
+  var info = document.getElementById('infoExtra');
+  if (!info) return;
+  var numFilas = matrizDatos.length;
+  var numCols = matrizDatos[0] ? matrizDatos[0].length : 0;
+  info.innerText = '📊 ' + numFilas + ' filas · ' + numCols + ' columnas · ' + (numFilas * numCols) + ' celdas';
+}
+
+function filtrarMatriz() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var filas = document.querySelectorAll('#tableWrapper tbody tr');
+  for (var i = 0; i < filas.length; i++) {
+    filas[i].style.display = filas[i].innerText.toLowerCase().includes(q) ? '' : 'none';
+  }
+}
+
+function limpiarFiltro() {
+  document.getElementById('searchInput').value = '';
+  filtrarMatriz();
+}
+
+async function ejecutarEscaneoCompleto() {
+  if (!rutaImagenActual) { alert('📷 Carga una imagen primero.'); return; }
+  if (procesando) return;
+  procesando = true;
+
+  try {
+    setProgreso(10, 'Preparando imagen...');
+    var imgElement = document.getElementById('imgPreview');
+    if (!imgElement || !imgElement.naturalWidth) throw new Error('Imagen no cargada correctamente');
+
+    var canvas = document.createElement('canvas');
+    canvas.width = imgElement.naturalWidth;
+    canvas.height = imgElement.naturalHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(imgElement, 0, 0);
+    var base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+    setProgreso(25, 'Extrayendo texto con ML Kit...');
+    var resultado = await extraerConMLKit(base64);
+
+    setProgreso(50, 'Procesando coordenadas...');
+    var palabras = [];
+    if (resultado && resultado.blocks) {
+      for (var b = 0; b < resultado.blocks.length; b++) {
+        var block = resultado.blocks[b];
+        if (block.lines) {
+          for (var l = 0; l < block.lines.length; l++) {
+            var line = block.lines[l];
+            if (line.words) {
+              for (var w = 0; w < line.words.length; w++) {
+                var word = line.words[w];
+                if (word.text && word.text.trim().length > 0) {
+                  var x = word.x || (word.boundingBox ? (word.boundingBox.x + word.boundingBox.width/2) : 0);
+                  var y = word.y || (word.boundingBox ? (word.boundingBox.y + word.boundingBox.height/2) : 0);
+                  palabras.push({ text: word.text.trim(), x: x, y: y });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (palabras.length === 0 && resultado && resultado.text) {
+      var lineas = resultado.text.split('\n').filter(function(l) { return l.trim(); });
+      var y = 20;
+      for (var li = 0; li < lineas.length; li++) {
+        var words = lineas[li].split(/\s+/).filter(function(w) { return w.trim(); });
+        var x = 20;
+        for (var wi = 0; wi < words.length; wi++) {
+          palabras.push({ text: words[wi].trim(), x: x, y: y });
+          x += words[wi].length * 8 + 10;
+        }
+        y += 24;
+      }
+    }
+
+    palabrasDetectadas = palabras;
+    setProgreso(60, 'Detectadas ' + palabras.length + ' palabras');
+    if (palabras.length < 5) {
+      alert('⚠️ No se detectó suficiente texto.');
+      ocultarProgreso();
+      procesando = false;
+      return;
+    }
+
+    setProgreso(65, 'Detectando columnas por clustering...');
+    var xs = palabras.map(function(p) { return p.x; });
+    var xMin = Math.min.apply(null, xs);
+    var xMax = Math.max.apply(null, xs);
+    var rangoX = xMax - xMin || 1;
+    var xsNorm = xs.map(function(x) { return (x - xMin) / rangoX; });
+    
+    var numClustersX = Math.min(Math.max(Math.round(Math.sqrt(palabras.length / 2)), 3), 30);
+    var clustersX = inicializarClusters(xsNorm, numClustersX);
+    for (var iter = 0; iter < 15; iter++) { clustersX = asignarYActualizarClusters(xsNorm, clustersX); }
+    clustersX = clustersX.filter(function(c) { return c.puntos.length > 0; });
+    numColumnasDetectadas = clustersX.length;
+    var centrosX = clustersX.map(function(c) { return c.centro; }).sort(function(a, b) { return a - b; });
+
+    setProgreso(75, 'Agrupando filas...');
+    var ys = palabras.map(function(p) { return p.y; });
+    var yMin = Math.min.apply(null, ys);
+    var yMax = Math.max.apply(null, ys);
+    var rangoY = yMax - yMin || 1;
+    var ysNorm = ys.map(function(y) { return (y - yMin) / rangoY; });
+    
+    var numClustersY = Math.min(Math.max(Math.round(palabras.length / 5), 2), 200);
+    var clustersY = inicializarClusters(ysNorm, numClustersY);
+    for (var iterY = 0; iterY < 15; iterY++) { clustersY = asignarYActualizarClusters(ysNorm, clustersY); }
+    clustersY = clustersY.filter(function(c) { return c.puntos.length > 0; });
+    var numFilas = clustersY.length;
+    var centrosY = clustersY.map(function(c) { return c.centro; }).sort(function(a, b) { return a - b; });
+
+    setProgreso(85, 'Asignando palabras a celdas...');
+    matrizDatos = [];
+    for (var iFila = 0; iFila < numFilas; iFila++) { matrizDatos.push(new Array(numColumnasDetectadas).fill('')); }
+    
+    for (var pIdx = 0; pIdx < palabras.length; pIdx++) {
+      var palabra = palabras[pIdx];
+      var xNorm = (palabra.x - xMin) / rangoX;
+      var yNorm = (palabra.y - yMin) / rangoY;
+      
+      var colIdx = 0;
+      var minDistX = Infinity;
+      for (var j = 0; j < centrosX.length; j++) {
+        var dist = Math.abs(xNorm - centrosX[j]);
+        if (dist < minDistX) { minDistX = dist; colIdx = j; }
+      }
+      
+      var rowIdx = 0;
+      var minDistY = Infinity;
+      for (var i = 0; i < centrosY.length; i++) {
+        var distY = Math.abs(yNorm - centrosY[i]);
+        if (distY < minDistY) { minDistY = distY; rowIdx = i; }
+      }
+      
+      if (rowIdx < matrizDatos.length && colIdx < matrizDatos[rowIdx].length) {
+        var existing = matrizDatos[rowIdx][colIdx];
+        matrizDatos[rowIdx][colIdx] = existing ? existing + ' ' + palabra.text : palabra.text;
+      }
+    }
+
+    setProgreso(90, 'Detectando tipos de datos...');
+    tiposColumnas = [];
+    for (var col = 0; col < numColumnasDetectadas; col++) {
+      var colValues = [];
+      for (var row = 0; row < matrizDatos.length; row++) {
+        if (matrizDatos[row][col] && matrizDatos[row][col].trim()) colValues.push(matrizDatos[row][col]);
+      }
+      tiposColumnas.push(detectarTipoColumna(colValues));
+    }
+
+    setProgreso(95, 'Limpiando datos...');
+    for (var iClean = 0; iClean < matrizDatos.length; iClean++) {
+      for (var jClean = 0; jClean < matrizDatos[iClean].length; jClean++) {
+        matrizDatos[iClean][jClean] = aplicarReglasFuzzy(matrizDatos[iClean][jClean], tiposColumnas[jClean] || 'texto');
+      }
+    }
+
+    setProgreso(100, '¡Escaneo completado!');
+    renderizarMatriz();
+    
+    var textoExtraido = matrizDatos.map(function(row) { return row.join('\t'); }).join('\n');
+    agregarAlHistorial(textoExtraido, numFilas, numColumnasDetectadas);
+    
+    var textoOCR = document.getElementById('textoOCR');
+    if (textoOCR) {
+      textoOCR.textContent = textoExtraido;
+      document.getElementById('resultadoTexto').classList.add('show');
+      var lineCount = document.getElementById('lineCount');
+      if (lineCount) lineCount.textContent = '(' + numFilas + ' filas)';
+    }
+    
+    var badge = document.getElementById('badgeTabla');
+    if (badge) badge.style.display = 'inline';
+    
+    mostrarStatus('✅ ' + numFilas + ' filas, ' + numColumnasDetectadas + ' columnas detectadas', 'success');
+    setTimeout(function() { cambiarPestania('tabla'); }, 1000);
+    setTimeout(ocultarProgreso, 1500);
+    procesando = false;
+
+  } catch (err) {
+    mostrarStatus('❌ Error: ' + (err.message || err), 'error');
+    ocultarProgreso();
+    procesando = false;
+  }
+}
+
+async function copiarAlPortapapeles() {
+  if (!matrizDatos || matrizDatos.length === 0) { alert('No hay datos para copiar.'); return; }
+  var tsv = matrizDatos.map(function(row) { return row.join('\t'); }).join('\n');
+  try {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Clipboard) {
+      await window.Capacitor.Plugins.Clipboard.write({ string: tsv });
+    } else {
+      await navigator.clipboard.writeText(tsv);
+    }
+    mostrarStatus('✅ Copiado al portapapeles', 'success');
+  } catch (e) { alert('Error al copiar'); }
+}
+
+function exportarCSV() {
+  if (!matrizDatos || matrizDatos.length === 0) { alert('No hay datos para exportar.'); return; }
+  var csv = matrizDatos.map(function(row) { return row.join(','); }).join('\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'tabla_exportada.csv'; a.click();
+  URL.revokeObjectURL(url);
+  mostrarStatus('✅ CSV descargado', 'success');
+}
+
+function exportarExcel() {
+  if (!matrizDatos || matrizDatos.length === 0) { alert('No hay datos para exportar.'); return; }
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Tabla</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>';
+  for (var i = 0; i < matrizDatos.length; i++) {
+    html += '<tr>';
+    for (var j = 0; j < matrizDatos[i].length; j++) { html += '<td>' + (matrizDatos[i][j] || '') + '</td>'; }
+    html += '</tr>';
+  }
+  html += '</table></body></html>';
+  var blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'tabla_exportada.xls'; a.click();
+  URL.revokeObjectURL(url);
+  mostrarStatus('✅ Excel descargado', 'success');
+}
+
+function compartirWhatsApp() {
+  if (!matrizDatos || matrizDatos.length === 0) { alert('No hay datos para compartir.'); return; }
+  var texto = matrizDatos.map(function(row) { return row.join('\t'); }).join('\n');
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+
+function agregarAlHistorial(texto, filas, columnas) {
+  try {
+    var historial = JSON.parse(localStorage.getItem('marCaribeHistorial') || '[]');
+    historial.unshift({
+      fecha: new Date().toLocaleString('es-MX'),
+      texto: texto.substring(0, 150) + (texto.length > 150 ? '...' : ''),
+      filas: filas || 0,
+      columnas: columnas || 0
+    });
+    if (historial.length > 20) historial.pop();
+    localStorage.setItem('marCaribeHistorial', JSON.stringify(historial));
+    renderizarHistorial();
+  } catch (e) {}
+}
+
+function renderizarHistorial() {
+  var container = document.getElementById('listaHistorial');
+  if (!container) return;
+  try {
+    var historial = JSON.parse(localStorage.getItem('marCaribeHistorial') || '[]');
+    if (!historial.length) {
+      container.innerHTML = '<div class="empty-state">📋 Aún no hay extracciones guardadas</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < historial.length; i++) {
+      var item = historial[i];
+      html += '<div style="background:white;border-radius:8px;padding:10px;margin-bottom:8px;border:1px solid #e0e0e0;">';
+      html += '<p style="font-size:0.75rem;color:#636e72;margin-bottom:4px;">🕐 ' + item.fecha + ' · ' + (item.filas || 0) + ' filas · ' + (item.columnas || 0) + ' columnas</p>';
+      html += '<p style="font-size:0.8rem;white-space:pre-wrap;line-height:1.4;">' + item.texto + '</p>';
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  } catch (e) { container.innerHTML = '<div class="empty-state">Error cargando historial</div>'; }
+}
+
+async function recibirImagenCompartida() {
+  try {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+      var App = window.Capacitor.Plugins.App;
+      App.addListener('appUrlOpen', async function(data) { await procesarUrlCompartida(data.url); });
+    }
+    var sharedImage = localStorage.getItem('sharedImage');
+    if (sharedImage) {
+      localStorage.removeItem('sharedImage');
+      await procesarImagenDesdeBase64(sharedImage);
+    }
+  } catch (error) {}
+}
+
+async function procesarUrlCompartida(url) {
+  try {
+    if (url.startsWith('content://') || url.startsWith('file://')) {
+      var Filesystem = window.Capacitor.Plugins.Filesystem;
+      var result = await Filesystem.readFile({ path: url, directory: 'DOCUMENTS' });
+      if (result && result.data) {
+        var base64 = 'data:image/jpeg;base64,' + result.data;
+        await procesarImagenDesdeBase64(base64);
+      }
+    }
+  } catch (error) {}
+}
+
+async function procesarImagenDesdeBase64(base64) {
+  var notif = document.getElementById('notificacionCompartir');
+  if (notif) notif.style.display = 'block';
+  cargarEnCanvas(base64);
+  setTimeout(function() {
+    if (notif) notif.style.display = 'none';
+    ejecutarEscaneoCompleto();
+  }, 1500);
+}
+
+function limpiarTodo() {
+  rutaImagenActual = null; matrizDatos = []; palabrasDetectadas = []; numColumnasDetectadas = 0; tiposColumnas = [];
+  document.getElementById('imgPreview').src = '';
+  document.getElementById('previewContainer').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('tableWrapper').innerHTML = '<div class="empty-state">📊 No hay datos procesados.</div>';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('resultadoTexto').classList.remove('show');
+  document.getElementById('badgeTabla').style.display = 'none';
+  actualizarInfoExtra();
+  mostrarStatus('🗑️ Todo limpiado', 'info');
+}
+
+function cambiarPestania(targetTab) {
+  var tabs = document.querySelectorAll('.tab');
+  var contents = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < tabs.length; i++) { tabs[i].classList.remove('active'); }
+  for (var i = 0; i < contents.length; i++) { contents[i].classList.remove('active'); }
+  document.querySelector('.tab[data-tab="' + targetTab + '"]').classList.add('active');
+  document.getElementById('tab-' + targetTab).classList.add('active');
+  if (targetTab === 'historial') renderizarHistorial();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('dropZone').addEventListener('click', capturarImagen);
+  document.getElementById('fileInput').addEventListener('change', cargarDesdeInput);
+  document.getElementById('btnCamera').addEventListener('click', capturarImagen);
+  document.getElementById('btnOCR').addEventListener('click', ejecutarEscaneoCompleto);
+  document.getElementById('btnLimpiar').addEventListener('click', limpiarTodo);
+  document.getElementById('btnCopiarTabla').addEventListener('click', copiarAlPortapapeles);
+  document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
+  document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
+  document.getElementById('btnCopiarTexto').addEventListener('click', function() {
+    var texto = document.getElementById('textoOCR').innerText;
+    if (texto && texto !== 'No hay texto...') {
+      navigator.clipboard.writeText(texto);
+      mostrarStatus('✅ Texto copiado', 'success');
+    }
+  });
+  document.getElementById('btnCompartirWA').addEventListener('click', compartirWhatsApp);
+  
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var target = this.dataset.tab;
+      cambiarPestania(target);
+      if (target === 'tabla' && matrizDatos && matrizDatos.length > 0) {
+        document.getElementById('badgeTabla').style.display = 'none';
+      }
+    });
+  });
+  
+  renderizarHistorial();
+  if (esCapacitor) { setTimeout(recibirImagenCompartida, 500); }
+  mostrarStatus('📷 Listo. Toca "Cámara" o selecciona una imagen.', 'info');
+});
+</script>
+</body>
+</html>
