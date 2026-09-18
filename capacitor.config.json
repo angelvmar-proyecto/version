@@ -1,0 +1,6 @@
+{
+  "appId": "com.marcaribe.tablas",
+  "appName": "MAR Caribe Tablas",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
