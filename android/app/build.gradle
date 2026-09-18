@@ -32,10 +32,10 @@ android {
 }
 
 dependencies {
-    # Capacitor — SIN ESTO NO ENCUENTRA BridgeActivity
+    // Capacitor
     implementation "com.getcapacitor:android:6.1.2"
     
-    # AndroidX
+    // AndroidX
     implementation "androidx.core:core-ktx:1.12.0"
     implementation "androidx.appcompat:appcompat:1.6.1"
     implementation "com.google.android.material:material:1.11.0"
