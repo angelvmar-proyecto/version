@@ -1,19 +1,12 @@
 buildscript {
-    ext {
-        compileSdkVersion = 34
-        targetSdkVersion = 34
-        minSdkVersion = 24
-        ndkVersion = "25.2.9519653"
-        kotlinVersion = "1.9.20"
-        agpVersion = "8.1.0"
-    }
+    ext.kotlin_version = "1.9.20"
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:${ext.agpVersion}"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${ext.kotlinVersion}"
+        classpath "com.android.tools.build:gradle:8.1.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$ext.kotlin_version"
     }
 }
 
