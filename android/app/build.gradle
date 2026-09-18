@@ -32,7 +32,8 @@ android {
 }
 
 dependencies {
-    // Capacitor — versión estable confirmada
+    // Capacitor — versión confirmada disponible públicamente
+    implementation "com.getcapacitor:core:5.7.4"
     implementation "com.getcapacitor:android:5.7.4"
     
     // AndroidX
