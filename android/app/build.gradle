@@ -32,9 +32,8 @@ android {
 }
 
 dependencies {
-    // Capacitor — versión confirmada disponible públicamente
-    implementation "com.getcapacitor:core:5.7.4"
-    implementation "com.getcapacitor:android:5.7.4"
+    // ⚠️ NOMBRES CORRECTOS — Capacitor 5+ usa paquetes @capacitor/android
+    implementation "io.ionic.capacitor:capacitor-android:5.7.4"
     
     // AndroidX
     implementation "androidx.core:core-ktx:1.12.0"
