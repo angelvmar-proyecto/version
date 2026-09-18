@@ -32,10 +32,10 @@ android {
 }
 
 dependencies {
-    // ⚠️ NOMBRES CORRECTOS — Capacitor 5+ usa paquetes @capacitor/android
-    implementation "io.ionic.capacitor:capacitor-android:5.7.4"
+    // Capacitor — estructura oficial: usa el plugin Gradle, NO dependencia directa
+    // El plugin "capacitor" maneja todo automáticamente
     
-    // AndroidX
+    // AndroidX solamente
     implementation "androidx.core:core-ktx:1.12.0"
     implementation "androidx.appcompat:appcompat:1.6.1"
     implementation "com.google.android.material:material:1.11.0"
