@@ -1,15 +1,17 @@
 buildscript {
+    apply from: "variables.gradle"
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
         classpath "com.android.tools.build:gradle:8.1.0"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$ext.kotlinVersion"
     }
 }
 
 allprojects {
+    apply from: "variables.gradle"
     repositories {
         google()
         mavenCentral()
