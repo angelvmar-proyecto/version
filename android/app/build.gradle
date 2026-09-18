@@ -32,8 +32,8 @@ android {
 }
 
 dependencies {
-    // Capacitor
-    implementation "com.getcapacitor:android:6.1.2"
+    // Capacitor — versión existente: 6.1.0 (NO 6.1.2)
+    implementation "com.getcapacitor:android:6.1.0"
     
     // AndroidX
     implementation "androidx.core:core-ktx:1.12.0"
