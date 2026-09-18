@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Pantalla de inicio (Splash) -->
     <style name="Theme.SplashScreen" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">#0f172a</item>
         <item name="android:windowBackground">@color/colorPrimaryDark</item>
     </style>
-    
-    <style name="Theme.App" parent="Theme.Material3.DayNight.NoActionBar">
+
+    <!-- Tema principal de la aplicación -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">#0f172a</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- Tema para la pantalla de lanzamiento sin barra de acción -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
     </style>
 </resources>
