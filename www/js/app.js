@@ -204,12 +204,12 @@ async function detectarLineas() {
   const medH = medianaArr(perfilH);
   const medV = medianaArr(perfilV);
   const umbralH = Math.max(8, medH * 2.5);
-  const umbralV = Math.max(8, medV * 2.5);
+  const umbralV = Math.max(5, medV * 1.2);
   log(`📊 Umbral H: ${umbralH.toFixed(1)} | Umbral V: ${umbralV.toFixed(1)}`);
 
   log('🔍 Paso 6/6: Buscando picos...');
   const picosH = buscarPicos(perfilH, umbralH, 8);
-  const picosV = buscarPicos(perfilV, umbralV, 8);
+  const picosV = buscarPicos(perfilV, umbralV, 15);
   const posH = ajustarLineas(picosH, perfilH, 5);
   const posV = ajustarLineas(picosV, perfilV, 5);
 
