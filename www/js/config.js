@@ -68,11 +68,19 @@ const CONFIG_DEFAULTS = {
   OCR_VOTING_CONFIANZA: 75,
   OCR_MARGEN_PADDING: 10,
 
-  // Retina bioinspirada (opcional)
-  RETINA_ACTIVO: false,
+  // ============================================
+  // RETINA BIOINSPIRADA (emulación)
+  // ============================================
+  // Activa la emulación retinal como paso previo al OCR
+  RETINA_ACTIVO: true,
+  // Radio de la ventana de contraste local (px)
   RETINA_RADIO: 15,
+  // Fuerza del ajuste de contraste local (0.5 - 2.5)
   RETINA_FUERZA_CONTRASTE: 1.5,
+  // Fuerza del realce de bordes (0.0 - 1.0)
   RETINA_FUERZA_BORDES: 0.5,
+  // Si la densidad de contraste de la celda es mayor a esto, NO aplicar retinal
+  // (ya tiene contraste suficiente, ahorra tiempo)
   RETINA_UMBRAL_APLICAR: 60,
 
   // Diccionario

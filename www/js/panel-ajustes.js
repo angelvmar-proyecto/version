@@ -47,6 +47,39 @@ const PARAMETROS_AJUSTABLES = [
     valorAjustado: 0.45,
     formato: function(v) { return v.toFixed(2); }
   },
+  // RETINA
+  {
+    id: 'RETINA_RADIO',
+    grupo: '🧠 RETINA',
+    nombre: 'Radio (px)',
+    min: 5, max: 30, paso: 1,
+    valorAjustado: 15,
+    formato: function(v) { return v; }
+  },
+  {
+    id: 'RETINA_FUERZA_CONTRASTE',
+    grupo: '🧠 RETINA',
+    nombre: 'Fuerza contraste',
+    min: 0.5, max: 2.5, paso: 0.1,
+    valorAjustado: 1.5,
+    formato: function(v) { return v.toFixed(1); }
+  },
+  {
+    id: 'RETINA_FUERZA_BORDES',
+    grupo: '🧠 RETINA',
+    nombre: 'Fuerza bordes',
+    min: 0.0, max: 1.0, paso: 0.05,
+    valorAjustado: 0.5,
+    formato: function(v) { return v.toFixed(2); }
+  },
+  {
+    id: 'RETINA_UMBRAL_APLICAR',
+    grupo: '🧠 RETINA',
+    nombre: 'Umbral aplicar',
+    min: 20, max: 120, paso: 5,
+    valorAjustado: 60,
+    formato: function(v) { return v; }
+  },
   // LIDAR
   {
     id: 'LIDAR_ECO_ALTO',
