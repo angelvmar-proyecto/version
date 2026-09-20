@@ -20,6 +20,7 @@ async function inicializarTesseract() {
     log('      Core:   ' + CONFIG.TESS_RUTA_CORE, 'info');
     log('      Datos:  ' + CONFIG.TESS_RUTA_DATOS, 'info');
 
+    // Crear worker SIN setParameters inicial
     tesseractWorker = await Tesseract.createWorker(
       CONFIG.TESS_IDIOMAS,
       CONFIG.TESS_OEM,
@@ -32,28 +33,21 @@ async function inicializarTesseract() {
             const pct = m.progress ? Math.round(m.progress * 100) : 0;
             log('      ⏳ ' + m.status + ' ' + pct + '%', 'info');
           }
-        },
-        errorHandler: function(err) {
-          log('      ❌ ERROR: ' + err, 'error');
         }
       }
     );
 
     log('   ✅ Worker creado', 'exito');
-
-    await tesseractWorker.setParameters({
-      tessedit_pageseg_mode: String(CONFIG.TESS_PSM),
-      preserve_interword_spaces: String(CONFIG.TESS_PRESERVE_SPACES)
-    });
-
-    log('   ✅ Parámetros aplicados', 'exito');
     log('✅ Tesseract listo', 'exito');
     return tesseractWorker;
 
   } catch (e) {
-    log('❌ ERROR: ' + e.message, 'error');
+    const msg = e && e.message ? e.message : String(e);
+    const stack = e && e.stack ? e.stack.substring(0, 300) : '';
+    log('❌ ERROR: ' + msg, 'error');
+    if (stack) log('   Stack: ' + stack, 'error');
     tesseractWorker = null;
-    throw e;
+    throw new Error('Falló inicializar Tesseract: ' + msg);
   }
 }
 
@@ -320,8 +314,14 @@ async function aplicarWhitelist(worker, tipo) {
     'texto': ''
   };
   try {
-    await worker.setParameters({ tessedit_char_whitelist: whitelists[tipo] || '' });
-  } catch (e) {}
+    await worker.setParameters({
+      tessedit_pageseg_mode: '7',
+      tessedit_char_whitelist: whitelists[tipo] || ''
+    });
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    log('      ⚠️ setParameters falló: ' + msg, 'alerta');
+  }
 }
 
 function limpiarTexto(texto, tipo) {
