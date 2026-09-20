@@ -9,46 +9,36 @@ async function inicializarTesseract() {
 
   log('🔤 Inicializando Tesseract v4...', 'etapa');
 
-  try {
-    if (typeof Tesseract === 'undefined') {
-      throw new Error('Tesseract no está cargado');
-    }
-    log('   ✅ Tesseract disponible', 'exito');
+  if (typeof Tesseract === 'undefined') {
+    throw new Error('Tesseract no está cargado');
+  }
+  log('   ✅ Tesseract disponible', 'exito');
 
-    log('   🔧 Creando worker...', 'info');
-    log('      Worker: ' + CONFIG.TESS_RUTA_WORKER, 'info');
-    log('      Core:   ' + CONFIG.TESS_RUTA_CORE, 'info');
-    log('      Datos:  ' + CONFIG.TESS_RUTA_DATOS, 'info');
+  log('   🔧 Creando worker...', 'info');
+  log('      Worker: ' + CONFIG.TESS_RUTA_WORKER, 'info');
+  log('      Core:   ' + CONFIG.TESS_RUTA_CORE, 'info');
+  log('      Datos:  ' + CONFIG.TESS_RUTA_DATOS, 'info');
 
-    // Crear worker SIN setParameters inicial
-    tesseractWorker = await Tesseract.createWorker(
-      CONFIG.TESS_IDIOMAS,
-      CONFIG.TESS_OEM,
-      {
-        workerPath: CONFIG.TESS_RUTA_WORKER,
-        corePath: CONFIG.TESS_RUTA_CORE,
-        langPath: CONFIG.TESS_RUTA_DATOS,
-        logger: function(m) {
-          if (m.status && (m.status.indexOf('core') !== -1 || m.status.indexOf('language') !== -1 || m.status.indexOf('initializ') !== -1)) {
-            const pct = m.progress ? Math.round(m.progress * 100) : 0;
-            log('      ⏳ ' + m.status + ' ' + pct + '%', 'info');
-          }
+  const worker = await Tesseract.createWorker(
+    CONFIG.TESS_IDIOMAS,
+    CONFIG.TESS_OEM,
+    {
+      workerPath: CONFIG.TESS_RUTA_WORKER,
+      corePath: CONFIG.TESS_RUTA_CORE,
+      langPath: CONFIG.TESS_RUTA_DATOS,
+      logger: function(m) {
+        if (m.status && (m.status.indexOf('core') !== -1 || m.status.indexOf('language') !== -1)) {
+          const pct = m.progress ? Math.round(m.progress * 100) : 0;
+          log('      ⏳ ' + m.status + ' ' + pct + '%', 'info');
         }
       }
-    );
+    }
+  );
 
-    log('   ✅ Worker creado', 'exito');
-    log('✅ Tesseract listo', 'exito');
-    return tesseractWorker;
-
-  } catch (e) {
-    const msg = e && e.message ? e.message : String(e);
-    const stack = e && e.stack ? e.stack.substring(0, 300) : '';
-    log('❌ ERROR: ' + msg, 'error');
-    if (stack) log('   Stack: ' + stack, 'error');
-    tesseractWorker = null;
-    throw new Error('Falló inicializar Tesseract: ' + msg);
-  }
+  tesseractWorker = worker;
+  log('   ✅ Worker creado y guardado', 'exito');
+  log('✅ Tesseract listo', 'exito');
+  return worker;
 }
 
 // ============================================
@@ -306,6 +296,10 @@ function detectarTipoColumna(matrizTexto, colIndex) {
 }
 
 async function aplicarWhitelist(worker, tipo) {
+  if (!worker) {
+    log('      ⚠️ aplicarWhitelist: worker es null', 'alerta');
+    return;
+  }
   const whitelists = {
     'numero': '0123456789.',
     'fecha': '0123456789/-',
@@ -375,13 +369,28 @@ function preprocesarCelda(canvasOriginal) {
 }
 
 async function leerCelda(canvasProcesado, tipo) {
-  const worker = await inicializarTesseract();
+  let worker = tesseractWorker;
+  if (!worker) {
+    worker = await inicializarTesseract();
+  }
+  if (!worker) {
+    log('      ❌ worker null en leerCelda', 'error');
+    return { texto: '', confianza: 0 };
+  }
+
   await aplicarWhitelist(worker, tipo);
   const dataURL = canvasProcesado.toDataURL('image/png');
+
   try {
-    const { data } = await worker.recognize(dataURL);
-    return { texto: data.text.trim(), confianza: data.confidence };
+    const resultado = await worker.recognize(dataURL);
+    const data = resultado.data || resultado;
+    return {
+      texto: (data.text || '').trim(),
+      confianza: data.confidence || 0
+    };
   } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    log('      ⚠️ recognize falló: ' + msg, 'alerta');
     return { texto: '', confianza: 0 };
   }
 }
