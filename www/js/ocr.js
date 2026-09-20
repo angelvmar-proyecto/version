@@ -1,46 +1,101 @@
 // ==============================================
 // MAR Caribe v12.0 - OCR CON ÓPTICA ESPACIAL
-// Pipeline: AP + BS local + PSF + escalado + binarización + voting
+// Fix v5.1.1: rutas absolutas + preserve_spaces string + logging detallado
 // ==============================================
 
 let tesseractWorker = null;
 
 // ============================================
-// INICIALIZAR TESSERACT (una sola vez)
+// INICIALIZAR TESSERACT (v5 - con logging paso a paso)
 // ============================================
 async function inicializarTesseract() {
-  if (tesseractWorker) return tesseractWorker;
+  if (tesseractWorker) {
+    log('   ✅ Tesseract ya inicializado (reutilizando)', 'info');
+    return tesseractWorker;
+  }
 
-  log('🔤 Inicializando Tesseract...', 'etapa');
+  log('🔤 Inicializando Tesseract v5...', 'etapa');
 
   try {
-    tesseractWorker = await Tesseract.createWorker(CONFIG.TESS_IDIOMAS, CONFIG.TESS_OEM, {
-      workerPath: CONFIG.TESS_RUTA_WORKER,
-      corePath: CONFIG.TESS_RUTA_CORE,
-      langPath: CONFIG.TESS_RUTA_DATOS,
-      logger: function(m) {
-        if (m.status === 'loading tesseract core') {
-          log(`   ⏳ ${m.status} ${Math.round(m.progress * 100)}%`, 'info');
+    log('   [1/5] Verificando Tesseract global...', 'info');
+    if (typeof Tesseract === 'undefined') {
+      throw new Error('Tesseract no está cargado. Verifica tesseract.min.js');
+    }
+    log('   ✅ Tesseract object disponible', 'exito');
+    log(`   📌 Versión: ${Tesseract.version || 'desconocida'}`, 'info');
+
+    log('   [2/5] Creando worker con rutas absolutas...', 'info');
+    log(`      Worker: ${CONFIG.TESS_RUTA_WORKER}`, 'info');
+    log(`      Core:   ${CONFIG.TESS_RUTA_CORE}`, 'info');
+    log(`      Datos:  ${CONFIG.TESS_RUTA_DATOS}`, 'info');
+    log(`      Lang:   ${CONFIG.TESS_IDIOMAS}`, 'info');
+    log(`      OEM:    ${CONFIG.TESS_OEM}`, 'info');
+
+    tesseractWorker = await Tesseract.createWorker(
+      CONFIG.TESS_IDIOMAS,
+      CONFIG.TESS_OEM,
+      {
+        workerPath: CONFIG.TESS_RUTA_WORKER,
+        corePath: CONFIG.TESS_RUTA_CORE,
+        langPath: CONFIG.TESS_RUTA_DATOS,
+        logger: function(m) {
+          if (m.status) {
+            const pct = m.progress ? Math.round(m.progress * 100) : 0;
+            if (m.status.indexOf('core') !== -1 || m.status.indexOf('language') !== -1) {
+              log(`      ⏳ ${m.status} ${pct}%`, 'info');
+            }
+          }
+        },
+        errorHandler: function(err) {
+          log(`      ❌ ERROR WORKER: ${err}`, 'error');
+          console.error('Tesseract worker error:', err);
         }
       }
-    });
+    );
+
+    log('   ✅ Worker creado', 'exito');
+
+    log('   [3/5] Aplicando parámetros (PSM, OEM, spaces)...', 'info');
+    log(`      PSM: ${CONFIG.TESS_PSM}`, 'info');
+    log(`      preserve_interword_spaces: '${CONFIG.TESS_PRESERVE_SPACES}'`, 'info');
 
     await tesseractWorker.setParameters({
-      tessedit_pageseg_mode: CONFIG.TESS_PSM,
-      preserve_interword_spaces: CONFIG.TESS_PRESERVE_SPACES
+      tessedit_pageseg_mode: String(CONFIG.TESS_PSM),
+      preserve_interword_spaces: String(CONFIG.TESS_PRESERVE_SPACES)
     });
 
-    log('✅ Tesseract listo', 'exito');
+    log('   ✅ Parámetros aplicados', 'exito');
+
+    log('   [4/5] Probando lectura de prueba...', 'info');
+    // Leer un canvas blanco de 50x50 para verificar que el worker responde
+    const canvasTest = document.createElement('canvas');
+    canvasTest.width = 100;
+    canvasTest.height = 50;
+    const ctxTest = canvasTest.getContext('2d');
+    ctxTest.fillStyle = '#FFFFFF';
+    ctxTest.fillRect(0, 0, 100, 50);
+    ctxTest.fillStyle = '#000000';
+    ctxTest.font = 'bold 30px sans-serif';
+    ctxTest.fillText('OK', 20, 35);
+    const testDataURL = canvasTest.toDataURL('image/png');
+
+    log('   [5/5] Enviando lectura de prueba a Tesseract...', 'info');
+    const testResult = await tesseractWorker.recognize(testDataURL);
+    log(`   ✅ Test de lectura OK (texto: "${testResult.data.text.trim()}", conf: ${testResult.data.confidence}%)`, 'exito');
+
+    log('✅ Tesseract listo y verificado', 'exito');
     return tesseractWorker;
+
   } catch (e) {
-    log(`❌ Error Tesseract: ${e.message}`, 'error');
+    log(`❌ ERROR inicializando Tesseract: ${e.message}`, 'error');
+    log(`   Stack: ${e.stack ? e.stack.substring(0, 200) : 'sin stack'}`, 'error');
+    tesseractWorker = null;
     throw e;
   }
 }
 
 // ============================================
 // MEDIR DENSIDAD DE CELDA (Aperture Photometry)
-// Devuelve 0-1 (proporción de píxeles con contenido)
 // ============================================
 function medirDensidadCelda(canvas, x1, y1, x2, y2) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -56,7 +111,6 @@ function medirDensidadCelda(canvas, x1, y1, x2, y2) {
 
   for (let i = 0; i < datos.length; i += 4) {
     const brillo = (datos[i] + datos[i + 1] + datos[i + 2]) / 3;
-    // Consideramos "contenido" píxeles oscuros
     if (brillo < 180) conContenido++;
     total++;
   }
@@ -80,14 +134,12 @@ function extraerCeldaCanvas(canvasFuente, x1, y1, x2, y2) {
 
 // ============================================
 // BS LOCAL POR CELDA
-// Elimina el color de fondo de la celda
 // ============================================
 function bsLocalCelda(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const datos = imageData.data;
 
-  // 1. Encontrar el color de fondo (píxeles más claros)
   const muestras = [];
   for (let i = 0; i < datos.length; i += 16) {
     muestras.push({
@@ -97,13 +149,11 @@ function bsLocalCelda(canvas) {
   }
   muestras.sort((a, b) => b.brillo - a.brillo);
 
-  // Top 25% más brillante = fondo
   const top25 = muestras.slice(0, Math.max(1, Math.floor(muestras.length * 0.25)));
   const fondoR = top25.reduce((s, m) => s + m.r, 0) / top25.length;
   const fondoG = top25.reduce((s, m) => s + m.g, 0) / top25.length;
   const fondoB = top25.reduce((s, m) => s + m.b, 0) / top25.length;
 
-  // 2. Restar fondo y normalizar a blanco puro
   for (let i = 0; i < datos.length; i += 4) {
     datos[i] = clamp((datos[i] - fondoR) * 4 + 255, 0, 255);
     datos[i + 1] = clamp((datos[i + 1] - fondoG) * 4 + 255, 0, 255);
@@ -116,7 +166,6 @@ function bsLocalCelda(canvas) {
 
 // ============================================
 // ESTIMAR BORROSIDAD (PSF σ aproximado)
-// Mide el ancho de las transiciones de borde
 // ============================================
 function estimarBorroso(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -128,7 +177,6 @@ function estimarBorroso(canvas) {
   let sumaAnchos = 0;
   let count = 0;
 
-  // Escanear filas horizontales buscando transiciones
   for (let y = 0; y < h; y += 5) {
     let enTransicion = false;
     let anchoTransicion = 0;
@@ -141,11 +189,9 @@ function estimarBorroso(canvas) {
       const dif = Math.abs(brillo - brilloAnt);
 
       if (dif > 20 && dif < 100) {
-        // Transición suave = borroso
         enTransicion = true;
         anchoTransicion++;
       } else if (dif >= 100) {
-        // Transición brusca = nítido
         enTransicion = false;
         anchoTransicion = 0;
       } else if (enTransicion && dif < 20) {
@@ -159,14 +205,11 @@ function estimarBorroso(canvas) {
     }
   }
 
-  const anchoPromedio = count > 0 ? sumaAnchos / count : 0;
-  // Interpretación: 0-1px nítido, 2-3px borroso moderado, 4+px muy borroso
-  return anchoPromedio;
+  return count > 0 ? sumaAnchos / count : 0;
 }
 
 // ============================================
-// PSF DECONVOLUTION (Richardson-Lucy simplificado)
-// Recupera nitidez del texto borroso de WhatsApp
+// PSF DECONVOLUTION
 // ============================================
 function deconvolucionarPSF(canvas, iteraciones) {
   iteraciones = iteraciones || 3;
@@ -178,7 +221,6 @@ function deconvolucionarPSF(canvas, iteraciones) {
   let est = new Float32Array(w * h);
   const orig = new Float32Array(w * h);
 
-  // Convertir a escala de grises (0-1)
   for (let i = 0; i < w * h; i++) {
     const idx = i * 4;
     const brillo = (imageData.data[idx] + imageData.data[idx + 1] + imageData.data[idx + 2]) / 3;
@@ -186,18 +228,15 @@ function deconvolucionarPSF(canvas, iteraciones) {
     orig[i] = est[i];
   }
 
-  // Kernel Gaussiano 3x3 (PSF estimada para WhatsApp)
   const kernel = [
     0.0625, 0.125, 0.0625,
     0.125,  0.25,  0.125,
     0.0625, 0.125, 0.0625
   ];
 
-  // Aplicar Richardson-Lucy
   for (let iter = 0; iter < iteraciones; iter++) {
     const borroso = new Float32Array(w * h);
 
-    // Convolución
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         let suma = 0;
@@ -210,13 +249,11 @@ function deconvolucionarPSF(canvas, iteraciones) {
       }
     }
 
-    // Cociente entre original y convolución
     const ratio = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) {
       ratio[i] = orig[i] / (borroso[i] + 0.001);
     }
 
-    // Convolución del ratio con kernel transpuesto
     const ratioConv = new Float32Array(w * h);
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
@@ -230,14 +267,12 @@ function deconvolucionarPSF(canvas, iteraciones) {
       }
     }
 
-    // Actualizar estimación
     for (let i = 0; i < w * h; i++) {
       est[i] = est[i] * ratioConv[i];
       est[i] = clamp(est[i], 0, 1);
     }
   }
 
-  // Escribir de vuelta
   for (let i = 0; i < w * h; i++) {
     const v = Math.round(est[i] * 255);
     imageData.data[i * 4] = v;
@@ -252,7 +287,6 @@ function deconvolucionarPSF(canvas, iteraciones) {
 
 // ============================================
 // ESCALADO INTELIGENTE
-// Escala según altura del texto detectado
 // ============================================
 function escalarInteligente(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -261,7 +295,6 @@ function escalarInteligente(canvas) {
   const w = canvas.width;
   const h = canvas.height;
 
-  // Detectar altura aproximada del texto
   const perfilH = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
     let cuenta = 0;
@@ -273,7 +306,6 @@ function escalarInteligente(canvas) {
     perfilH[y] = cuenta;
   }
 
-  // Encontrar filas con contenido
   let primera = -1, ultima = -1;
   for (let y = 0; y < h; y++) {
     if (perfilH[y] > w * 0.02) {
@@ -291,13 +323,10 @@ function escalarInteligente(canvas) {
     } else if (alturaTexto < CONFIG.OCR_ESCALA_UMBRAL_MEDIO) {
       factor = CONFIG.OCR_ESCALA_2X;
     }
-  } else {
-    factor = 1;
   }
 
   if (factor === 1) return canvas;
 
-  // Escalar
   const nuevoCanvas = document.createElement('canvas');
   nuevoCanvas.width = w * factor;
   nuevoCanvas.height = h * factor;
@@ -319,14 +348,6 @@ function binarizarAdaptativo(canvas) {
   const w = canvas.width;
   const h = canvas.height;
 
-  // Calcular umbral global primero
-  let suma = 0;
-  for (let i = 0; i < datos.length; i += 4) {
-    suma += (datos[i] + datos[i + 1] + datos[i + 2]) / 3;
-  }
-  const promGlobal = suma / (datos.length / 4);
-
-  // Umbral adaptativo por bloques
   const bloque = 20;
   for (let by = 0; by < h; by += bloque) {
     for (let bx = 0; bx < w; bx += bloque) {
@@ -361,14 +382,13 @@ function binarizarAdaptativo(canvas) {
 }
 
 // ============================================
-// CONTRASTE ADAPTATIVO (simplificado)
+// CONTRASTE ADAPTATIVO
 // ============================================
 function contrastarAdaptativo(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const datos = imageData.data;
 
-  // Encontrar mín y máx
   let min = 255, max = 0;
   for (let i = 0; i < datos.length; i += 4) {
     const b = (datos[i] + datos[i + 1] + datos[i + 2]) / 3;
@@ -378,7 +398,6 @@ function contrastarAdaptativo(canvas) {
 
   if (max - min < 10) return canvas;
 
-  // Estirar el rango
   const factor = 255 / (max - min);
   for (let i = 0; i < datos.length; i += 4) {
     datos[i] = clamp((datos[i] - min) * factor, 0, 255);
@@ -391,7 +410,7 @@ function contrastarAdaptativo(canvas) {
 }
 
 // ============================================
-// AÑADIR PADDING (margen blanco)
+// AÑADIR PADDING
 // ============================================
 function añadirPadding(canvas, margen) {
   margen = margen || CONFIG.OCR_MARGEN_PADDING;
@@ -407,7 +426,6 @@ function añadirPadding(canvas, margen) {
 
 // ============================================
 // DETECTAR TIPO DE COLUMNA
-// Analiza la primera fila completa de la columna
 // ============================================
 function detectarTipoColumna(matrizTexto, colIndex) {
   const muestras = [];
@@ -435,7 +453,7 @@ function detectarTipoColumna(matrizTexto, colIndex) {
 }
 
 // ============================================
-// APLICAR WHITELIST SEGÚN TIPO
+// APLICAR WHITELIST
 // ============================================
 async function aplicarWhitelist(worker, tipo) {
   const whitelists = {
@@ -456,32 +474,19 @@ async function aplicarWhitelist(worker, tipo) {
 }
 
 // ============================================
-// LIMPIAR TEXTO SEGÚN TIPO
+// LIMPIAR TEXTO
 // ============================================
 function limpiarTexto(texto, tipo) {
   let t = texto.trim();
-
-  // Quitar basura común
   t = t.replace(/[|_~`^]/g, '');
   t = t.replace(/\s+/g, ' ');
 
   switch (tipo) {
-    case 'numero':
-      t = t.replace(/[^\d.]/g, '');
-      break;
-    case 'fecha':
-      t = t.replace(/[^\d\/\-]/g, '');
-      break;
-    case 'moneda':
-      t = t.replace(/[^\d.,\$€£]/g, '');
-      break;
-    case 'hora':
-      t = t.replace(/[^\d:]/g, '');
-      break;
-    case 'texto':
-      // Solo letras, números, espacios y algunos signos
-      t = t.replace(/[^\w\sáéíóúÁÉÍÓÚñÑüÜ\-\.,]/g, '');
-      break;
+    case 'numero': t = t.replace(/[^\d.]/g, ''); break;
+    case 'fecha': t = t.replace(/[^\d\/\-]/g, ''); break;
+    case 'moneda': t = t.replace(/[^\d.,\$€£]/g, ''); break;
+    case 'hora': t = t.replace(/[^\d:]/g, ''); break;
+    case 'texto': t = t.replace(/[^\w\sáéíóúÁÉÍÓÚñÑüÜ\-\.,]/g, ''); break;
   }
 
   return t.trim();
@@ -495,9 +500,7 @@ function corregirConDiccionario(texto) {
   const palabras = texto.split(/\s+/);
   const corregidas = palabras.map(p => {
     const mayus = p.toUpperCase();
-    // Si ya está en el diccionario, dejarla
     if (CONFIG.DICCIONARIO.indexOf(mayus) !== -1) return mayus;
-    // Buscar similar (distancia 1-2)
     for (const palabra of CONFIG.DICCIONARIO) {
       if (levenshtein(mayus, palabra) <= 1 && mayus.length > 3) {
         return palabra;
@@ -509,18 +512,14 @@ function corregirConDiccionario(texto) {
 }
 
 // ============================================
-// LEVENSHTEIN (distancia entre strings)
+// LEVENSHTEIN
 // ============================================
 function levenshtein(a, b) {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
   const matriz = [];
-  for (let i = 0; i <= b.length; i++) {
-    matriz[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matriz[0][j] = j;
-  }
+  for (let i = 0; i <= b.length; i++) matriz[i] = [i];
+  for (let j = 0; j <= a.length; j++) matriz[0][j] = j;
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
       if (b.charAt(i - 1) === a.charAt(j - 1)) {
@@ -538,32 +537,19 @@ function levenshtein(a, b) {
 }
 
 // ============================================
-// PREPROCESAR CELDA (pipeline completo)
+// PREPROCESAR CELDA
 // ============================================
 function preprocesarCelda(canvasOriginal) {
   let canvas = canvasOriginal;
-
-  // 1. BS local (eliminar color de fondo)
   canvas = bsLocalCelda(canvas);
-
-  // 2. Detectar borrosidad y aplicar PSF si es necesario
   const borroso = estimarBorroso(canvas);
   if (borroso > 1.5) {
     canvas = deconvolucionarPSF(canvas, 3);
   }
-
-  // 3. Escalar según altura de texto
   canvas = escalarInteligente(canvas);
-
-  // 4. Contraste adaptativo
   canvas = contrastarAdaptativo(canvas);
-
-  // 5. Binarización adaptativa
   canvas = binarizarAdaptativo(canvas);
-
-  // 6. Añadir padding
   canvas = añadirPadding(canvas);
-
   return canvas;
 }
 
@@ -572,11 +558,7 @@ function preprocesarCelda(canvasOriginal) {
 // ============================================
 async function leerCelda(canvasProcesado, tipo) {
   const worker = await inicializarTesseract();
-
-  // Aplicar whitelist según tipo
   await aplicarWhitelist(worker, tipo);
-
-  // Convertir canvas a dataURL
   const dataURL = canvasProcesado.toDataURL('image/png');
 
   try {
@@ -586,6 +568,7 @@ async function leerCelda(canvasProcesado, tipo) {
       confianza: data.confidence
     };
   } catch (e) {
+    log(`      ⚠️ Error leyendo celda: ${e.message}`, 'alerta');
     return { texto: '', confianza: 0 };
   }
 }
@@ -604,18 +587,22 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
     return;
   }
 
-  // Determinar filas y columnas
   const filas = Math.max(...celdas.map(c => c.fila)) + 1;
   const columnas = Math.max(...celdas.map(c => c.col)) + 1;
 
   log(`📊 Tabla: ${filas}×${columnas} (${total} celdas)`, 'info');
 
-  // Matriz de resultados
   const matrizTexto = Array(filas).fill(null).map(() => Array(columnas).fill(''));
   const matrizConfianza = Array(filas).fill(null).map(() => Array(columnas).fill(0));
 
-  // Primera pasada: leer cabecera + muestra para detectar tipos de columna
-  const muestraFilas = Math.min(5, filas - 1);
+  // Inicializar Tesseract ANTES del bucle principal
+  log('🔤 Iniciando Tesseract...', 'etapa');
+  try {
+    await inicializarTesseract();
+  } catch (e) {
+    log(`❌ No se pudo inicializar Tesseract: ${e.message}`, 'error');
+    return;
+  }
 
   let procesadas = 0;
   const inicio = Date.now();
@@ -624,31 +611,25 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
     for (let c = 0; c < columnas; c++) {
       procesadas++;
 
-      // Buscar la celda correspondiente
       const celda = celdas.find(x => x.fila === f && x.col === c);
       if (!celda) continue;
 
-      // Progreso cada 10 celdas
-      if (procesadas % 10 === 0 || procesadas === total) {
+      if (procesadas % 10 === 0 || procesadas === total || procesadas === 1) {
         const pct = Math.round((procesadas / total) * 100);
         actualizarProgreso(pct);
         log(`   ⏳ ${procesadas}/${total} (${pct}%)`, 'info');
       }
 
-      // Medir densidad
       const densidad = medirDensidadCelda(canvasFuente, celda.x1, celda.y1, celda.x2, celda.y2);
 
-      // Saltar celdas vacías
       if (densidad < CONFIG.OCR_DENSIDAD_MIN) {
         matrizTexto[f][c] = '';
         matrizConfianza[f][c] = 100;
         continue;
       }
 
-      // Extraer canvas de la celda
       let canvasCelda = extraerCeldaCanvas(canvasFuente, celda.x1, celda.y1, celda.x2, celda.y2);
 
-      // Detectar tipo (usar 'texto' por defecto la primera vez)
       let tipo = 'texto';
       if (f > 0 && c < columnas) {
         const colMuestra = [];
@@ -660,41 +641,30 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
         }
       }
 
-      // Preprocesar según modo
       let canvasProcesado;
       if (modo === 'rapido') {
-        // Solo binarización
         canvasProcesado = binarizarAdaptativo(canvasCelda);
         canvasProcesado = añadirPadding(canvasProcesado);
       } else if (modo === 'medio') {
-        // BS + escalado + binarización
         canvasProcesado = bsLocalCelda(canvasCelda);
         canvasProcesado = escalarInteligente(canvasProcesado);
         canvasProcesado = binarizarAdaptativo(canvasProcesado);
         canvasProcesado = añadirPadding(canvasProcesado);
       } else {
-        // Preciso: pipeline completo
         canvasProcesado = preprocesarCelda(canvasCelda);
       }
 
-      // Leer
       const resultado = await leerCelda(canvasProcesado, tipo);
-
-      // Limpiar según tipo
       let textoLimpio = limpiarTexto(resultado.texto, tipo);
 
-      // Corregir con diccionario (solo tipo texto)
       if (tipo === 'texto') {
         textoLimpio = corregirConDiccionario(textoLimpio);
       }
 
-      // Si la confianza es muy baja y hay modo voting, reintentar
       if (modo === 'preciso' && resultado.confianza < CONFIG.OCR_VOTING_CONFIANZA) {
-        // Segunda pasada con binarización simple
         let canvasAlt = binarizarAdaptativo(canvasCelda);
         canvasAlt = añadirPadding(canvasAlt);
         const alt = await leerCelda(canvasAlt, tipo);
-        // Elegir el de mayor confianza
         if (alt.confianza > resultado.confianza) {
           textoLimpio = limpiarTexto(alt.texto, tipo);
           matrizConfianza[f][c] = alt.confianza;
@@ -712,15 +682,12 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   const duracion = ((Date.now() - inicio) / 1000).toFixed(1);
   log(`✅ OCR COMPLETO en ${duracion}s`, 'exito');
 
-  // Guardar resultados
   window.estadoPasos.matrizTexto = matrizTexto;
   window.estadoPasos.matrizConfianza = matrizConfianza;
   window.estadoPasos.matrizColores = extraerColoresCelda(canvasFuente, celdas);
 
-  // Mostrar en la pestaña Tabla
   mostrarTabla(matrizTexto, window.estadoPasos.matrizColores, matrizConfianza);
 
-  // Cambiar a la pestaña Tabla
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.querySelector('[data-tab="tabla"]').classList.add('active');
@@ -745,7 +712,6 @@ function extraerColoresCelda(canvasFuente, celdas) {
       continue;
     }
 
-    // Muestrear píxeles (cada 4)
     const imageData = ctx.getImageData(celda.x1, celda.y1, ancho, alto);
     const datos = imageData.data;
 
@@ -756,7 +722,6 @@ function extraerColoresCelda(canvasFuente, celdas) {
       muestras.push({ r, g, b, brillo });
     }
 
-    // El fondo es el más brillante (top 25%)
     muestras.sort((a, b) => b.brillo - a.brillo);
     const top = muestras.slice(0, Math.max(1, Math.floor(muestras.length * 0.25)));
     const promR = Math.round(top.reduce((s, m) => s + m.r, 0) / top.length);
@@ -769,7 +734,7 @@ function extraerColoresCelda(canvasFuente, celdas) {
 }
 
 // ============================================
-// MOSTRAR TABLA EN HTML
+// MOSTRAR TABLA
 // ============================================
 function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   const wrapper = document.getElementById('tablaWrapper');
@@ -783,11 +748,9 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   for (let f = 0; f < filas; f++) {
     html += '<tr>';
     for (let c = 0; c < columnas; c++) {
-      // Índice en matrizColores (lineal)
       const idx = f * columnas + c;
       const color = matrizColores[idx] || { r: 255, g: 255, b: 255 };
       const conf = matrizConfianza ? matrizConfianza[f][c] : 100;
-      const confColor = conf < 50 ? '#fee2e2' : (conf < 75 ? '#fef3c7' : 'transparent');
 
       const tag = (f === 0) ? 'th' : 'td';
       const colorHex = `rgb(${color.r},${color.g},${color.b})`;
@@ -801,10 +764,8 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   }
 
   html += '</tbody></table>';
-
   wrapper.innerHTML = html;
 
-  // Info extra
   const info = document.getElementById('infoExtra');
   if (info) {
     info.textContent = `📊 ${filas} filas · ${columnas} columnas · ${filas * columnas} celdas`;
@@ -813,4 +774,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log(`📊 Tabla mostrada: ${filas}×${columnas}`, 'exito');
 }
 
-console.log('✅ OCR cargado');
+console.log('✅ OCR cargado (v5.1.1 fix)');

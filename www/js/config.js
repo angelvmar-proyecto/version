@@ -82,12 +82,12 @@ const CONFIG = {
   // OCR - TESSERACT (rutas relativas a www/)
   // ============================================
   TESS_IDIOMAS: 'spa+eng',
-  TESS_RUTA_WORKER: 'tesseract/worker.min.js',
-  TESS_RUTA_CORE: 'tesseract/',
-  TESS_RUTA_DATOS: 'tesseract/lang-data',
+  TESS_RUTA_WORKER: '/tesseract/worker.min.js',
+  TESS_RUTA_CORE: '/tesseract',
+  TESS_RUTA_DATOS: '/tesseract/lang-data',
   TESS_PSM: 7,               // 7 = una línea de texto (ideal para celdas)
   TESS_OEM: 1,               // 1 = LSTM (mejor precisión)
-  TESS_PRESERVE_SPACES: 1,   // Respetar espacios entre palabras
+  TESS_PRESERVE_SPACES: '1',   // Respetar espacios entre palabras
   TESS_CONF_MIN: 30,         // Confianza mínima aceptable
 
   // ============================================
