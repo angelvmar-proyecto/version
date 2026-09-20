@@ -1,5 +1,6 @@
 // ==============================================
 // MAR Caribe v12.0 - APP PRINCIPAL
+// + Retina integrada + botones individuales funcionales + reset al analizar
 // ==============================================
 
 let imagenActual = null;
@@ -51,6 +52,20 @@ function marcarPasoCompletado(num) {
   if (paso) paso.classList.add('hecho');
 }
 
+// ============================================
+// REINICIAR PASOS (para reanálisis limpio)
+// ============================================
+function reiniciarPasos(excepto) {
+  for (let i = 1; i <= 9; i++) {
+    if (i === excepto) continue;
+    const paso = document.getElementById('paso' + i);
+    if (paso) paso.classList.remove('hecho', 'activo');
+  }
+}
+
+// ============================================
+// CARGAR IMAGEN
+// ============================================
 function cargarImagen(file) {
   log('📷 Cargando imagen...', 'etapa');
   const reader = new FileReader();
@@ -61,6 +76,8 @@ function cargarImagen(file) {
       lienzo.width = img.width;
       lienzo.height = img.height;
       limpiarLineas();
+      reiniciarPasos();
+
       window.estadoPasos = {
         brillo: null, ancho: 0, alto: 0,
         perfilH: null, perfilV: null, ecoH: null, ecoV: null,
@@ -71,13 +88,9 @@ function cargarImagen(file) {
         paso5Completado: false, paso6Completado: false,
         paso8Completado: false
       };
-      for (let i = 1; i <= 9; i++) {
-        const p = document.getElementById('paso' + i);
-        if (p) p.classList.remove('hecho');
-      }
       ajustarVista();
       actualizarProgreso(0);
-      log(`✅ Imagen cargada: ${img.width}×${img.height}`, 'exito');
+      log('✅ Imagen cargada: ' + img.width + '×' + img.height, 'exito');
     };
     img.onerror = () => log('❌ Error al cargar', 'error');
     img.src = e.target.result;
@@ -119,14 +132,22 @@ function cambiarZoom(delta, puntoX, puntoY) {
   dibujarTodo();
 }
 
+// ============================================
+// ANÁLISIS COMPLETO
+// ============================================
 async function analizarTodo() {
   if (!imagenActual) {
     log('⚠️ Carga una imagen', 'alerta');
     alert('⚠️ Primero carga una imagen');
     return;
   }
+
+  // Reiniciar pasos visuales Y líneas (pero mantener log)
+  reiniciarPasos();
+  limpiarLineas();
+  actualizarProgreso(0);
   log('═══════════════════════════════════', 'etapa');
-  log('🔬 ANÁLISIS COMPLETO', 'etapa');
+  log('🔬 NUEVO ANÁLISIS', 'etapa');
   log('═══════════════════════════════════', 'etapa');
 
   try {
@@ -139,7 +160,7 @@ async function analizarTodo() {
     ctxP1.drawImage(imagenActual, 0, 0);
     let imageData = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
     const preproc = preprocesarImagen(imageData);
-    log(`   Color: ${preproc.tieneColor ? 'SÍ' : 'NO'} | Ruido: ${preproc.tieneRuido ? 'SÍ' : 'NO'}`, 'info');
+    log('   Color: ' + (preproc.tieneColor ? 'SÍ' : 'NO') + ' | Ruido: ' + (preproc.tieneRuido ? 'SÍ' : 'NO'), 'info');
     if (preproc.aplicoCRR) log('   ✅ CRR', 'exito');
     if (preproc.aplicoBS) log('   ✅ BS', 'exito');
     ctxP1.putImageData(preproc.imageData, 0, 0);
@@ -163,10 +184,12 @@ async function analizarTodo() {
     window.lineasEcografiaV = det.ecografia.lineasV;
     window.lineasA3H = det.a3.lineasH;
     window.lineasA3V = det.a3.lineasV;
-    log(`   🟡 ${det.optica.lineasH.length}H, ${det.optica.lineasV.length}V`, 'info');
-    log(`   🔴🔵 ${det.ecografia.lineasH.length}H, ${det.ecografia.lineasV.length}V`, 'info');
-    log(`   🟣 ${det.a3.lineasH.length}H, ${det.a3.lineasV.length}V`, 'info');
-    marcarPasoCompletado(3); marcarPasoCompletado(4); marcarPasoCompletado(5);
+    log('   🟡 Óptica: ' + det.optica.lineasH.length + 'H, ' + det.optica.lineasV.length + 'V', 'info');
+    log('   🔴🔵 Eco: ' + det.ecografia.lineasH.length + 'H, ' + det.ecografia.lineasV.length + 'V', 'info');
+    log('   🟣 A3: ' + det.a3.lineasH.length + 'H, ' + det.a3.lineasV.length + 'V', 'info');
+    marcarPasoCompletado(3);
+    marcarPasoCompletado(4);
+    marcarPasoCompletado(5);
     actualizarProgreso(55);
     dibujarTodo();
 
@@ -181,9 +204,9 @@ async function analizarTodo() {
     window.lineasLidarV = lidar.lineasV;
     const rH = resumenVotacion(lidar.votosH);
     const rV = resumenVotacion(lidar.votosV);
-    log(`   📊 H: ${rH.con3Votos}×3v, ${rH.con2Votos}×2v, ${rH.con1Voto}×1v`, 'info');
-    log(`   📊 V: ${rV.con3Votos}×3v, ${rV.con2Votos}×2v, ${rV.con1Voto}×1v`, 'info');
-    log(`   ✅ Finales: ${lidar.lineasH.length}H, ${lidar.lineasV.length}V`, 'exito');
+    log('   📊 H: ' + rH.con3Votos + '×3v, ' + rH.con2Votos + '×2v, ' + rH.con1Voto + '×1v', 'info');
+    log('   📊 V: ' + rV.con3Votos + '×3v, ' + rV.con2Votos + '×2v, ' + rV.con1Voto + '×1v', 'info');
+    log('   ✅ Finales: ' + lidar.lineasH.length + 'H, ' + lidar.lineasV.length + 'V', 'exito');
     marcarPasoCompletado(6);
     actualizarProgreso(70);
     dibujarTodo();
@@ -194,7 +217,7 @@ async function analizarTodo() {
     window.estadoPasos.paso8Completado = true;
     const filas = lidar.lineasH.length - 1;
     const columnas = lidar.lineasV.length - 1;
-    log(`   ${filas} filas × ${columnas} columnas = ${celdas.length} celdas`, 'exito');
+    log('   ' + filas + ' filas × ' + columnas + ' columnas = ' + celdas.length + ' celdas', 'exito');
     marcarPasoCompletado(8);
     actualizarProgreso(85);
 
@@ -202,7 +225,7 @@ async function analizarTodo() {
     actualizarProgreso(90);
 
   } catch (e) {
-    log(`❌ Error: ${e.message}`, 'error');
+    log('❌ Error: ' + e.message, 'error');
     console.error(e);
   }
 }
@@ -228,6 +251,7 @@ function limpiarTodo() {
   zoom = 1;
   desplazamiento = { x: 0, y: 0 };
   limpiarLineas();
+  reiniciarPasos();
   window.estadoPasos = {
     brillo: null, ancho: 0, alto: 0,
     perfilH: null, perfilV: null, ecoH: null, ecoV: null,
@@ -240,13 +264,10 @@ function limpiarTodo() {
   };
   lienzo.width = 0;
   lienzo.height = 0;
-  for (let i = 1; i <= 9; i++) {
-    const p = document.getElementById('paso' + i);
-    if (p) p.classList.remove('hecho');
-  }
   const input = document.getElementById('entradaImagen');
   if (input) input.value = '';
-  document.getElementById('tablaWrapper').innerHTML = '<div class="empty-state">📊 Sin datos.</div>';
+  const tw = document.getElementById('tablaWrapper');
+  if (tw) tw.innerHTML = '<div class="empty-state">📊 Sin datos.</div>';
   actualizarProgreso(0);
   log('🗑️ Todo limpiado', 'info');
 }
@@ -261,7 +282,137 @@ async function ejecutarOCR(modo) {
   try {
     await ejecutarOCRCompleto(fuente, window.estadoPasos.celdas, modo);
   } catch (e) {
-    log(`❌ Error OCR: ${e.message}`, 'error');
+    log('❌ Error OCR: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ============================================
+// BOTONES INDIVIDUALES DE ALGORITMOS
+// ============================================
+async function ejecutarPasoIndividual(num) {
+  if (!imagenActual) {
+    log('⚠️ Carga una imagen primero', 'alerta');
+    return;
+  }
+
+  log('═══════════════════════════════════', 'etapa');
+  log('🎯 PASO ' + num + ' INDIVIDUAL', 'etapa');
+  log('═══════════════════════════════════', 'etapa');
+
+  // Marcar visualmente el paso activo
+  document.querySelectorAll('.paso').forEach(p => p.classList.remove('activo'));
+  const pasoEl = document.getElementById('paso' + num);
+  if (pasoEl) pasoEl.classList.add('activo');
+
+  // Asegurar brillo calculado
+  if (!window.estadoPasos.brillo) {
+    const canvasP1 = document.createElement('canvas');
+    canvasP1.width = imagenActual.width;
+    canvasP1.height = imagenActual.height;
+    const ctxP1 = canvasP1.getContext('2d');
+    ctxP1.drawImage(imagenActual, 0, 0);
+    const imageData = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
+    window.estadoPasos.brillo = calcularBrillo(imageData);
+    window.estadoPasos.ancho = canvasP1.width;
+    window.estadoPasos.alto = canvasP1.height;
+    window.estadoPasos.imagenProcesada = canvasP1;
+  }
+
+  const brillo = window.estadoPasos.brillo;
+  const ancho = window.estadoPasos.ancho;
+  const alto = window.estadoPasos.alto;
+
+  try {
+    switch (num) {
+      case 3: {
+        log('🔭 Ejecutando solo Óptica...', 'etapa');
+        const r = detectarOptica(brillo, ancho, alto);
+        const aj = aplicarAjusteLocal(r.lineasH, r.lineasV, brillo, alto, ancho);
+        window.lineasOpticaH = aj.lineasH;
+        window.lineasOpticaV = aj.lineasV;
+        window.lineasEcografiaH = [];
+        window.lineasEcografiaV = [];
+        window.lineasA3H = [];
+        window.lineasA3V = [];
+        window.lineasLidarH = [];
+        window.lineasLidarV = [];
+        log('   🟡 Óptica: ' + aj.lineasH.length + 'H, ' + aj.lineasV.length + 'V', 'exito');
+        dibujarTodo();
+        marcarPasoCompletado(3);
+        break;
+      }
+      case 4: {
+        log('🔊 Ejecutando solo Ecografía...', 'etapa');
+        const r = detectarEcografia(brillo, ancho, alto);
+        const aj = aplicarAjusteLocal(r.lineasH, r.lineasV, brillo, alto, ancho);
+        window.lineasEcografiaH = aj.lineasH;
+        window.lineasEcografiaV = aj.lineasV;
+        window.lineasOpticaH = [];
+        window.lineasOpticaV = [];
+        window.lineasA3H = [];
+        window.lineasA3V = [];
+        window.lineasLidarH = [];
+        window.lineasLidarV = [];
+        log('   🔴🔵 Eco: ' + aj.lineasH.length + 'H, ' + aj.lineasV.length + 'V', 'exito');
+        dibujarTodo();
+        marcarPasoCompletado(4);
+        break;
+      }
+      case 5: {
+        log('🟣 Ejecutando solo A3...', 'etapa');
+        const r = detectarA3(brillo, ancho, alto);
+        const aj = aplicarAjusteLocal(r.lineasH, r.lineasV, brillo, alto, ancho);
+        window.lineasA3H = aj.lineasH;
+        window.lineasA3V = aj.lineasV;
+        window.lineasOpticaH = [];
+        window.lineasOpticaV = [];
+        window.lineasEcografiaH = [];
+        window.lineasEcografiaV = [];
+        window.lineasLidarH = [];
+        window.lineasLidarV = [];
+        log('   🟣 A3: ' + aj.lineasH.length + 'H, ' + aj.lineasV.length + 'V', 'exito');
+        dibujarTodo();
+        marcarPasoCompletado(5);
+        break;
+      }
+      case 6: {
+        log('📐 Ejecutando LIDAR (requiere los 3 algoritmos)...', 'etapa');
+        if (!window.lineasOpticaH.length && !window.lineasA3H.length && !window.lineasEcografiaH.length) {
+          log('   ⚠️ Ejecuta primero 3, 4 y 5 (o Analizar completo)', 'alerta');
+          return;
+        }
+        const lidar = ejecutarLidar(
+          window.lineasOpticaH, window.lineasOpticaV,
+          window.lineasEcografiaH, window.lineasEcografiaV,
+          window.lineasA3H, window.lineasA3V,
+          brillo, ancho, alto
+        );
+        window.lineasLidarH = lidar.lineasH;
+        window.lineasLidarV = lidar.lineasV;
+        log('   ✅ Finales: ' + lidar.lineasH.length + 'H, ' + lidar.lineasV.length + 'V', 'exito');
+        dibujarTodo();
+        marcarPasoCompletado(6);
+        break;
+      }
+      case 8: {
+        log('✂️ Recortando celdas...', 'etapa');
+        const lh = window.lineasLidarH.length ? window.lineasLidarH : window.lineasOpticaH;
+        const lv = window.lineasLidarV.length ? window.lineasLidarV : window.lineasOpticaV;
+        if (lh.length < 2 || lv.length < 2) {
+          log('   ⚠️ Necesitas al menos 2 líneas H y 2 V', 'alerta');
+          return;
+        }
+        window.estadoPasos.celdas = recortarCeldas(lh, lv);
+        log('   ' + (lh.length - 1) + ' filas × ' + (lv.length - 1) + ' columnas = ' + window.estadoPasos.celdas.length + ' celdas', 'exito');
+        marcarPasoCompletado(8);
+        break;
+      }
+      default:
+        log('   ℹ️ Paso ' + num + ' sin función individual (usa Analizar)', 'info');
+    }
+  } catch (e) {
+    log('❌ Error en paso ' + num + ': ' + e.message, 'error');
     console.error(e);
   }
 }
@@ -300,12 +451,15 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   });
 
+  // PASOS INDIVIDUALES: ahora funcionales
   for (let i = 1; i <= 9; i++) {
     const paso = document.getElementById('paso' + i);
-    if (paso) paso.onclick = () => log(`👆 Paso ${i}`, 'info');
+    if (paso) {
+      paso.onclick = () => ejecutarPasoIndividual(i);
+    }
   }
 
-  // Gestos táctiles
+  // Gestos táctiles (sin cambios)
   const areaImg = document.querySelector('.area-img');
   if (areaImg) {
     areaImg.addEventListener('touchstart', function(e) {
@@ -357,17 +511,11 @@ document.addEventListener('DOMContentLoaded', function() {
         distanciaPinchAnterior = null;
       }
     }, { passive: true });
-
-    areaImg.addEventListener('wheel', function(e) {
-      if (!imagenActual) return;
-      e.preventDefault();
-      const rect = areaImg.getBoundingClientRect();
-      cambiarZoom(e.deltaY > 0 ? -CONFIG.ZOOM_PASO : CONFIG.ZOOM_PASO, e.clientX - rect.left, e.clientY - rect.top);
-    }, { passive: false });
   }
 
   log('✅ App lista', 'exito');
   log('👆 Arrastra · 🔍 Pinch · 👆👆 Doble toque = centrar', 'info');
+  log('🎯 Pulsa los números de paso (3, 4, 5, 6, 8) para ejecutarlos individualmente', 'info');
 });
 
 console.log('✅ App cargada');

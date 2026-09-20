@@ -192,14 +192,29 @@ function añadirPadding(canvas, margen) {
 
 function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
+
   if (modo === 'rapido') {
     return añadirPadding(binarizarAdaptativo(canvas));
   }
+
+  // 1. BS local (elimina color de fondo)
   canvas = bsLocalCelda(canvas);
+
+  // 2. RETINA (emulación bioinspirada - opcional)
+  if (typeof aplicarRetina === 'function') {
+    canvas = aplicarRetina(canvas);
+  }
+
+  // 3. Escalado inteligente
   canvas = escalarInteligente(canvas);
+
+  // 4. Contraste y binarización
   canvas = contrastarAdaptativo(canvas);
   canvas = binarizarAdaptativo(canvas);
+
+  // 5. Padding
   canvas = añadirPadding(canvas);
+
   return canvas;
 }
 
