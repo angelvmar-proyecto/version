@@ -191,6 +191,52 @@
     .btn-copiar   { background: #3c6382; }
 
     /* ====================================
+       PANEL DE AJUSTES
+       ==================================== */
+    .ajuste-grupo {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #334155;
+    }
+    .ajuste-grupo:last-child {
+      border-bottom: none;
+    }
+    .ajuste-grupo-titulo {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 6px;
+    }
+    .ajuste-fila {
+      display: grid;
+      grid-template-columns: 1fr 2fr 60px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .ajuste-nombre {
+      font-size: 0.7rem;
+      color: #cbd5e1;
+    }
+    .ajuste-fila input[type="range"] {
+      width: 100%;
+      accent-color: #8B5CF6;
+    }
+    .ajuste-input {
+      width: 60px;
+      padding: 3px 4px;
+      font-size: 0.7rem;
+      background: #0f172a;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .ajuste-input:focus {
+      outline: 2px solid #38bdf8;
+    }
+
+    /* ====================================
        SECCIÓN LEER (OCR)
        ==================================== */
     .seccion-leer {
@@ -363,6 +409,26 @@
       <button class="btn-centrar" id="btnCentrar" style="background:#06b6d4;">🎯 Centrar</button>
     </div>
 
+    <div class="botonera">
+      <button id="btnAbrirAjustes" style="background:#8B5CF6;grid-column:span 3;">⚙️ Ajustes de Parámetros</button>
+    </div>
+
+    <div id="panelAjustes" style="display:none;background:#1e293b;border-radius:10px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="font-size:0.9rem;color:#38bdf8;">⚙️ Ajustes de Parámetros</h3>
+        <button id="btnCerrarAjustes" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">❌ Cerrar</button>
+      </div>
+      <div id="panelAjustesContenido"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:12px;">
+        <button id="btnGuardarAjustes" style="background:#22c55e;color:white;border:none;border-radius:8px;padding:10px;font-size:0.75rem;font-weight:600;cursor:pointer;">💾 Guardar</button>
+        <button id="btnResetAjustes" style="background:#f59e0b;color:white;border:none;border-radius:8px;padding:10px;font-size:0.75rem;font-weight:600;cursor:pointer;">🔄 Reset</button>
+        <button id="btnCopiarLog" style="background:#3b82f6;color:white;border:none;border-radius:8px;padding:10px;font-size:0.75rem;font-weight:600;cursor:pointer;">📋 Copiar Log</button>
+      </div>
+      <div style="margin-top:8px;">
+        <button id="btnValoresSugeridos" style="background:#06b6d4;color:white;border:none;border-radius:8px;padding:8px;width:100%;font-size:0.75rem;font-weight:600;cursor:pointer;">💡 Cargar Valores Ajustados Sugeridos</button>
+      </div>
+    </div>
+
     <div class="seccion-leer">
       <div class="seccion-leer-titulo">📖 LEER (OCR)</div>
       <div class="botonera-leer">
@@ -400,6 +466,7 @@
   <script src="js/lidar.js"></script>
   <script src="js/dibujo.js"></script>
   <script src="js/ocr.js"></script>
+  <script src="js/panel-ajustes.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
