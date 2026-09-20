@@ -102,18 +102,33 @@ function ajustarVista() {
   if (!imagenActual) return;
   const area = document.querySelector('.area-img');
   if (!area) return;
-  const anchoArea = area.clientWidth;
-  const altoArea = area.clientHeight;
+
+  // Usar getBoundingClientRect para dimensiones reales
+  const rect = area.getBoundingClientRect();
+  const anchoArea = rect.width;
+  const altoArea = rect.height;
+
+  if (anchoArea === 0 || altoArea === 0) {
+    // El área aún no está renderizada, reintentar
+    setTimeout(ajustarVista, 100);
+    return;
+  }
+
+  // Margen del 95% para que se vea con un poco de aire
   const margen = 0.95;
   const ratioX = (anchoArea * margen) / imagenActual.width;
   const ratioY = (altoArea * margen) / imagenActual.height;
   zoom = Math.min(ratioX, ratioY);
+
+  // Centrar: la imagen escalada ocupa imagenActual.width * zoom
+  // El desplazamiento debe ponerla en el centro del área
   const anchoEsc = imagenActual.width * zoom;
   const altoEsc = imagenActual.height * zoom;
   desplazamiento = {
     x: (anchoArea - anchoEsc) / 2,
     y: (altoArea - altoEsc) / 2
   };
+
   dibujarTodo();
 }
 
@@ -121,14 +136,22 @@ function cambiarZoom(delta, puntoX, puntoY) {
   if (!imagenActual) return;
   const area = document.querySelector('.area-img');
   if (!area) return;
-  if (puntoX === undefined) puntoX = area.clientWidth / 2;
-  if (puntoY === undefined) puntoY = area.clientHeight / 2;
+
+  const rect = area.getBoundingClientRect();
+
+  // Punto de referencia (por defecto: centro del área)
+  if (puntoX === undefined) puntoX = rect.width / 2;
+  if (puntoY === undefined) puntoY = rect.height / 2;
+
   const zAnt = zoom;
   zoom = clamp(zoom + delta, CONFIG.ZOOM_MIN, CONFIG.ZOOM_MAX);
   if (zoom === zAnt) return;
+
+  // Ajustar desplazamiento para mantener el punto bajo el dedo/centro
   const factor = zoom / zAnt;
   desplazamiento.x = puntoX - (puntoX - desplazamiento.x) * factor;
   desplazamiento.y = puntoY - (puntoY - desplazamiento.y) * factor;
+
   dibujarTodo();
 }
 
