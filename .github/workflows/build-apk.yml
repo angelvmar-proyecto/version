@@ -27,11 +27,21 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Agregar Android (forzado)
+      - name: Verificar plugin ML Kit
+        run: |
+          echo "🔍 Verificando plugin ML Kit..."
+          ls node_modules/@capacitor-mlkit/ 2>/dev/null || echo "❌ Falta"
+          cat node_modules/@capacitor-mlkit/text-recognition/package.json | grep version || echo "❌ No encontrado"
+
+      - name: Regenerar Android
         run: |
           rm -rf android
           npx cap add android
-          npx cap sync
+          npx cap sync android
+
+      - name: Verificar que el plugin llegó a Android
+        run: |
+          grep -i mlkit android/app/capacitor.build.gradle && echo "✅ Plugin registrado" || echo "❌ No registrado"
 
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew
