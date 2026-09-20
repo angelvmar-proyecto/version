@@ -37,12 +37,44 @@ jobs:
             npx cap sync
           fi
 
+      - name: Parchear build.gradle para incluir .gz
+        run: |
+          echo "🔧 Parcheando build.gradle para permitir .gz..."
+          cd android/app
+          # Insertar aaptOptions al inicio del bloque android
+          python3 -c "
+          import re
+          with open('build.gradle', 'r') as f:
+              contenido = f.read()
+          
+          if 'aaptOptions' not in contenido:
+              # Buscar el bloque android { y añadir aaptOptions justo después
+              contenido = contenido.replace(
+                  'android {',
+                  'android {\n    aaptOptions {\n        noCompress \"gz\", \"traineddata\"\n        ignoreAssetsPattern \"!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~\"\n    }',
+                  1
+              )
+              with open('build.gradle', 'w') as f:
+                  f.write(contenido)
+              print('✅ aaptOptions añadido')
+          else:
+              print('⚠️  aaptOptions ya existe, no se modifica')
+          "
+          echo ""
+          echo "📄 Verificando parche:"
+          grep -A3 "aaptOptions" build.gradle || echo "⚠️  No se aplicó el parche"
+
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew
 
       - name: Compilar APK Debug
         working-directory: ./android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Verificar que los .gz están en el APK
+        run: |
+          echo "🔍 Buscando .gz dentro del APK..."
+          unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep -i "traineddata" || echo "❌ Los .gz NO están en el APK"
 
       - name: Renombrar APK
         run: |
