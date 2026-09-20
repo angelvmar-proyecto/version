@@ -18,20 +18,23 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
+
+      - name: Verificar versiones
+        run: |
+          echo "Node: $(node --version)"
+          echo "Java: $(java -version 2>&1 | head -1)"
 
       - name: Instalar dependencias
         run: npm install
 
       - name: Verificar plugin ML Kit
         run: |
-          echo "🔍 Verificando plugin ML Kit..."
           ls node_modules/@capacitor-mlkit/ 2>/dev/null || echo "❌ Falta"
-          cat node_modules/@capacitor-mlkit/text-recognition/package.json | grep version || echo "❌ No encontrado"
 
       - name: Regenerar Android
         run: |
@@ -39,9 +42,9 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Verificar que el plugin llegó a Android
+      - name: Verificar plugin en Android
         run: |
-          grep -i mlkit android/app/capacitor.build.gradle && echo "✅ Plugin registrado" || echo "❌ No registrado"
+          grep -i mlkit android/app/capacitor.build.gradle && echo "✅ Registrado" || echo "❌ No registrado"
 
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew
