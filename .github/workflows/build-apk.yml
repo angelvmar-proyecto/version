@@ -13,10 +13,6 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Limpiar caché de npm y gradle
-        run: |
-          rm -rf ~/.npm ~/.gradle || true
-
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -31,19 +27,19 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Verificar archivos .gz ANTES de Capacitor
+      - name: Verificar archivos .traineddata ANTES de Capacitor
         run: |
-          echo "🔍 Verificando .gz en www/"
+          echo "🔍 Verificando .traineddata en www/"
           ls -lh www/tesseract/lang-data/
-          if [ ! -f "www/tesseract/lang-data/spa.traineddata.gz" ]; then
-            echo "❌ FALTA spa.traineddata.gz"
+          if [ ! -f "www/tesseract/lang-data/spa.traineddata" ]; then
+            echo "❌ FALTA spa.traineddata"
             exit 1
           fi
-          if [ ! -f "www/tesseract/lang-data/eng.traineddata.gz" ]; then
-            echo "❌ FALTA eng.traineddata.gz"
+          if [ ! -f "www/tesseract/lang-data/eng.traineddata" ]; then
+            echo "❌ FALTA eng.traineddata"
             exit 1
           fi
-          echo "✅ Los 2 .gz están presentes"
+          echo "✅ Los 2 .traineddata están presentes"
 
       - name: Agregar Android (forzado, borra si existe)
         run: |
@@ -51,38 +47,17 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Verificar .gz DESPUÉS de Capacitor sync
+      - name: Verificar .traineddata DESPUÉS de Capacitor sync
         run: |
-          echo "🔍 Verificando .gz en android/app/src/main/assets/public/"
+          echo "🔍 Verificando .traineddata en android/app/src/main/assets/public/"
           ls -lh android/app/src/main/assets/public/tesseract/lang-data/ 2>/dev/null || echo "⚠️ Carpeta no existe"
-          if [ ! -f "android/app/src/main/assets/public/tesseract/lang-data/spa.traineddata.gz" ]; then
-            echo "❌ FALTA spa.traineddata.gz en android/assets"
+          if [ ! -f "android/app/src/main/assets/public/tesseract/lang-data/spa.traineddata" ]; then
+            echo "❌ FALTA spa.traineddata en android/assets"
             echo "Buscando en otra ubicación..."
-            find android -name "*.traineddata.gz" 2>/dev/null
+            find android -name "*.traineddata" 2>/dev/null
             exit 1
           fi
-          echo "✅ Los 2 .gz pasaron a android/assets"
-
-      - name: Parchear build.gradle con aaptOptions
-        run: |
-          cd android/app
-          python3 << 'PYEOF'
-          with open('build.gradle', 'r') as f:
-              contenido = f.read()
-          
-          if 'aaptOptions' not in contenido:
-              contenido = contenido.replace(
-                  'android {',
-                  'android {\n    aaptOptions {\n        noCompress "gz", "traineddata"\n        ignoreAssetsPattern "!.svn:!.git:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"\n    }',
-                  1
-              )
-              with open('build.gradle', 'w') as f:
-                  f.write(contenido)
-              print('✅ aaptOptions añadido')
-          else:
-              print('⚠️  aaptOptions ya existe')
-          PYEOF
-          grep -A3 "aaptOptions" build.gradle
+          echo "✅ Los 2 .traineddata pasaron a android/assets"
 
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew
@@ -91,17 +66,16 @@ jobs:
         working-directory: ./android
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: VERIFICACIÓN FORZADA - ¿Los .gz están DENTRO del APK?
+      - name: VERIFICACIÓN FORZADA - ¿Los .traineddata están DENTRO del APK?
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          echo "🔍 Buscando .gz DENTRO del APK..."
+          echo "🔍 Buscando .traineddata DENTRO del APK..."
           unzip -l "$APK" | grep -i "traineddata" || {
             echo "❌❌❌ FALLO CRÍTICO: NO hay traineddata dentro del APK"
-            echo "Contenido de assets/public/tesseract/lang-data dentro del APK:"
             unzip -l "$APK" | grep -i "tesseract" || echo "No hay NADA de tesseract"
             exit 1
           }
-          echo "✅✅✅ Los .gz SÍ están dentro del APK"
+          echo "✅✅✅ Los .traineddata SÍ están dentro del APK"
 
       - name: Renombrar APK
         run: |
