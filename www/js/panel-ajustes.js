@@ -47,7 +47,24 @@ const PARAMETROS_AJUSTABLES = [
     valorAjustado: 0.45,
     formato: function(v) { return v.toFixed(2); }
   },
-  // RETINA
+  // RETINA GLOBAL
+  {
+    id: 'RETINA_GLOBAL_FUERZA',
+    grupo: '🧠 RETINA GLOBAL',
+    nombre: 'Fuerza contraste',
+    min: 0.3, max: 1.5, paso: 0.1,
+    valorAjustado: 1.0,
+    formato: function(v) { return v.toFixed(1); }
+  },
+  {
+    id: 'RETINA_GLOBAL_RADIO',
+    grupo: '🧠 RETINA GLOBAL',
+    nombre: 'Radio (px)',
+    min: 10, max: 50, paso: 5,
+    valorAjustado: 25,
+    formato: function(v) { return v; }
+  },
+  // RETINA (por celda)
   {
     id: 'RETINA_RADIO',
     grupo: '🧠 RETINA',

@@ -83,6 +83,17 @@ const CONFIG_DEFAULTS = {
   // (ya tiene contraste suficiente, ahorra tiempo)
   RETINA_UMBRAL_APLICAR: 60,
 
+  // ============================================
+  // RETINA GLOBAL (aplicada antes de detectar líneas)
+  // ============================================
+  // Aplica contraste local suave a TODA la imagen antes de detección
+  // - Mejora la detección de líneas tenues o grises
+  // - NO aplica realce de bordes (solo contraste)
+  // - Es rápido (una sola aplicación sobre la imagen completa)
+  RETINA_GLOBAL_ACTIVO: true,
+  RETINA_GLOBAL_FUERZA: 1.0,        // Suave (0.5 - 1.5)
+  RETINA_GLOBAL_RADIO: 25,           // Radio más grande (la imagen es más grande)
+
   // Diccionario
   DICCIONARIO: [
     'MARRIED', 'SINGLE', 'COUPLE', 'DIVORCED', 'WIDOWED',

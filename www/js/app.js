@@ -187,6 +187,17 @@ async function analizarTodo() {
     if (preproc.aplicoCRR) log('   ✅ CRR', 'exito');
     if (preproc.aplicoBS) log('   ✅ BS', 'exito');
     ctxP1.putImageData(preproc.imageData, 0, 0);
+
+    // ✨ RETINAL GLOBAL (antes de detección de líneas)
+    // Mejora la detección de líneas tenues/grises
+    if (typeof aplicarRetinaGlobal === 'function' && CONFIG.RETINA_GLOBAL_ACTIVO) {
+      log('🧠 Retinal global: aplicando contraste local...', 'info');
+      const inicioRetina = Date.now();
+      aplicarRetinaGlobal(canvasP1);
+      const duracionRetina = ((Date.now() - inicioRetina) / 1000).toFixed(2);
+      log('   ✅ Retinal global aplicado en ' + duracionRetina + 's', 'exito');
+    }
+
     window.estadoPasos.imagenProcesada = canvasP1;
     marcarPasoCompletado(1);
     actualizarProgreso(15);
