@@ -24,17 +24,15 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Verificar versiones
-        run: |
-          echo "Node: $(node --version)"
-          echo "Java: $(java -version 2>&1 | head -1)"
-
       - name: Instalar dependencias
         run: npm install
 
-      - name: Verificar plugin ML Kit
+      - name: Verificar plugins instalados
         run: |
-          ls node_modules/@capacitor-mlkit/ 2>/dev/null || echo "❌ Falta"
+          echo "📦 @capacitor-mlkit/text-recognition:"
+          ls node_modules/@capacitor-mlkit/text-recognition 2>/dev/null && echo "✅" || echo "❌"
+          echo "📦 @capacitor/filesystem:"
+          ls node_modules/@capacitor/filesystem 2>/dev/null && echo "✅" || echo "❌"
 
       - name: Regenerar Android
         run: |
@@ -42,9 +40,13 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Verificar plugin en Android
+      - name: Verificar plugins en Android
         run: |
-          grep -i mlkit android/app/capacitor.build.gradle && echo "✅ Registrado" || echo "❌ No registrado"
+          echo "📄 capacitor.build.gradle:"
+          cat android/app/capacitor.build.gradle
+          echo ""
+          grep -i "mlkit" android/app/capacitor.build.gradle && echo "✅ ML Kit" || echo "❌ ML Kit"
+          grep -i "filesystem" android/app/capacitor.build.gradle && echo "✅ Filesystem" || echo "❌ Filesystem"
 
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew

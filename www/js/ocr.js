@@ -1,8 +1,8 @@
 // ==============================================
-// MAR Caribe v12.0 - OCR con ML Kit (nativo Android)
+// MAR Caribe v12.0 - OCR con ML Kit + Filesystem
+// Guarda cada celda como archivo temporal y lo pasa a ML Kit
 // ==============================================
 
-// Variable global del plugin
 let mlkitDisponible = false;
 
 // ============================================
@@ -10,7 +10,7 @@ let mlkitDisponible = false;
 // ============================================
 async function inicializarMLKit() {
   if (typeof Capacitor === 'undefined' || !Capacitor.Plugins) {
-    log('⚠️ Capacitor no disponible, modo debug', 'alerta');
+    log('⚠️ Capacitor no disponible', 'alerta');
     return false;
   }
 
@@ -20,16 +20,14 @@ async function inicializarMLKit() {
     return false;
   }
 
-  log('🔤 Plugin ML Kit encontrado', 'exito');
-
-  // Verificar que el modelo esté descargado
-  try {
-    const resultado = await plugin.isLanguageAvailable({ language: 'es' });
-    log('   Español disponible: ' + (resultado.available ? 'SÍ' : 'NO'), 'info');
-  } catch (e) {
-    log('   ⚠️ isLanguageAvailable falló: ' + (e.message || e), 'alerta');
+  const fs = Capacitor.Plugins.Filesystem;
+  if (!fs) {
+    log('⚠️ Filesystem plugin no encontrado', 'alerta');
+    return false;
   }
 
+  log('🔤 Plugin ML Kit encontrado', 'exito');
+  log('📁 Plugin Filesystem encontrado', 'exito');
   mlkitDisponible = true;
   return true;
 }
@@ -217,29 +215,53 @@ function limpiarTexto(texto) {
 }
 
 // ============================================
-// LEER CELDA CON ML KIT
+// GUARDAR CANVAS COMO ARCHIVO Y LEER CON ML KIT
 // ============================================
-async function leerCeldaMLKit(canvasProcesado) {
-  if (!mlkitDisponible) {
-    return { texto: '', confianza: 0 };
-  }
+async function leerCeldaMLKit(canvasProcesado, indice) {
+  if (!mlkitDisponible) return { texto: '', confianza: 0 };
 
   const plugin = Capacitor.Plugins.TextRecognition;
-  if (!plugin) return { texto: '', confianza: 0 };
+  const fs = Capacitor.Plugins.Filesystem;
+  if (!plugin || !fs) return { texto: '', confianza: 0 };
 
   try {
+    // 1. Convertir canvas a base64 (sin el prefijo data:...)
     const dataURL = canvasProcesado.toDataURL('image/png');
     const base64 = dataURL.replace(/^data:image\/png;base64,/, '');
 
+    // 2. Guardar como archivo temporal
+    const nombreArchivo = 'celda_' + indice + '_' + Date.now() + '.png';
+    const escritura = await fs.writeFile({
+      path: nombreArchivo,
+      data: base64,
+      directory: 'CACHE'
+    });
+
+    // 3. Obtener la URI del archivo
+    const uri = escritura.uri;
+    console.log('📁 Archivo guardado:', uri);
+
+    // 4. Pasar a ML Kit
     const resultado = await plugin.processImage({
-      image: base64,
+      path: uri,
       language: 'es'
     });
+
+    // 5. Borrar archivo temporal (opcional, para no llenar el cache)
+    try {
+      await fs.deleteFile({
+        path: nombreArchivo,
+        directory: 'CACHE'
+      });
+    } catch (e) {
+      // Si falla el borrado, no importa
+    }
 
     const texto = (resultado.text || '').trim();
     return { texto, confianza: 90 };
   } catch (e) {
-    log('      ⚠️ ML Kit falló: ' + (e.message || e), 'alerta');
+    const msg = e && e.message ? e.message : String(e);
+    log('      ⚠️ ML Kit falló: ' + msg, 'alerta');
     return { texto: '', confianza: 0 };
   }
 }
@@ -259,10 +281,9 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   const columnas = Math.max(...celdas.map(c => c.col)) + 1;
   log('📊 Tabla: ' + filas + '×' + columnas + ' (' + total + ' celdas)', 'info');
 
-  // Verificar que ML Kit esté disponible
   const ok = await inicializarMLKit();
   if (!ok) {
-    log('❌ ML Kit no está disponible. Verifica la instalación del plugin', 'error');
+    log('❌ ML Kit no disponible. Verifica la instalación del plugin', 'error');
     return;
   }
 
@@ -270,11 +291,13 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   const matrizConfianza = Array(filas).fill(null).map(() => Array(columnas).fill(0));
 
   let procesadas = 0;
+  let indiceGlobal = 0;
   const inicio = Date.now();
 
   for (let f = 0; f < filas; f++) {
     for (let c = 0; c < columnas; c++) {
       procesadas++;
+      indiceGlobal++;
       const celda = celdas.find(x => x.fila === f && x.col === c);
       if (!celda) continue;
 
@@ -294,7 +317,7 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
       let canvasCelda = extraerCeldaCanvas(canvasFuente, celda.x1, celda.y1, celda.x2, celda.y2);
       let canvasProcesado = preprocesarCelda(canvasCelda, modo);
 
-      const resultado = await leerCeldaMLKit(canvasProcesado);
+      const resultado = await leerCeldaMLKit(canvasProcesado, indiceGlobal);
       matrizTexto[f][c] = limpiarTexto(resultado.texto);
       matrizConfianza[f][c] = resultado.confianza;
     }
@@ -370,4 +393,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado (ML Kit nativo)');
+console.log('✅ OCR cargado (ML Kit + Filesystem)');
