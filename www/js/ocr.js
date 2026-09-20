@@ -1,67 +1,37 @@
 // ==============================================
-// MAR Caribe v12.0 - OCR con Tesseract v4 (minimal)
+// MAR Caribe v12.0 - OCR con ML Kit (nativo Android)
 // ==============================================
 
-let tesseractWorker = null;
-let tesseractListo = false;
+// Variable global del plugin
+let mlkitDisponible = false;
 
 // ============================================
-// INICIALIZAR TESSERACT (versión minimal)
+// INICIALIZAR ML KIT
 // ============================================
-async function inicializarTesseract() {
-  if (tesseractListo && tesseractWorker) return tesseractWorker;
-
-  log('🔤 Inicializando Tesseract v4...', 'etapa');
-
-  if (typeof Tesseract === 'undefined') {
-    throw new Error('Tesseract no está cargado');
+async function inicializarMLKit() {
+  if (typeof Capacitor === 'undefined' || !Capacitor.Plugins) {
+    log('⚠️ Capacitor no disponible, modo debug', 'alerta');
+    return false;
   }
-  log('   ✅ Tesseract disponible', 'exito');
 
-  log('   🔧 Creando worker (sin parámetros)...', 'info');
+  const plugin = Capacitor.Plugins.TextRecognition;
+  if (!plugin) {
+    log('⚠️ TextRecognition plugin no encontrado', 'alerta');
+    return false;
+  }
 
-  const worker = await Tesseract.createWorker(
-    CONFIG.TESS_IDIOMAS,
-    CONFIG.TESS_OEM,
-    {
-      workerPath: CONFIG.TESS_RUTA_WORKER,
-      corePath: CONFIG.TESS_RUTA_CORE,
-      langPath: CONFIG.TESS_RUTA_DATOS,
-      logger: function(m) {
-        if (m.status && (m.status.indexOf('core') !== -1 || m.status.indexOf('language') !== -1)) {
-          const pct = m.progress ? Math.round(m.progress * 100) : 0;
-          log('      ⏳ ' + m.status + ' ' + pct + '%', 'info');
-        }
-      }
-    }
-  );
+  log('🔤 Plugin ML Kit encontrado', 'exito');
 
-  tesseractWorker = worker;
-  tesseractListo = true;
-  log('   ✅ Worker creado y guardado', 'exito');
-
-  // Test de lectura mínimo con canvas blanco
-  log('   🧪 Probando lectura con canvas vacío...', 'info');
+  // Verificar que el modelo esté descargado
   try {
-    const canvasTest = document.createElement('canvas');
-    canvasTest.width = 100;
-    canvasTest.height = 50;
-    const ctxT = canvasTest.getContext('2d');
-    ctxT.fillStyle = 'white';
-    ctxT.fillRect(0, 0, 100, 50);
-    ctxT.fillStyle = 'black';
-    ctxT.font = 'bold 30px sans-serif';
-    ctxT.fillText('TEST', 10, 35);
-
-    const testResult = await worker.recognize(canvasTest.toDataURL('image/png'));
-    const txt = (testResult.data && testResult.data.text) ? testResult.data.text.trim() : '';
-    log('   ✅ Test de lectura OK (texto detectado: "' + txt + '")', 'exito');
+    const resultado = await plugin.isLanguageAvailable({ language: 'es' });
+    log('   Español disponible: ' + (resultado.available ? 'SÍ' : 'NO'), 'info');
   } catch (e) {
-    log('   ⚠️ Test de lectura falló: ' + (e.message || e), 'alerta');
+    log('   ⚠️ isLanguageAvailable falló: ' + (e.message || e), 'alerta');
   }
 
-  log('✅ Tesseract listo', 'exito');
-  return worker;
+  mlkitDisponible = true;
+  return true;
 }
 
 // ============================================
@@ -222,8 +192,11 @@ function añadirPadding(canvas, margen) {
   return nuevoCanvas;
 }
 
-function preprocesarCelda(canvasOriginal) {
+function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
+  if (modo === 'rapido') {
+    return añadirPadding(binarizarAdaptativo(canvas));
+  }
   canvas = bsLocalCelda(canvas);
   canvas = escalarInteligente(canvas);
   canvas = contrastarAdaptativo(canvas);
@@ -233,27 +206,40 @@ function preprocesarCelda(canvasOriginal) {
 }
 
 // ============================================
-// LEER CELDA (mínimo)
+// LIMPIAR TEXTO
 // ============================================
-async function leerCelda(canvasProcesado) {
-  if (!tesseractWorker) {
-    await inicializarTesseract();
-  }
-  if (!tesseractWorker) {
+function limpiarTexto(texto) {
+  if (!texto) return '';
+  let t = texto.trim();
+  t = t.replace(/[|_~`^]/g, '');
+  t = t.replace(/\s+/g, ' ');
+  return t;
+}
+
+// ============================================
+// LEER CELDA CON ML KIT
+// ============================================
+async function leerCeldaMLKit(canvasProcesado) {
+  if (!mlkitDisponible) {
     return { texto: '', confianza: 0 };
   }
 
+  const plugin = Capacitor.Plugins.TextRecognition;
+  if (!plugin) return { texto: '', confianza: 0 };
+
   try {
     const dataURL = canvasProcesado.toDataURL('image/png');
-    const resultado = await tesseractWorker.recognize(dataURL);
-    const data = resultado.data || resultado;
-    return {
-      texto: (data.text || '').trim(),
-      confianza: data.confidence || 0
-    };
+    const base64 = dataURL.replace(/^data:image\/png;base64,/, '');
+
+    const resultado = await plugin.processImage({
+      image: base64,
+      language: 'es'
+    });
+
+    const texto = (resultado.text || '').trim();
+    return { texto, confianza: 90 };
   } catch (e) {
-    const msg = e && e.message ? e.message : String(e);
-    log('      ⚠️ recognize falló: ' + msg, 'alerta');
+    log('      ⚠️ ML Kit falló: ' + (e.message || e), 'alerta');
     return { texto: '', confianza: 0 };
   }
 }
@@ -263,7 +249,7 @@ async function leerCelda(canvasProcesado) {
 // ============================================
 async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   log('═══════════════════════════════════', 'etapa');
-  log('📄 OCR MODO: ' + modo.toUpperCase(), 'etapa');
+  log('📄 OCR MODO: ' + modo.toUpperCase() + ' (ML Kit)', 'etapa');
   log('═══════════════════════════════════', 'etapa');
 
   const total = celdas.length;
@@ -273,17 +259,15 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   const columnas = Math.max(...celdas.map(c => c.col)) + 1;
   log('📊 Tabla: ' + filas + '×' + columnas + ' (' + total + ' celdas)', 'info');
 
-  const matrizTexto = Array(filas).fill(null).map(() => Array(columnas).fill(''));
-  const matrizConfianza = Array(filas).fill(null).map(() => Array(columnas).fill(0));
-
-  // Inicializar UNA SOLA VEZ
-  log('🔤 Iniciando Tesseract...', 'etapa');
-  try {
-    await inicializarTesseract();
-  } catch (e) {
-    log('❌ No se pudo inicializar: ' + (e.message || e), 'error');
+  // Verificar que ML Kit esté disponible
+  const ok = await inicializarMLKit();
+  if (!ok) {
+    log('❌ ML Kit no está disponible. Verifica la instalación del plugin', 'error');
     return;
   }
+
+  const matrizTexto = Array(filas).fill(null).map(() => Array(columnas).fill(''));
+  const matrizConfianza = Array(filas).fill(null).map(() => Array(columnas).fill(0));
 
   let procesadas = 0;
   const inicio = Date.now();
@@ -294,7 +278,7 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
       const celda = celdas.find(x => x.fila === f && x.col === c);
       if (!celda) continue;
 
-      if (procesadas % 20 === 0 || procesadas === total || procesadas === 1) {
+      if (procesadas % 10 === 0 || procesadas === total || procesadas === 1) {
         const pct = Math.round((procesadas / total) * 100);
         actualizarProgreso(pct);
         log('   ⏳ ' + procesadas + '/' + total + ' (' + pct + '%)', 'info');
@@ -308,21 +292,10 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
       }
 
       let canvasCelda = extraerCeldaCanvas(canvasFuente, celda.x1, celda.y1, celda.x2, celda.y2);
+      let canvasProcesado = preprocesarCelda(canvasCelda, modo);
 
-      let canvasProcesado;
-      if (modo === 'rapido') {
-        canvasProcesado = añadirPadding(binarizarAdaptativo(canvasCelda));
-      } else if (modo === 'medio') {
-        canvasProcesado = bsLocalCelda(canvasCelda);
-        canvasProcesado = escalarInteligente(canvasProcesado);
-        canvasProcesado = binarizarAdaptativo(canvasProcesado);
-        canvasProcesado = añadirPadding(canvasProcesado);
-      } else {
-        canvasProcesado = preprocesarCelda(canvasCelda);
-      }
-
-      const resultado = await leerCelda(canvasProcesado);
-      matrizTexto[f][c] = resultado.texto;
+      const resultado = await leerCeldaMLKit(canvasProcesado);
+      matrizTexto[f][c] = limpiarTexto(resultado.texto);
       matrizConfianza[f][c] = resultado.confianza;
     }
   }
@@ -397,4 +370,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado (Tesseract v4 minimal)');
+console.log('✅ OCR cargado (ML Kit nativo)');

@@ -27,37 +27,11 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Verificar archivos .traineddata ANTES de Capacitor
-        run: |
-          echo "🔍 Verificando .traineddata en www/"
-          ls -lh www/tesseract/lang-data/
-          if [ ! -f "www/tesseract/lang-data/spa.traineddata" ]; then
-            echo "❌ FALTA spa.traineddata"
-            exit 1
-          fi
-          if [ ! -f "www/tesseract/lang-data/eng.traineddata" ]; then
-            echo "❌ FALTA eng.traineddata"
-            exit 1
-          fi
-          echo "✅ Los 2 .traineddata están presentes"
-
-      - name: Agregar Android (forzado, borra si existe)
+      - name: Agregar Android (forzado)
         run: |
           rm -rf android
           npx cap add android
           npx cap sync
-
-      - name: Verificar .traineddata DESPUÉS de Capacitor sync
-        run: |
-          echo "🔍 Verificando .traineddata en android/app/src/main/assets/public/"
-          ls -lh android/app/src/main/assets/public/tesseract/lang-data/ 2>/dev/null || echo "⚠️ Carpeta no existe"
-          if [ ! -f "android/app/src/main/assets/public/tesseract/lang-data/spa.traineddata" ]; then
-            echo "❌ FALTA spa.traineddata en android/assets"
-            echo "Buscando en otra ubicación..."
-            find android -name "*.traineddata" 2>/dev/null
-            exit 1
-          fi
-          echo "✅ Los 2 .traineddata pasaron a android/assets"
 
       - name: Dar permisos a gradlew
         run: chmod +x android/gradlew
@@ -65,17 +39,6 @@ jobs:
       - name: Compilar APK Debug
         working-directory: ./android
         run: ./gradlew assembleDebug --stacktrace
-
-      - name: VERIFICACIÓN FORZADA - ¿Los .traineddata están DENTRO del APK?
-        run: |
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          echo "🔍 Buscando .traineddata DENTRO del APK..."
-          unzip -l "$APK" | grep -i "traineddata" || {
-            echo "❌❌❌ FALLO CRÍTICO: NO hay traineddata dentro del APK"
-            unzip -l "$APK" | grep -i "tesseract" || echo "No hay NADA de tesseract"
-            exit 1
-          }
-          echo "✅✅✅ Los .traineddata SÍ están dentro del APK"
 
       - name: Renombrar APK
         run: |
