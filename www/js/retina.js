@@ -211,3 +211,27 @@ function aplicarRetinaGlobal(canvas) {
   ctx.putImageData(orig, 0, 0);
   return canvas;
 }
+
+// ============================================
+// RETINA SUAVE (para modo RÁPIDO)
+// Aplicación ligera que no penaliza velocidad.
+// ============================================
+function aplicarRetinaSuave(canvas) {
+  const radio = (CONFIG.RETINA_RAPIDO_RADIO !== undefined) ? CONFIG.RETINA_RAPIDO_RADIO : 8;
+  const fuerza = (CONFIG.RETINA_RAPIDO_FUERZA !== undefined) ? CONFIG.RETINA_RAPIDO_FUERZA : 0.8;
+  canvas = ajusteContrasteLocal(canvas, radio, fuerza);
+  return canvas;
+}
+
+// ============================================
+// RETINA FORZADO (para modo PRECISO)
+// Ignora el umbral de densidad y aplica siempre.
+// ============================================
+function aplicarRetinaForzado(canvas, radio, fuerzaContraste, fuerzaBordes) {
+  radio = radio || 12;
+  fuerzaContraste = fuerzaContraste || 2.0;
+  fuerzaBordes = fuerzaBordes || 0.7;
+  canvas = ajusteContrasteLocal(canvas, radio, fuerzaContraste);
+  canvas = realzarBordes(canvas, fuerzaBordes);
+  return canvas;
+}

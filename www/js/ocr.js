@@ -1,6 +1,6 @@
 // ==============================================
-// MAR Caribe v12.0 - OCR con ML Kit + Filesystem
-// v4: consistencia cruzada + opcion fila0 encabezado
+// MAR Caribe v13 - OCR con ML Kit + Filesystem
+// v5: 3 modos diferenciados (rapido/medio/preciso)
 // ==============================================
 
 let mlkitDisponible = false;
@@ -52,7 +52,7 @@ function medirDensidadCelda(canvas, x1, y1, x2, y2) {
 }
 
 // ============================================
-// EXTRAER CELDA (con margen interno para eliminar bordes de línea)
+// EXTRAER CELDA (con margen interno)
 // ============================================
 function extraerCeldaCanvas(canvasFuente, x1, y1, x2, y2) {
   const margen = (CONFIG.OCR_MARGEN_CELDA !== undefined) ? CONFIG.OCR_MARGEN_CELDA : 3;
@@ -135,6 +135,20 @@ function escalarInteligente(canvas) {
   return nuevoCanvas;
 }
 
+function escalarInteligenteForzado(canvas, factorMinimo) {
+  factorMinimo = factorMinimo || 2;
+  const w = canvas.width, h = canvas.height;
+  const factor = Math.max(factorMinimo, CONFIG.OCR_ESCALA_2X || 2);
+  const nuevoCanvas = document.createElement('canvas');
+  nuevoCanvas.width = w * factor;
+  nuevoCanvas.height = h * factor;
+  const nuevoCtx = nuevoCanvas.getContext('2d');
+  nuevoCtx.imageSmoothingEnabled = true;
+  nuevoCtx.imageSmoothingQuality = 'high';
+  nuevoCtx.drawImage(canvas, 0, 0, w * factor, h * factor);
+  return nuevoCanvas;
+}
+
 function binarizarAdaptativo(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -170,7 +184,6 @@ function contrastarAdaptativo(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const datos = imageData.data;
-
   const brillos = [];
   for (let i = 0; i < datos.length; i += 4) {
     brillos.push((datos[i] + datos[i + 1] + datos[i + 2]) / 3);
@@ -178,7 +191,6 @@ function contrastarAdaptativo(canvas) {
   brillos.sort((a, b) => a - b);
   const min = brillos[Math.floor(brillos.length * 0.02)];
   const max = brillos[Math.floor(brillos.length * 0.98)];
-
   if (max - min < 10) return canvas;
   const factor = 255 / (max - min);
   for (let i = 0; i < datos.length; i += 4) {
@@ -202,17 +214,49 @@ function añadirPadding(canvas, margen) {
   return nuevoCanvas;
 }
 
+// ============================================
+// PREPROCESAR CELDA - 3 MODOS DIFERENCIADOS
+// ⚡ RÁPIDO   → BS + retinal suave opcional
+// 📊 MEDIO    → Pipeline equilibrado (default)
+// 🎯 PRECISO  → Retinal forzado + upscale 2x + binarizado
+// ============================================
 function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
 
+  // ⚡ RÁPIDO
   if (modo === 'rapido') {
     canvas = bsLocalCelda(canvas);
+    if (CONFIG.RETINA_ACTIVO && CONFIG.RETINA_EN_RAPIDO === true &&
+        typeof aplicarRetinaSuave === 'function') {
+      canvas = aplicarRetinaSuave(canvas);
+    }
     return añadirPadding(canvas);
   }
 
+  // 🎯 PRECISO
+  if (modo === 'preciso') {
+    canvas = bsLocalCelda(canvas);
+
+    if (CONFIG.RETINA_ACTIVO && typeof aplicarRetinaForzado === 'function') {
+      canvas = aplicarRetinaForzado(canvas, 12, 2.0, 0.7);
+    }
+
+    if (typeof escalarInteligenteForzado === 'function') {
+      canvas = escalarInteligenteForzado(canvas, 2);
+    } else {
+      canvas = escalarInteligente(canvas);
+    }
+
+    canvas = contrastarAdaptativo(canvas);
+    canvas = binarizarAdaptativo(canvas);
+    canvas = añadirPadding(canvas);
+    return canvas;
+  }
+
+  // 📊 MEDIO (default)
   canvas = bsLocalCelda(canvas);
 
-  if (typeof aplicarRetina === 'function') {
+  if (CONFIG.RETINA_ACTIVO && typeof aplicarRetina === 'function') {
     canvas = aplicarRetina(canvas);
   }
 
@@ -224,7 +268,6 @@ function preprocesarCelda(canvasOriginal, modo) {
   }
 
   canvas = añadirPadding(canvas);
-
   return canvas;
 }
 
@@ -240,7 +283,7 @@ function limpiarTexto(texto) {
 }
 
 // ============================================
-// GUARDAR CANVAS COMO ARCHIVO Y LEER CON ML KIT
+// LEER CELDA CON ML KIT
 // ============================================
 async function leerCeldaMLKit(canvasProcesado, indice) {
   if (!mlkitDisponible) return { texto: '', confianza: 0 };
@@ -261,21 +304,14 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
     });
 
     const uri = escritura.uri;
-    console.log('📁 Archivo guardado:', uri);
-
     const resultado = await plugin.processImage({
       path: uri,
       language: 'es'
     });
 
     try {
-      await fs.deleteFile({
-        path: nombreArchivo,
-        directory: 'CACHE'
-      });
-    } catch (e) {
-      // Si falla el borrado, no importa
-    }
+      await fs.deleteFile({ path: nombreArchivo, directory: 'CACHE' });
+    } catch (e) {}
 
     const texto = (resultado.text || '').trim();
     return { texto, confianza: 90 };
@@ -287,7 +323,7 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
 }
 
 // ============================================
-// 🧠 CONSISTENCIA CRUZADA POR COLUMNA
+// CONSISTENCIA CRUZADA
 // ============================================
 function aplicarConsistenciaCruzada(matrizTexto) {
   const filas = matrizTexto.length;
@@ -307,21 +343,17 @@ function aplicarConsistenciaCruzada(matrizTexto) {
     Object.keys(grupos).forEach(clave => {
       const grupo = grupos[clave];
       if (grupo.length < 2) return;
-
       const variantes = {};
       grupo.forEach(item => {
         variantes[item.texto] = (variantes[item.texto] || 0) + 1;
       });
-
-      let mejorTexto = null;
-      let mejorCount = 0;
+      let mejorTexto = null, mejorCount = 0;
       Object.keys(variantes).forEach(v => {
         if (variantes[v] > mejorCount) {
           mejorCount = variantes[v];
           mejorTexto = v;
         }
       });
-
       const numVariantes = Object.keys(variantes).length;
       if (mejorCount >= 2 && numVariantes > 1) {
         grupo.forEach(item => {
@@ -333,7 +365,6 @@ function aplicarConsistenciaCruzada(matrizTexto) {
       }
     });
   }
-
   return correcciones;
 }
 
@@ -354,7 +385,7 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
 
   const ok = await inicializarMLKit();
   if (!ok) {
-    log('❌ ML Kit no disponible. Verifica la instalación del plugin', 'error');
+    log('❌ ML Kit no disponible', 'error');
     return;
   }
 
@@ -401,11 +432,22 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   window.estadoPasos.matrizConfianza = matrizConfianza;
   window.estadoPasos.matrizColores = extraerColoresCelda(canvasFuente, celdas);
 
+  // 🎓 Aplicar reglas aprendidas (si activo)
+  if (typeof aprendizajeAplicar === 'function' && CONFIG.APRENDIZAJE_ACTIVO) {
+    const apr = aprendizajeAplicar(matrizTexto);
+    if (apr.aplicado && apr.correcciones > 0) {
+      log('🎓 Aprendizaje: ' + apr.correcciones + ' celdas corregidas', 'exito');
+    } else if (apr.aplicado) {
+      log('🎓 Aprendizaje: sin cambios', 'info');
+    }
+  }
+
+  // 🧠 Consistencia cruzada
   const correcciones = aplicarConsistenciaCruzada(matrizTexto);
   if (correcciones > 0) {
     log('🧠 Consistencia cruzada: ' + correcciones + ' celdas corregidas', 'exito');
   } else {
-    log('🧠 Consistencia cruzada: sin correcciones necesarias', 'info');
+    log('🧠 Consistencia cruzada: sin correcciones', 'info');
   }
 
   mostrarTabla(matrizTexto, window.estadoPasos.matrizColores, matrizConfianza);
@@ -444,7 +486,6 @@ function extraerColoresCelda(canvasFuente, celdas) {
 
 // ============================================
 // MOSTRAR TABLA
-// v4: respeta OCR_FILA0_ENCABEZADO
 // ============================================
 function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   const wrapper = document.getElementById('tablaWrapper');
@@ -478,4 +519,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado v4 (consistencia + fila0 configurable)');
+console.log('✅ OCR v5 (3 modos diferenciados)');
