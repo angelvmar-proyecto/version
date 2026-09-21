@@ -1,5 +1,6 @@
 // ==============================================
 // MAR Caribe v12.0 - CONFIGURACIÓN GLOBAL
+// Valores calibrados sobre tabla densa real (20/09/2026)
 // ==============================================
 
 const CONFIG_DEFAULTS = {
@@ -12,10 +13,10 @@ const CONFIG_DEFAULTS = {
   BS_TAMANIO_BLOQUE: 30,
   BS_UMBRAL_SATURACION: 0.20,
 
-  // Óptica
-  OPTICA_UMBRAL_ADAPTATIVO: 0.40,
+  // Óptica (calibrado: 37→50 verticales en tabla densa)
+  OPTICA_UMBRAL_ADAPTATIVO: 0.30,
   OPTICA_DISTANCIA_MIN_H: 15,
-  OPTICA_DISTANCIA_MIN_V: 20,
+  OPTICA_DISTANCIA_MIN_V: 12,
   OPTICA_SUAVIZADO: 5,
 
   // Ecografía
@@ -26,10 +27,10 @@ const CONFIG_DEFAULTS = {
   ECO_DISTANCIA_MIN_H: 18,
   ECO_DISTANCIA_MIN_V: 20,
 
-  // A3
-  A3_UMBRAL_MAGNITUD: 180,
-  A3_UMBRAL_ORTOGONALIDAD: 0.85,
-  A3_COBERTURA_MINIMA: 0.30,
+  // A3 (calibrado: 21→40+ verticales en tabla densa)
+  A3_UMBRAL_MAGNITUD: 130,
+  A3_UMBRAL_ORTOGONALIDAD: 0.75,
+  A3_COBERTURA_MINIMA: 0.20,
   A3_DISTANCIA_MIN: 10,
 
   // Ajuste local
@@ -37,7 +38,7 @@ const CONFIG_DEFAULTS = {
 
   // LIDAR
   LIDAR_VOTOS_MINIMOS: 2,
-  LIDAR_ECO_ALTO: 80,
+  LIDAR_ECO_ALTO: 60,
   LIDAR_ECO_BAJO: 30,
   LIDAR_AGRUPAR_DIST: 4,
 
@@ -68,31 +69,17 @@ const CONFIG_DEFAULTS = {
   OCR_VOTING_CONFIANZA: 75,
   OCR_MARGEN_PADDING: 10,
 
-  // ============================================
-  // RETINA BIOINSPIRADA (emulación)
-  // ============================================
-  // Activa la emulación retinal como paso previo al OCR
+  // Retina por celda
   RETINA_ACTIVO: true,
-  // Radio de la ventana de contraste local (px)
   RETINA_RADIO: 15,
-  // Fuerza del ajuste de contraste local (0.5 - 2.5)
   RETINA_FUERZA_CONTRASTE: 1.5,
-  // Fuerza del realce de bordes (0.0 - 1.0)
   RETINA_FUERZA_BORDES: 0.5,
-  // Si la densidad de contraste de la celda es mayor a esto, NO aplicar retinal
-  // (ya tiene contraste suficiente, ahorra tiempo)
   RETINA_UMBRAL_APLICAR: 60,
 
-  // ============================================
-  // RETINA GLOBAL (aplicada antes de detectar líneas)
-  // ============================================
-  // Aplica contraste local suave a TODA la imagen antes de detección
-  // - Mejora la detección de líneas tenues o grises
-  // - NO aplica realce de bordes (solo contraste)
-  // - Es rápido (una sola aplicación sobre la imagen completa)
+  // Retina global (antes de detección de líneas)
   RETINA_GLOBAL_ACTIVO: true,
-  RETINA_GLOBAL_FUERZA: 1.0,        // Suave (0.5 - 1.5)
-  RETINA_GLOBAL_RADIO: 25,           // Radio más grande (la imagen es más grande)
+  RETINA_GLOBAL_FUERZA: 1.0,
+  RETINA_GLOBAL_RADIO: 25,
 
   // Diccionario
   DICCIONARIO: [
@@ -104,7 +91,6 @@ const CONFIG_DEFAULTS = {
 };
 
 // CONFIG es una copia modificable de CONFIG_DEFAULTS
-// El panel de ajustes modifica CONFIG en runtime
 let CONFIG = JSON.parse(JSON.stringify(CONFIG_DEFAULTS));
 
 // Cargar ajustes guardados de localStorage si existen
