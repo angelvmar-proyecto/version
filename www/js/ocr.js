@@ -520,3 +520,99 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
 }
 
 console.log('✅ OCR v5 (3 modos diferenciados)');
+
+// ============================================================
+// v13-fase2: ENTRENAMIENTO — procesar foto + devolver matriz cruda
+// SIN aplicar aprendizaje (para no contaminar el entrenamiento)
+// Reutiliza el pipeline real de app.js/analizarTodo.
+// ============================================================
+async function procesarFotoParaEntrenar(file) {
+  if (!file) throw new Error('procesarFotoParaEntrenar: file vacío');
+
+  // 1) Cargar imagen en canvas offscreen
+  const img = await new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('No se pudo cargar la imagen'));
+    im.src = URL.createObjectURL(file);
+  });
+
+  const canvasP1 = document.createElement('canvas');
+  canvasP1.width = img.naturalWidth;
+  canvasP1.height = img.naturalHeight;
+  const ctxP1 = canvasP1.getContext('2d', { willReadFrequently: true });
+  ctxP1.drawImage(img, 0, 0);
+  URL.revokeObjectURL(img.src);
+
+  // 2) Preprocesamiento (CRR + BS)
+  const imageData = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
+  const preproc = preprocesarImagen(imageData);
+  ctxP1.putImageData(preproc.imageData, 0, 0);
+
+  // 3) Retinal global (mejora detección de líneas)
+  if (typeof aplicarRetinaGlobal === 'function' && CONFIG.RETINA_GLOBAL_ACTIVO) {
+    aplicarRetinaGlobal(canvasP1);
+  }
+
+  // 4) Brillo
+  const imageDataPost = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
+  const brillo = calcularBrillo(imageDataPost);
+  const ancho = canvasP1.width;
+  const alto = canvasP1.height;
+
+  // 5) Detección + LIDAR
+  const det = ejecutarDeteccion(brillo, ancho, alto);
+  const lidar = ejecutarLidar(
+    det.optica.lineasH, det.optica.lineasV,
+    det.ecografia.lineasH, det.ecografia.lineasV,
+    det.a3.lineasH, det.a3.lineasV,
+    brillo, ancho, alto
+  );
+
+  // 6) Celdas
+  const celdas = recortarCeldas(lidar.lineasH, lidar.lineasV);
+  if (!celdas || celdas.length === 0) {
+    throw new Error('No se detectaron celdas en la imagen');
+  }
+
+  // 7) OCR "limpio": guardamos estado global, desactivamos efectos laterales
+  const estadoPrevio = window.estadoPasos;
+  const mostrarTablaOrig = window.mostrarTabla;
+  const aprendizajeAplicarOrig = window.aprendizajeAplicar;
+
+  // Bypass: mostrarTabla no debe cambiar de pestaña ni pintar
+  window.mostrarTabla = function() { /* noop */ };
+  // Bypass: aprendizajeAplicar no debe corregir (entrenamos con OCR crudo)
+  window.aprendizajeAplicar = function(m) { return { aplicado: false, correcciones: 0 }; };
+
+  try {
+    // Estado temporal para que ejecutarOCRCompleto funcione
+    window.estadoPasos = {
+      brillo: brillo, ancho: ancho, alto: alto,
+      perfilH: null, perfilV: null, ecoH: null, ecoV: null,
+      imagenProcesada: canvasP1,
+      celdas: celdas,
+      matrizTexto: [], matrizColores: [], matrizConfianza: [],
+      paso1Completado: true, paso2Completado: true,
+      paso3Completado: true, paso4Completado: true,
+      paso5Completado: true, paso6Completado: true,
+      paso8Completado: true
+    };
+
+    await ejecutarOCRCompleto(canvasP1, celdas, 'rapido');
+
+    const matriz = window.estadoPasos.matrizTexto;
+    if (!matriz || matriz.length === 0) {
+      throw new Error('OCR no devolvió matriz');
+    }
+
+    // Devolver copia limpia (todo string)
+    return matriz.map(fila => fila.map(c => (c == null ? '' : String(c))));
+
+  } finally {
+    // Restaurar TODO
+    window.estadoPasos = estadoPrevio;
+    if (mostrarTablaOrig) window.mostrarTabla = mostrarTablaOrig;
+    if (aprendizajeAplicarOrig) window.aprendizajeAplicar = aprendizajeAplicarOrig;
+  }
+}
