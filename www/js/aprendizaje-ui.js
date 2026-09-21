@@ -181,16 +181,46 @@
       renderEntrenar();
     });
 
-    if (btnExp) btnExp.addEventListener('click', () => {
+    if (btnExp) btnExp.addEventListener('click', async () => {
       const json = aprendizajeExportar();
+      const nombre = 'aprendizaje_' + Date.now() + '.json';
+
+      // 1) Intentar guardar con Filesystem (Android nativo)
+      const fs = (typeof Capacitor !== 'undefined' && Capacitor.Plugins)
+        ? Capacitor.Plugins.Filesystem : null;
+
+      if (fs) {
+        try {
+          const base64 = btoa(unescape(encodeURIComponent(json)));
+          await fs.writeFile({ path: nombre, data: base64, directory: 'DOCUMENTS' });
+          logEntrenar('📤 Guardado en Documentos: ' + nombre);
+          alert('✅ Guardado en Documentos:\n' + nombre);
+          return;
+        } catch (e1) {
+          try {
+            const res = await fs.writeFile({ path: nombre, data: btoa(unescape(encodeURIComponent(json))), directory: 'CACHE' });
+            logEntrenar('📤 Guardado en Cache: ' + res.uri);
+            alert('✅ Guardado en Cache:\n' + res.uri);
+            return;
+          } catch (e2) {
+            logEntrenar('❌ Error guardando: ' + e2.message);
+            alert('❌ Error al guardar: ' + e2.message);
+            return;
+          }
+        }
+      }
+
+      // 2) Fallback navegador
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `aprendizaje_${Date.now()}.json`;
+      a.download = nombre;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      logEntrenar('📤 Exportado JSON');
+      logEntrenar('📤 Descargado (navegador): ' + nombre);
     });
 
     if (btnImp) btnImp.addEventListener('click', () => {
