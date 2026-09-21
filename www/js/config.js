@@ -73,6 +73,7 @@ const CONFIG_DEFAULTS = {
   OCR_MARGEN_CELDA: 3,
   OCR_BINARIZAR: false,
   OCR_FILA0_ENCABEZADO: false,
+  APRENDIZAJE_ACTIVO: false,
 
   // Retina por celda
   RETINA_ACTIVO: true,
