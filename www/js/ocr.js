@@ -1,6 +1,6 @@
 // ==============================================
 // MAR Caribe v12.0 - OCR con ML Kit + Filesystem
-// v3: consistencia cruzada (mayoría corrige minorías)
+// v4: consistencia cruzada + opcion fila0 encabezado
 // ==============================================
 
 let mlkitDisponible = false;
@@ -55,8 +55,6 @@ function medirDensidadCelda(canvas, x1, y1, x2, y2) {
 // EXTRAER CELDA (con margen interno para eliminar bordes de línea)
 // ============================================
 function extraerCeldaCanvas(canvasFuente, x1, y1, x2, y2) {
-  // 🖼️ Recortar un margen hacia adentro para eliminar el borde de la línea.
-  // Evita que ML Kit lea las franjas negras como caracteres fantasma (I, l, |)
   const margen = (CONFIG.OCR_MARGEN_CELDA !== undefined) ? CONFIG.OCR_MARGEN_CELDA : 3;
   x1 = x1 + margen;
   y1 = y1 + margen;
@@ -173,8 +171,6 @@ function contrastarAdaptativo(canvas) {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const datos = imageData.data;
 
-  // 📊 Percentiles 2-98 en lugar de min/max absolutos.
-  // Un píxel outlier (borde, artefacto JPEG) no arruina el estiramiento.
   const brillos = [];
   for (let i = 0; i < datos.length; i += 4) {
     brillos.push((datos[i] + datos[i + 1] + datos[i + 2]) / 3);
@@ -209,33 +205,24 @@ function añadirPadding(canvas, margen) {
 function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
 
-  // Modo rápido: BS local + padding, sin binarizar (ML Kit lo hace mejor)
   if (modo === 'rapido') {
     canvas = bsLocalCelda(canvas);
     return añadirPadding(canvas);
   }
 
-  // 1. BS local (elimina color de fondo)
   canvas = bsLocalCelda(canvas);
 
-  // 2. Retina (emulación bioinspirada)
   if (typeof aplicarRetina === 'function') {
     canvas = aplicarRetina(canvas);
   }
 
-  // 3. Escalado inteligente
   canvas = escalarInteligente(canvas);
-
-  // 4. Contraste adaptativo (con percentiles)
   canvas = contrastarAdaptativo(canvas);
 
-  // 5. Binarización: SOLO si se pide explícitamente.
-  // ML Kit binariza internamente mejor que nosotros. Dejar apagada.
   if (CONFIG.OCR_BINARIZAR === true) {
     canvas = binarizarAdaptativo(canvas);
   }
 
-  // 6. Padding
   canvas = añadirPadding(canvas);
 
   return canvas;
@@ -301,10 +288,6 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
 
 // ============================================
 // 🧠 CONSISTENCIA CRUZADA POR COLUMNA
-// Si una palabra se lee bien en unas filas y mal en otras,
-// la versión mayoritaria corrige a las minorías.
-// Basado en que las tablas reales repiten valores (nombres,
-// programas, hoteles, etc.) y el OCR acierta más veces que falla.
 // ============================================
 function aplicarConsistenciaCruzada(matrizTexto) {
   const filas = matrizTexto.length;
@@ -312,8 +295,6 @@ function aplicarConsistenciaCruzada(matrizTexto) {
   let correcciones = 0;
 
   for (let c = 0; c < columnas; c++) {
-    // 1. Agrupar por forma normalizada (minúsculas + sin espacios)
-    //    Así "APOYO EZEQUIEL OLA 8" y "APOYOEZEQUIELOLA8" caen en el mismo grupo
     const grupos = {};
     for (let f = 0; f < filas; f++) {
       const texto = (matrizTexto[f][c] || '').trim();
@@ -323,7 +304,6 @@ function aplicarConsistenciaCruzada(matrizTexto) {
       grupos[clave].push({ fila: f, texto: texto });
     }
 
-    // 2. En cada grupo con 2+ miembros, contar variantes exactas
     Object.keys(grupos).forEach(clave => {
       const grupo = grupos[clave];
       if (grupo.length < 2) return;
@@ -333,7 +313,6 @@ function aplicarConsistenciaCruzada(matrizTexto) {
         variantes[item.texto] = (variantes[item.texto] || 0) + 1;
       });
 
-      // 3. Encontrar la variante ganadora
       let mejorTexto = null;
       let mejorCount = 0;
       Object.keys(variantes).forEach(v => {
@@ -343,8 +322,6 @@ function aplicarConsistenciaCruzada(matrizTexto) {
         }
       });
 
-      // 4. Solo corregir si hay ganadora clara (>=2 votos)
-      //    y hay más de una variante distinta
       const numVariantes = Object.keys(variantes).length;
       if (mejorCount >= 2 && numVariantes > 1) {
         grupo.forEach(item => {
@@ -424,7 +401,6 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   window.estadoPasos.matrizConfianza = matrizConfianza;
   window.estadoPasos.matrizColores = extraerColoresCelda(canvasFuente, celdas);
 
-  // 🧠 Consistencia cruzada: la mayoría corrige a las minorías
   const correcciones = aplicarConsistenciaCruzada(matrizTexto);
   if (correcciones > 0) {
     log('🧠 Consistencia cruzada: ' + correcciones + ' celdas corregidas', 'exito');
@@ -466,11 +442,17 @@ function extraerColoresCelda(canvasFuente, celdas) {
   return colores;
 }
 
+// ============================================
+// MOSTRAR TABLA
+// v4: respeta OCR_FILA0_ENCABEZADO
+// ============================================
 function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   const wrapper = document.getElementById('tablaWrapper');
   if (!wrapper) return;
   const filas = matrizTexto.length;
   const columnas = matrizTexto[0].length;
+  const fila0EsEncabezado = (CONFIG.OCR_FILA0_ENCABEZADO === true);
+
   let html = '<table class="tabla-resultado"><tbody>';
   for (let f = 0; f < filas; f++) {
     html += '<tr>';
@@ -478,12 +460,13 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
       const idx = f * columnas + c;
       const color = matrizColores[idx] || { r: 255, g: 255, b: 255 };
       const conf = matrizConfianza ? matrizConfianza[f][c] : 100;
-      const tag = (f === 0) ? 'th' : 'td';
+      const esHeader = fila0EsEncabezado && (f === 0);
+      const tag = esHeader ? 'th' : 'td';
       const colorHex = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
-      const estilo = f === 0 ? '' : 'background:' + colorHex + ';';
-      const estiloConf = conf < 75 && f > 0 ? 'box-shadow:inset 0 0 0 2px ' + (conf < 50 ? '#ef4444' : '#f59e0b') + ';' : '';
+      const estilo = esHeader ? '' : 'background:' + colorHex + ';';
+      const estiloConf = conf < 75 && !esHeader ? 'box-shadow:inset 0 0 0 2px ' + (conf < 50 ? '#ef4444' : '#f59e0b') + ';' : '';
       const texto = (matrizTexto[f][c] || '').replace(/</g, '&lt;');
-      html += '<' + tag + ' style="' + estilo + estiloConf + '" contenteditable="' + (f > 0) + '">' + texto + '</' + tag + '>';
+      html += '<' + tag + ' style="' + estilo + estiloConf + '" contenteditable="' + (!esHeader) + '">' + texto + '</' + tag + '>';
     }
     html += '</tr>';
   }
@@ -495,4 +478,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado (ML Kit + Filesystem) v3 con consistencia cruzada');
+console.log('✅ OCR cargado v4 (consistencia + fila0 configurable)');

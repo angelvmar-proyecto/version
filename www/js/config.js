@@ -1,6 +1,7 @@
 // ==============================================
 // MAR Caribe v12.0 - CONFIGURACIÓN GLOBAL
-// Valores calibrados sobre tabla densa real (20/09/2026)
+// Valores calibrados sobre tabla densa real
+// Incluye: OCR_FILA0_ENCABEZADO y LIDAR_MARGEN_BORDE
 // ==============================================
 
 const CONFIG_DEFAULTS = {
@@ -41,6 +42,7 @@ const CONFIG_DEFAULTS = {
   LIDAR_ECO_ALTO: 60,
   LIDAR_ECO_BAJO: 30,
   LIDAR_AGRUPAR_DIST: 4,
+  LIDAR_MARGEN_BORDE: 8,
 
   // Visualización
   ANCHO_LINEA: 2,
@@ -70,6 +72,7 @@ const CONFIG_DEFAULTS = {
   OCR_MARGEN_PADDING: 10,
   OCR_MARGEN_CELDA: 3,
   OCR_BINARIZAR: false,
+  OCR_FILA0_ENCABEZADO: false,
 
   // Retina por celda
   RETINA_ACTIVO: true,
