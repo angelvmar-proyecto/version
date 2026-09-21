@@ -1,6 +1,7 @@
 // ==============================================
 // MAR Caribe v12.0 - LIDAR
 // Votación entre 3 algoritmos + análisis de eco
+// + distancia adaptativa al tamaño de la imagen
 // ==============================================
 
 // ============================================
@@ -15,10 +16,8 @@ function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup) {
 
   if (todos.length === 0) return [];
 
-  // Ordenar por posición
   todos.sort((a, b) => a.pos - b.pos);
 
-  // Agrupar líneas cercanas
   const grupos = [];
   let grupo = [todos[0]];
 
@@ -32,7 +31,6 @@ function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup) {
   }
   grupos.push(grupo);
 
-  // Contar votos por grupo (algoritmos únicos)
   const confirmados = [];
   grupos.forEach(g => {
     const algs = new Set(g.map(x => x.alg));
@@ -51,37 +49,30 @@ function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup) {
 // CLASIFICAR LÍNEA SEGÚN VOTOS Y ECO
 // ============================================
 function clasificarLinea(votos, eco) {
-  // 3 votos + eco alto → LÍNEA REAL segura
   if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_ALTO) {
     return { aceptar: true, razon: '3 votos + eco alto' };
   }
 
-  // 2 votos + eco alto → LÍNEA REAL probable
   if (votos >= CONFIG.LIDAR_VOTOS_MINIMOS && eco >= CONFIG.LIDAR_ECO_ALTO) {
     return { aceptar: true, razon: '2 votos + eco alto' };
   }
 
-  // 3 votos + eco bajo → DOBLE RENGLÓN (descartar)
   if (votos >= 3 && eco < CONFIG.LIDAR_ECO_BAJO) {
     return { aceptar: false, razon: '3 votos pero eco bajo (doble renglón)' };
   }
 
-  // 3 votos + eco medio → LÍNEA REAL probable
   if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_BAJO) {
     return { aceptar: true, razon: '3 votos + eco medio' };
   }
 
-  // 2 votos + eco medio → LÍNEA PROBABLE
   if (votos >= 2 && eco >= CONFIG.LIDAR_ECO_BAJO) {
     return { aceptar: true, razon: '2 votos + eco medio' };
   }
 
-  // 1 voto → DESCARTAR
   if (votos < CONFIG.LIDAR_VOTOS_MINIMOS) {
     return { aceptar: false, razon: votos + ' voto(s)' };
   }
 
-  // 2 votos + eco bajo → DESCARTAR
   if (votos >= 2 && eco < CONFIG.LIDAR_ECO_BAJO) {
     return { aceptar: false, razon: '2 votos pero eco bajo' };
   }
@@ -95,10 +86,26 @@ function clasificarLinea(votos, eco) {
 function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto) {
   console.log('📐 LIDAR: votación + eco');
 
+  // 📊 Diagnóstico de entrada
+  console.log('   📥 ENTRADA V: optica=' + opticaV.length +
+              ', eco=' + ecoV.length +
+              ', a3=' + a3V.length +
+              ' (total=' + (opticaV.length + ecoV.length + a3V.length) + ')');
+  console.log('   📥 ENTRADA H: optica=' + opticaH.length +
+              ', eco=' + ecoH.length +
+              ', a3=' + a3H.length +
+              ' (total=' + (opticaH.length + ecoH.length + a3H.length) + ')');
+
+  // 🎯 Distancia adaptativa: al menos el config, o ~0.3% de la dimensión
+  const distH = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
+  const distV = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
+  console.log('   📏 distAgrup: H=' + distH + ', V=' + distV +
+              ' (img ' + ancho + '×' + alto + ')');
+
   // ==========================================
   // VOTACIÓN HORIZONTAL
   // ==========================================
-  const votosH = votarLineas(opticaH, ecoH, a3H, CONFIG.LIDAR_AGRUPAR_DIST);
+  const votosH = votarLineas(opticaH, ecoH, a3H, distH);
 
   const analisisH = votosH.map(v => {
     const eco = medirEcoLineaH(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
@@ -116,7 +123,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   // ==========================================
   // VOTACIÓN VERTICAL
   // ==========================================
-  const votosV = votarLineas(opticaV, ecoV, a3V, CONFIG.LIDAR_AGRUPAR_DIST);
+  const votosV = votarLineas(opticaV, ecoV, a3V, distV);
 
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
@@ -147,8 +154,8 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   const descartadasH = analisisH.filter(a => !a.aceptar);
   const descartadasV = analisisV.filter(a => !a.aceptar);
 
-  console.log(`   ✅ Aceptadas: ${lineasHFinal.length}H, ${lineasVFinal.length}V`);
-  console.log(`   ❌ Descartadas: ${descartadasH.length}H, ${descartadasV.length}V`);
+  console.log('   ✅ Aceptadas: ' + lineasHFinal.length + 'H, ' + lineasVFinal.length + 'V');
+  console.log('   ❌ Descartadas: ' + descartadasH.length + 'H, ' + descartadasV.length + 'V');
 
   return {
     lineasH: lineasHFinal,

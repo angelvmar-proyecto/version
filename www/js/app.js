@@ -203,7 +203,8 @@ async function analizarTodo() {
     actualizarProgreso(15);
 
     log('🎨 Paso 2: Brillo', 'etapa');
-    const brillo = calcularBrillo(preproc.imageData);
+    const imageDataPostRetina = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
+    const brillo = calcularBrillo(imageDataPostRetina);
     window.estadoPasos.brillo = brillo;
     window.estadoPasos.ancho = canvasP1.width;
     window.estadoPasos.alto = canvasP1.height;

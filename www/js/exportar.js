@@ -173,3 +173,96 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ Exportar análisis cargado');
+
+// ============================================
+// EXPORTAR TABLA: CSV / Excel / Copiar
+// ============================================
+function _obtenerTablaHTML() {
+  return document.querySelector('#tablaWrapper table.tabla-resultado');
+}
+
+function _tablaAArray() {
+  const tabla = _obtenerTablaHTML();
+  if (!tabla) return null;
+  const filas = [];
+  for (const tr of tabla.rows) {
+    const fila = [];
+    for (const cell of tr.cells) {
+      fila.push(cell.innerText.replace(/\s+/g, ' ').trim());
+    }
+    filas.push(fila);
+  }
+  return filas;
+}
+
+async function _guardarArchivo(nombre, contenido, mime) {
+  const fs = (typeof Capacitor !== 'undefined' && Capacitor.Plugins)
+    ? Capacitor.Plugins.Filesystem : null;
+
+  if (fs) {
+    const base64 = btoa(unescape(encodeURIComponent(contenido)));
+    try {
+      await fs.writeFile({ path: nombre, data: base64, directory: 'DOCUMENTS' });
+      alert('✅ Guardado en Documentos:\n' + nombre);
+      return;
+    } catch (e) {
+      try {
+        const res = await fs.writeFile({ path: nombre, data: base64, directory: 'CACHE' });
+        alert('✅ Guardado en Cache:\n' + res.uri);
+        return;
+      } catch (e2) {
+        alert('❌ Error al guardar: ' + e2.message);
+        return;
+      }
+    }
+  } else {
+    const blob = new Blob([contenido], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function exportarTablaCSV() {
+  const datos = _tablaAArray();
+  if (!datos) { alert('⚠️ No hay tabla para exportar'); return; }
+  const csv = '\uFEFF' + datos.map(fila =>
+    fila.map(c => '"' + c.replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+  await _guardarArchivo('tabla_' + Date.now() + '.csv', csv, 'text/csv;charset=utf-8');
+}
+
+async function exportarTablaExcel() {
+  const tabla = _obtenerTablaHTML();
+  if (!tabla) { alert('⚠️ No hay tabla para exportar'); return; }
+  const html = '<html><head><meta charset="utf-8"></head><body>'
+    + tabla.outerHTML + '</body></html>';
+  await _guardarArchivo('tabla_' + Date.now() + '.xls', html, 'application/vnd.ms-excel');
+}
+
+async function copiarTabla() {
+  const datos = _tablaAArray();
+  if (!datos) { alert('⚠️ No hay tabla'); return; }
+  const tsv = datos.map(fila => fila.join('\t')).join('\n');
+  try {
+    await navigator.clipboard.writeText(tsv);
+    alert('✅ Tabla copiada al portapapeles (pégala en Excel/Sheets)');
+  } catch (e) {
+    alert('❌ No se pudo copiar: ' + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    const b1 = document.getElementById('btnCopiar');
+    const b2 = document.getElementById('btnCSV');
+    const b3 = document.getElementById('btnExcel');
+    if (b1) b1.onclick = copiarTabla;
+    if (b2) b2.onclick = exportarTablaCSV;
+    if (b3) b3.onclick = exportarTablaExcel;
+    console.log('✅ Handlers de exportación registrados');
+  }, 700);
+});

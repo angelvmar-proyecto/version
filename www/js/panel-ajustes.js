@@ -3,7 +3,6 @@
 // Sliders + inputs numéricos + localStorage
 // ==============================================
 
-// Definición de parámetros ajustables
 const PARAMETROS_AJUSTABLES = [
   // Óptica
   {
@@ -18,8 +17,8 @@ const PARAMETROS_AJUSTABLES = [
     id: 'OPTICA_DISTANCIA_MIN_V',
     grupo: '🟡 ÓPTICA',
     nombre: 'Distancia V (px)',
-    min: 20, max: 80, paso: 1,
-    valorAjustado: 50,
+    min: 5, max: 80, paso: 1,
+    valorAjustado: 10,
     formato: function(v) { return v; }
   },
   // A3
@@ -99,6 +98,14 @@ const PARAMETROS_AJUSTABLES = [
   },
   // LIDAR
   {
+    id: 'LIDAR_AGRUPAR_DIST',
+    grupo: '📐 LIDAR',
+    nombre: 'Agrupar dist (px)',
+    min: 2, max: 30, paso: 1,
+    valorAjustado: 8,
+    formato: function(v) { return v; }
+  },
+  {
     id: 'LIDAR_ECO_ALTO',
     grupo: '📐 LIDAR',
     nombre: 'Eco alto',
@@ -144,14 +151,12 @@ function renderizarPanelAjustes() {
 
   let html = '';
 
-  // Agrupar por grupo
   const grupos = {};
   PARAMETROS_AJUSTABLES.forEach(function(p) {
     if (!grupos[p.grupo]) grupos[p.grupo] = [];
     grupos[p.grupo].push(p);
   });
 
-  // Generar HTML por grupo
   Object.keys(grupos).forEach(function(nombreGrupo) {
     html += '<div class="ajuste-grupo">';
     html += '<div class="ajuste-grupo-titulo">' + nombreGrupo + '</div>';
@@ -247,7 +252,6 @@ function aplicarValoresSugeridos() {
 // ============================================
 async function copiarLog() {
   try {
-    // Recopilar parámetros actuales
     let texto = '═══════════════════════════════════\n';
     texto += 'PARÁMETROS ACTUALES:\n';
     PARAMETROS_AJUSTABLES.forEach(function(p) {
@@ -259,7 +263,6 @@ async function copiarLog() {
     texto += 'LOG COMPLETO:\n';
     texto += '═══════════════════════════════════\n';
 
-    // Recopilar log
     const logsEl = document.getElementById('logs');
     if (logsEl) {
       texto += logsEl.innerText + '\n';
@@ -269,11 +272,9 @@ async function copiarLog() {
     texto += 'FIN DEL LOG · ' + new Date().toLocaleString() + '\n';
     texto += '═══════════════════════════════════\n';
 
-    // Copiar al portapapeles
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(texto);
     } else {
-      // Fallback para navegadores viejos
       const textarea = document.createElement('textarea');
       textarea.value = texto;
       textarea.style.position = 'fixed';
@@ -284,7 +285,6 @@ async function copiarLog() {
       document.body.removeChild(textarea);
     }
 
-    // Feedback visual
     const btn = event && event.target;
     if (btn) {
       const textoOriginal = btn.textContent;
@@ -304,36 +304,23 @@ async function copiarLog() {
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(function() {
-    // Solo añadir handlers si existen los botones
     const btnAbrir = document.getElementById('btnAbrirAjustes');
-    if (btnAbrir) {
-      btnAbrir.onclick = togglePanelAjustes;
-    }
+    if (btnAbrir) btnAbrir.onclick = togglePanelAjustes;
 
     const btnCerrar = document.getElementById('btnCerrarAjustes');
-    if (btnCerrar) {
-      btnCerrar.onclick = cerrarPanelAjustes;
-    }
+    if (btnCerrar) btnCerrar.onclick = cerrarPanelAjustes;
 
     const btnGuardar = document.getElementById('btnGuardarAjustes');
-    if (btnGuardar) {
-      btnGuardar.onclick = guardarAjustes;
-    }
+    if (btnGuardar) btnGuardar.onclick = guardarAjustes;
 
     const btnReset = document.getElementById('btnResetAjustes');
-    if (btnReset) {
-      btnReset.onclick = resetAjustes;
-    }
+    if (btnReset) btnReset.onclick = resetAjustes;
 
     const btnSugeridos = document.getElementById('btnValoresSugeridos');
-    if (btnSugeridos) {
-      btnSugeridos.onclick = aplicarValoresSugeridos;
-    }
+    if (btnSugeridos) btnSugeridos.onclick = aplicarValoresSugeridos;
 
     const btnCopiarLog = document.getElementById('btnCopiarLog');
-    if (btnCopiarLog) {
-      btnCopiarLog.onclick = copiarLog;
-    }
+    if (btnCopiarLog) btnCopiarLog.onclick = copiarLog;
   }, 500);
 });
 

@@ -171,3 +171,43 @@ function aplicarRetina(canvasOriginal) {
 }
 
 console.log('✅ Retina (emulación bioinspirada) cargada');
+
+// ============================================
+// RETINA GLOBAL (antes de detección de líneas)
+// Unsharp masking usando blur nativo del canvas (rápido en Android)
+// ============================================
+function aplicarRetinaGlobal(canvas) {
+  const fuerza = (CONFIG.RETINA_GLOBAL_FUERZA !== undefined)
+    ? CONFIG.RETINA_GLOBAL_FUERZA : 1.0;
+  const radio = (CONFIG.RETINA_GLOBAL_RADIO !== undefined)
+    ? CONFIG.RETINA_GLOBAL_RADIO : 25;
+
+  const w = canvas.width, h = canvas.height;
+  if (w === 0 || h === 0) return canvas;
+
+  // 1. Referencia "promedio local" con blur nativo (usa GPU en Android)
+  const blur = document.createElement('canvas');
+  blur.width = w;
+  blur.height = h;
+  const ctxB = blur.getContext('2d');
+  ctxB.filter = 'blur(' + radio + 'px)';
+  ctxB.drawImage(canvas, 0, 0);
+  ctxB.filter = 'none';
+
+  // 2. Unsharp masking: salida = original + (original - blur) * fuerza
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const orig = ctx.getImageData(0, 0, w, h);
+  const blurd = ctxB.getImageData(0, 0, w, h);
+  const dO = orig.data, dB = blurd.data;
+
+  for (let i = 0; i < dO.length; i += 4) {
+    const g  = (dO[i]     + dO[i + 1]     + dO[i + 2])     / 3;
+    const gb = (dB[i]     + dB[i + 1]     + dB[i + 2])     / 3;
+    const ajuste = (g - gb) * fuerza;
+    dO[i]     = clamp(dO[i]     + ajuste, 0, 255);
+    dO[i + 1] = clamp(dO[i + 1] + ajuste, 0, 255);
+    dO[i + 2] = clamp(dO[i + 2] + ajuste, 0, 255);
+  }
+  ctx.putImageData(orig, 0, 0);
+  return canvas;
+}
