@@ -68,6 +68,8 @@ const CONFIG_DEFAULTS = {
   OCR_VOTING_ACTIVO: true,
   OCR_VOTING_CONFIANZA: 75,
   OCR_MARGEN_PADDING: 10,
+  OCR_MARGEN_CELDA: 3,
+  OCR_BINARIZAR: false,
 
   // Retina por celda
   RETINA_ACTIVO: true,

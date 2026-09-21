@@ -1,6 +1,6 @@
 // ==============================================
 // MAR Caribe v12.0 - OCR con ML Kit + Filesystem
-// Guarda cada celda como archivo temporal y lo pasa a ML Kit
+// v2: mejor visión (margen celda, contraste percentil, binarizado off)
 // ==============================================
 
 let mlkitDisponible = false;
@@ -51,9 +51,20 @@ function medirDensidadCelda(canvas, x1, y1, x2, y2) {
   return conContenido / total;
 }
 
+// ============================================
+// EXTRAER CELDA (con margen interno para eliminar bordes de línea)
+// ============================================
 function extraerCeldaCanvas(canvasFuente, x1, y1, x2, y2) {
-  const ancho = x2 - x1;
-  const alto = y2 - y1;
+  // 🖼️ Recortar un margen hacia adentro para eliminar el borde de la línea.
+  // Evita que ML Kit lea las franjas negras como caracteres fantasma (I, l, |)
+  const margen = (CONFIG.OCR_MARGEN_CELDA !== undefined) ? CONFIG.OCR_MARGEN_CELDA : 3;
+  x1 = x1 + margen;
+  y1 = y1 + margen;
+  x2 = x2 - margen;
+  y2 = y2 - margen;
+
+  const ancho = Math.max(1, x2 - x1);
+  const alto = Math.max(1, y2 - y1);
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
   canvas.height = alto;
@@ -79,7 +90,7 @@ function bsLocalCelda(canvas) {
   const fondoG = top25.reduce((s, m) => s + m.g, 0) / top25.length;
   const fondoB = top25.reduce((s, m) => s + m.b, 0) / top25.length;
   for (let i = 0; i < datos.length; i += 4) {
-    datos[i] = clamp((datos[i] - fondoR) * 4 + 255, 0, 255);
+    datos[i]     = clamp((datos[i]     - fondoR) * 4 + 255, 0, 255);
     datos[i + 1] = clamp((datos[i + 1] - fondoG) * 4 + 255, 0, 255);
     datos[i + 2] = clamp((datos[i + 2] - fondoB) * 4 + 255, 0, 255);
   }
@@ -161,16 +172,21 @@ function contrastarAdaptativo(canvas) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const datos = imageData.data;
-  let min = 255, max = 0;
+
+  // 📊 Percentiles 2-98 en lugar de min/max absolutos.
+  // Un píxel outlier (borde, artefacto JPEG) no arruina el estiramiento.
+  const brillos = [];
   for (let i = 0; i < datos.length; i += 4) {
-    const b = (datos[i] + datos[i + 1] + datos[i + 2]) / 3;
-    if (b < min) min = b;
-    if (b > max) max = b;
+    brillos.push((datos[i] + datos[i + 1] + datos[i + 2]) / 3);
   }
+  brillos.sort((a, b) => a - b);
+  const min = brillos[Math.floor(brillos.length * 0.02)];
+  const max = brillos[Math.floor(brillos.length * 0.98)];
+
   if (max - min < 10) return canvas;
   const factor = 255 / (max - min);
   for (let i = 0; i < datos.length; i += 4) {
-    datos[i] = clamp((datos[i] - min) * factor, 0, 255);
+    datos[i]     = clamp((datos[i]     - min) * factor, 0, 255);
     datos[i + 1] = clamp((datos[i + 1] - min) * factor, 0, 255);
     datos[i + 2] = clamp((datos[i + 2] - min) * factor, 0, 255);
   }
@@ -193,14 +209,16 @@ function añadirPadding(canvas, margen) {
 function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
 
+  // Modo rápido: BS local + padding, sin binarizar (ML Kit lo hace mejor)
   if (modo === 'rapido') {
-    return añadirPadding(binarizarAdaptativo(canvas));
+    canvas = bsLocalCelda(canvas);
+    return añadirPadding(canvas);
   }
 
   // 1. BS local (elimina color de fondo)
   canvas = bsLocalCelda(canvas);
 
-  // 2. RETINA (emulación bioinspirada - opcional)
+  // 2. Retina (emulación bioinspirada)
   if (typeof aplicarRetina === 'function') {
     canvas = aplicarRetina(canvas);
   }
@@ -208,11 +226,16 @@ function preprocesarCelda(canvasOriginal, modo) {
   // 3. Escalado inteligente
   canvas = escalarInteligente(canvas);
 
-  // 4. Contraste y binarización
+  // 4. Contraste adaptativo (con percentiles)
   canvas = contrastarAdaptativo(canvas);
-  canvas = binarizarAdaptativo(canvas);
 
-  // 5. Padding
+  // 5. Binarización: SOLO si se pide explícitamente.
+  // ML Kit binariza internamente mejor que nosotros. Dejar apagada.
+  if (CONFIG.OCR_BINARIZAR === true) {
+    canvas = binarizarAdaptativo(canvas);
+  }
+
+  // 6. Padding
   canvas = añadirPadding(canvas);
 
   return canvas;
@@ -240,11 +263,9 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
   if (!plugin || !fs) return { texto: '', confianza: 0 };
 
   try {
-    // 1. Convertir canvas a base64 (sin el prefijo data:...)
     const dataURL = canvasProcesado.toDataURL('image/png');
     const base64 = dataURL.replace(/^data:image\/png;base64,/, '');
 
-    // 2. Guardar como archivo temporal
     const nombreArchivo = 'celda_' + indice + '_' + Date.now() + '.png';
     const escritura = await fs.writeFile({
       path: nombreArchivo,
@@ -252,17 +273,14 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
       directory: 'CACHE'
     });
 
-    // 3. Obtener la URI del archivo
     const uri = escritura.uri;
     console.log('📁 Archivo guardado:', uri);
 
-    // 4. Pasar a ML Kit
     const resultado = await plugin.processImage({
       path: uri,
       language: 'es'
     });
 
-    // 5. Borrar archivo temporal (opcional, para no llenar el cache)
     try {
       await fs.deleteFile({
         path: nombreArchivo,
@@ -408,4 +426,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado (ML Kit + Filesystem)');
+console.log('✅ OCR cargado (ML Kit + Filesystem) v2');
