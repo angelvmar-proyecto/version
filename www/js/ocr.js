@@ -1,6 +1,6 @@
 // ==============================================
 // MAR Caribe v12.0 - OCR con ML Kit + Filesystem
-// v2: mejor visión (margen celda, contraste percentil, binarizado off)
+// v3: consistencia cruzada (mayoría corrige minorías)
 // ==============================================
 
 let mlkitDisponible = false;
@@ -300,6 +300,67 @@ async function leerCeldaMLKit(canvasProcesado, indice) {
 }
 
 // ============================================
+// 🧠 CONSISTENCIA CRUZADA POR COLUMNA
+// Si una palabra se lee bien en unas filas y mal en otras,
+// la versión mayoritaria corrige a las minorías.
+// Basado en que las tablas reales repiten valores (nombres,
+// programas, hoteles, etc.) y el OCR acierta más veces que falla.
+// ============================================
+function aplicarConsistenciaCruzada(matrizTexto) {
+  const filas = matrizTexto.length;
+  const columnas = matrizTexto[0].length;
+  let correcciones = 0;
+
+  for (let c = 0; c < columnas; c++) {
+    // 1. Agrupar por forma normalizada (minúsculas + sin espacios)
+    //    Así "APOYO EZEQUIEL OLA 8" y "APOYOEZEQUIELOLA8" caen en el mismo grupo
+    const grupos = {};
+    for (let f = 0; f < filas; f++) {
+      const texto = (matrizTexto[f][c] || '').trim();
+      if (!texto) continue;
+      const clave = texto.toLowerCase().replace(/\s+/g, '');
+      if (!grupos[clave]) grupos[clave] = [];
+      grupos[clave].push({ fila: f, texto: texto });
+    }
+
+    // 2. En cada grupo con 2+ miembros, contar variantes exactas
+    Object.keys(grupos).forEach(clave => {
+      const grupo = grupos[clave];
+      if (grupo.length < 2) return;
+
+      const variantes = {};
+      grupo.forEach(item => {
+        variantes[item.texto] = (variantes[item.texto] || 0) + 1;
+      });
+
+      // 3. Encontrar la variante ganadora
+      let mejorTexto = null;
+      let mejorCount = 0;
+      Object.keys(variantes).forEach(v => {
+        if (variantes[v] > mejorCount) {
+          mejorCount = variantes[v];
+          mejorTexto = v;
+        }
+      });
+
+      // 4. Solo corregir si hay ganadora clara (>=2 votos)
+      //    y hay más de una variante distinta
+      const numVariantes = Object.keys(variantes).length;
+      if (mejorCount >= 2 && numVariantes > 1) {
+        grupo.forEach(item => {
+          if (item.texto !== mejorTexto) {
+            matrizTexto[item.fila][c] = mejorTexto;
+            correcciones++;
+          }
+        });
+      }
+    });
+  }
+
+  return correcciones;
+}
+
+// ============================================
 // OCR COMPLETO
 // ============================================
 async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
@@ -362,6 +423,14 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   window.estadoPasos.matrizTexto = matrizTexto;
   window.estadoPasos.matrizConfianza = matrizConfianza;
   window.estadoPasos.matrizColores = extraerColoresCelda(canvasFuente, celdas);
+
+  // 🧠 Consistencia cruzada: la mayoría corrige a las minorías
+  const correcciones = aplicarConsistenciaCruzada(matrizTexto);
+  if (correcciones > 0) {
+    log('🧠 Consistencia cruzada: ' + correcciones + ' celdas corregidas', 'exito');
+  } else {
+    log('🧠 Consistencia cruzada: sin correcciones necesarias', 'info');
+  }
 
   mostrarTabla(matrizTexto, window.estadoPasos.matrizColores, matrizConfianza);
 
@@ -426,4 +495,4 @@ function mostrarTabla(matrizTexto, matrizColores, matrizConfianza) {
   log('📊 Tabla mostrada: ' + filas + '×' + columnas, 'exito');
 }
 
-console.log('✅ OCR cargado (ML Kit + Filesystem) v2');
+console.log('✅ OCR cargado (ML Kit + Filesystem) v3 con consistencia cruzada');
