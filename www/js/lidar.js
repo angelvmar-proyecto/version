@@ -2,6 +2,7 @@
 // MAR Caribe v12.0 - LIDAR
 // Votación entre 3 algoritmos + análisis de eco
 // + distancia adaptativa al tamaño de la imagen
+// + auto-detección de bordes de tabla
 // ==============================================
 
 // ============================================
@@ -153,6 +154,37 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   const descartadasH = analisisH.filter(a => !a.aceptar);
   const descartadasV = analisisV.filter(a => !a.aceptar);
+
+  // ==========================================
+  // 🔲 AUTO-BORDES DE TABLA
+  // Si el borde de la tabla está pegado al borde de la imagen
+  // y no se detectó como línea, lo añadimos manualmente.
+  // Esto recupera la primera/última columna cuando se fusionaba
+  // con el borde de la foto.
+  // ==========================================
+  const UMBRAL_BORDE_PX = 40;
+
+  if (lineasVFinal.length > 0) {
+    if (lineasVFinal[0] > UMBRAL_BORDE_PX) {
+      lineasVFinal.unshift(0);
+      console.log('   🔲 Borde izquierdo agregado en x=0');
+    }
+    if (lineasVFinal[lineasVFinal.length - 1] < ancho - UMBRAL_BORDE_PX) {
+      lineasVFinal.push(ancho - 1);
+      console.log('   🔲 Borde derecho agregado en x=' + (ancho - 1));
+    }
+  }
+
+  if (lineasHFinal.length > 0) {
+    if (lineasHFinal[0] > UMBRAL_BORDE_PX) {
+      lineasHFinal.unshift(0);
+      console.log('   🔲 Borde superior agregado en y=0');
+    }
+    if (lineasHFinal[lineasHFinal.length - 1] < alto - UMBRAL_BORDE_PX) {
+      lineasHFinal.push(alto - 1);
+      console.log('   🔲 Borde inferior agregado en y=' + (alto - 1));
+    }
+  }
 
   console.log('   ✅ Aceptadas: ' + lineasHFinal.length + 'H, ' + lineasVFinal.length + 'V');
   console.log('   ❌ Descartadas: ' + descartadasH.length + 'H, ' + descartadasV.length + 'V');
