@@ -217,6 +217,15 @@ function detectarSustituciones(diferencias) {
     if (!ocr || !excel) return;
     if (ocr.length !== excel.length) return;
 
+    // 🔒 FILTRO Levenshtein: solo aceptar si son realmente similares
+    const dist = levenshtein(ocr.toLowerCase(), excel.toLowerCase());
+    const umbralDist = ocr.length <= 10 ? 2 : 3;
+    if (dist > umbralDist) return;
+
+    // 🔒 FILTRO ratio: si cambian >40% de chars, no es el mismo texto
+    const ratioCambio = dist / Math.max(ocr.length, 1);
+    if (ratioCambio > 0.4) return;
+
     for (let i = 0; i < ocr.length; i++) {
       const a = ocr[i];
       const b = excel[i];
@@ -345,6 +354,19 @@ function fusionarPatrones(nuevos) {
 function aprendizajeAnalizarPar(matrizOCR, matrizExcel, nombre) {
   if (!matrizOCR || !matrizExcel) {
     return { ok: false, error: 'Falta una de las matrices' };
+  }
+
+  // 🔍 DIAGNÓSTICO DE ALINEACIÓN
+  if (typeof log === 'function') {
+    log('🔍 [DIAG] OCR: ' + matrizOCR.length + ' filas × ' + (matrizOCR[0] ? matrizOCR[0].length : 0) + ' cols', 'info');
+    log('🔍 [DIAG] Excel: ' + matrizExcel.length + ' filas × ' + (matrizExcel[0] ? matrizExcel[0].length : 0) + ' cols', 'info');
+    const nf = Math.min(2, matrizOCR.length, matrizExcel.length);
+    for (let i = 0; i < nf; i++) {
+      const o = (matrizOCR[i] || []).slice(0, 6).join(' | ');
+      const e = (matrizExcel[i] || []).slice(0, 6).join(' | ');
+      log('🔍 [DIAG] Fila ' + i + ' OCR: ' + o, 'info');
+      log('🔍 [DIAG] Fila ' + i + ' XLS: ' + e, 'info');
+    }
   }
 
   const comparacion = compararMatrices(matrizOCR, matrizExcel);

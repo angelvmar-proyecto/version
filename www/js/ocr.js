@@ -371,30 +371,25 @@ function aplicarConsistenciaCruzada(matrizTexto) {
 // ============================================
 // OCR COMPLETO
 // ============================================
-async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
-  log('═══════════════════════════════════', 'etapa');
-  log('📄 OCR MODO: ' + modo.toUpperCase() + ' (ML Kit)', 'etapa');
-  log('═══════════════════════════════════', 'etapa');
-
+// ============================================
+// OCR MATRIZ CRUDA (sin efectos colaterales)
+// Usada internamente por ejecutarOCRCompleto y por el entrenamiento
+// ============================================
+async function ocrMatrizCruda(canvasFuente, celdas, modo) {
   const total = celdas.length;
-  if (total === 0) { log('⚠️ Sin celdas', 'alerta'); return; }
+  if (total === 0) throw new Error('Sin celdas');
 
   const filas = Math.max(...celdas.map(c => c.fila)) + 1;
   const columnas = Math.max(...celdas.map(c => c.col)) + 1;
-  log('📊 Tabla: ' + filas + '×' + columnas + ' (' + total + ' celdas)', 'info');
 
   const ok = await inicializarMLKit();
-  if (!ok) {
-    log('❌ ML Kit no disponible', 'error');
-    return;
-  }
+  if (!ok) throw new Error('ML Kit no disponible');
 
   const matrizTexto = Array(filas).fill(null).map(() => Array(columnas).fill(''));
   const matrizConfianza = Array(filas).fill(null).map(() => Array(columnas).fill(0));
 
   let procesadas = 0;
   let indiceGlobal = 0;
-  const inicio = Date.now();
 
   for (let f = 0; f < filas; f++) {
     for (let c = 0; c < columnas; c++) {
@@ -406,7 +401,9 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
       if (procesadas % 10 === 0 || procesadas === total || procesadas === 1) {
         const pct = Math.round((procesadas / total) * 100);
         actualizarProgreso(pct);
-        log('   ⏳ ' + procesadas + '/' + total + ' (' + pct + '%)', 'info');
+        if (!window._modoEntrenamiento) {
+          log('   ⏳ ' + procesadas + '/' + total + ' (' + pct + '%)', 'info');
+        }
       }
 
       const densidad = medirDensidadCelda(canvasFuente, celda.x1, celda.y1, celda.x2, celda.y2);
@@ -425,6 +422,33 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
     }
   }
 
+  return { matrizTexto, matrizConfianza };
+}
+
+async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
+  log('═══════════════════════════════════', 'etapa');
+  log('📄 OCR MODO: ' + modo.toUpperCase() + ' (ML Kit)', 'etapa');
+  log('═══════════════════════════════════', 'etapa');
+
+  const total = celdas.length;
+  if (total === 0) { log('⚠️ Sin celdas', 'alerta'); return; }
+
+  const filas = Math.max(...celdas.map(c => c.fila)) + 1;
+  const columnas = Math.max(...celdas.map(c => c.col)) + 1;
+  log('📊 Tabla: ' + filas + '×' + columnas + ' (' + total + ' celdas)', 'info');
+
+  const inicio = Date.now();
+
+  let matrizTexto, matrizConfianza;
+  try {
+    const r = await ocrMatrizCruda(canvasFuente, celdas, modo);
+    matrizTexto = r.matrizTexto;
+    matrizConfianza = r.matrizConfianza;
+  } catch (e) {
+    log('❌ ' + e.message, 'error');
+    return;
+  }
+
   const duracion = ((Date.now() - inicio) / 1000).toFixed(1);
   log('✅ OCR COMPLETO en ' + duracion + 's', 'exito');
 
@@ -432,8 +456,8 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
   window.estadoPasos.matrizConfianza = matrizConfianza;
   window.estadoPasos.matrizColores = extraerColoresCelda(canvasFuente, celdas);
 
-  // 🎓 Aplicar reglas aprendidas (si activo)
-  if (typeof aprendizajeAplicar === 'function' && CONFIG.APRENDIZAJE_ACTIVO) {
+  // 🎓 Aplicar reglas aprendidas (si activo y NO en modo entrenamiento)
+  if (typeof aprendizajeAplicar === 'function' && CONFIG.APRENDIZAJE_ACTIVO && !window._modoEntrenamiento) {
     const apr = aprendizajeAplicar(matrizTexto);
     if (apr.aplicado && apr.correcciones > 0) {
       log('🎓 Aprendizaje: ' + apr.correcciones + ' celdas corregidas', 'exito');
@@ -442,12 +466,14 @@ async function ejecutarOCRCompleto(canvasFuente, celdas, modo) {
     }
   }
 
-  // 🧠 Consistencia cruzada
-  const correcciones = aplicarConsistenciaCruzada(matrizTexto);
-  if (correcciones > 0) {
-    log('🧠 Consistencia cruzada: ' + correcciones + ' celdas corregidas', 'exito');
-  } else {
-    log('🧠 Consistencia cruzada: sin correcciones', 'info');
+  // 🧠 Consistencia cruzada (también se salta en modo entrenamiento)
+  if (!window._modoEntrenamiento) {
+    const correcciones = aplicarConsistenciaCruzada(matrizTexto);
+    if (correcciones > 0) {
+      log('🧠 Consistencia cruzada: ' + correcciones + ' celdas corregidas', 'exito');
+    } else {
+      log('🧠 Consistencia cruzada: sin correcciones', 'info');
+    }
   }
 
   mostrarTabla(matrizTexto, window.estadoPasos.matrizColores, matrizConfianza);
@@ -575,44 +601,18 @@ async function procesarFotoParaEntrenar(file) {
     throw new Error('No se detectaron celdas en la imagen');
   }
 
-  // 7) OCR "limpio": guardamos estado global, desactivamos efectos laterales
-  const estadoPrevio = window.estadoPasos;
-  const mostrarTablaOrig = window.mostrarTabla;
-  const aprendizajeAplicarOrig = window.aprendizajeAplicar;
-
-  // Bypass: mostrarTabla no debe cambiar de pestaña ni pintar
-  window.mostrarTabla = function() { /* noop */ };
-  // Bypass: aprendizajeAplicar no debe corregir (entrenamos con OCR crudo)
-  window.aprendizajeAplicar = function(m) { return { aplicado: false, correcciones: 0 }; };
-
+  // 7) OCR crudo: usamos ocrMatrizCruda directamente
+  //    No aplicamos aprendizaje ni consistencia cruzada (datos limpios)
+  window._modoEntrenamiento = true;
   try {
-    // Estado temporal para que ejecutarOCRCompleto funcione
-    window.estadoPasos = {
-      brillo: brillo, ancho: ancho, alto: alto,
-      perfilH: null, perfilV: null, ecoH: null, ecoV: null,
-      imagenProcesada: canvasP1,
-      celdas: celdas,
-      matrizTexto: [], matrizColores: [], matrizConfianza: [],
-      paso1Completado: true, paso2Completado: true,
-      paso3Completado: true, paso4Completado: true,
-      paso5Completado: true, paso6Completado: true,
-      paso8Completado: true
-    };
-
-    await ejecutarOCRCompleto(canvasP1, celdas, 'rapido');
-
-    const matriz = window.estadoPasos.matrizTexto;
+    const r = await ocrMatrizCruda(canvasP1, celdas, 'rapido');
+    const matriz = r.matrizTexto;
     if (!matriz || matriz.length === 0) {
       throw new Error('OCR no devolvió matriz');
     }
-
     // Devolver copia limpia (todo string)
     return matriz.map(fila => fila.map(c => (c == null ? '' : String(c))));
-
   } finally {
-    // Restaurar TODO
-    window.estadoPasos = estadoPrevio;
-    if (mostrarTablaOrig) window.mostrarTabla = mostrarTablaOrig;
-    if (aprendizajeAplicarOrig) window.aprendizajeAplicar = aprendizajeAplicarOrig;
+    window._modoEntrenamiento = false;
   }
 }
