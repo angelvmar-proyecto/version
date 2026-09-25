@@ -412,40 +412,55 @@ function alinearColumnasExcel(matrizOCR, matrizExcel) {
   if (!matrizOCR.length || !matrizExcel.length) return matrizExcel;
   const cabeceraOCR = matrizOCR[0] || [];
   const cabeceraXLS = matrizExcel[0] || [];
-  const numColsOCR = cabeceraOCR.length;
-  const numColsXLS = cabeceraXLS.length;
+  const n = cabeceraXLS.length;
+  const m = cabeceraOCR.length;
 
-  // Cuántas columnas hay que quitar del Excel
-  const numAEliminar = numColsXLS - numColsOCR;
-  if (numAEliminar <= 0) {
-    return matrizExcel;
+  if (n <= m) return matrizExcel;
+
+  // DP: alinear en orden, permitiendo SALTAR columnas del Excel
+  const dp = Array(n + 1).fill(0).map(() => Array(m + 1).fill(-1e9));
+  const path = Array(n + 1).fill(0).map(() => Array(m + 1).fill(null));
+  dp[0][0] = 0;
+
+  for (let i = 1; i <= n; i++) {
+    dp[i][0] = dp[i - 1][0] - 1;
+    path[i][0] = 'skip';
   }
 
-  // Similitud de cada columna Excel con su mejor match en OCR
-  const similitudes = [];
-  for (let i = 0; i < numColsXLS; i++) {
-    let mejorSim = 0;
-    for (let j = 0; j < numColsOCR; j++) {
-      const sim = similitudCabecera(cabeceraXLS[i], cabeceraOCR[j]);
-      if (sim > mejorSim) mejorSim = sim;
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const sim = similitudCabecera(cabeceraXLS[i - 1], cabeceraOCR[j - 1]);
+      const match = sim >= 0.5 ? dp[i - 1][j - 1] + sim : -1e9;
+      const skip = dp[i - 1][j] - 1;
+      if (match >= skip) {
+        dp[i][j] = match;
+        path[i][j] = 'match';
+      } else {
+        dp[i][j] = skip;
+        path[i][j] = 'skip';
+      }
     }
-    similitudes.push({ idx: i, sim: mejorSim, cab: cabeceraXLS[i] });
   }
 
-  // Quitar solo las N con MENOR similitud (las que no existen en OCR)
-  const ordenadas = similitudes.slice().sort((a, b) => a.sim - b.sim);
-  const aEliminar = new Set(ordenadas.slice(0, numAEliminar).map(s => s.idx));
+  // Reconstruir path
+  const eliminadas = new Set();
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (path[i][j] === 'match') { i--; j--; }
+    else { eliminadas.add(i - 1); i--; }
+  }
+  while (i > 0) { eliminadas.add(i - 1); i--; }
+
+  if (eliminadas.size === 0) return matrizExcel;
 
   if (typeof log === 'function') {
-    log('📋 Alineación: Excel ' + numColsXLS + ' → ' + numColsOCR + ' cols', 'info');
-    ordenadas.slice(0, numAEliminar).forEach(s => {
-      log('   ↳ quitada "' + (s.cab || '(vacío)') + '" (col ' + s.idx + ', sim ' + s.sim.toFixed(2) + ')', 'info');
+    log('📋 Alineación: Excel ' + n + ' → ' + (n - eliminadas.size) + ' cols', 'info');
+    [...eliminadas].sort((a, b) => a - b).forEach(idx => {
+      log('   ↳ quitada "' + (cabeceraXLS[idx] || '(vacío)') + '" (col ' + idx + ')', 'info');
     });
   }
 
-  return matrizExcel.map(fila =>
-    fila.filter((_, i) => !aEliminar.has(i))
-  );
+  return matrizExcel.map(fila => fila.filter((_, i) => !eliminadas.has(i)));
 }
 
 function aprendizajeAnalizarPar(matrizOCR, matrizExcel, nombre) {
