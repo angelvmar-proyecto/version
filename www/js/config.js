@@ -23,10 +23,10 @@ const CONFIG_DEFAULTS = {
   // Ecografía
   ECO_VENTANA: 3,
   ECO_UMBRAL_H: 38,
-  ECO_UMBRAL_V: 42,
+  ECO_UMBRAL_V: 32,
   ECO_CONTINUIDAD: 0.55,
   ECO_DISTANCIA_MIN_H: 18,
-  ECO_DISTANCIA_MIN_V: 20,
+  ECO_DISTANCIA_MIN_V: 12,
 
   // A3 (calibrado: 21→40+ verticales en tabla densa)
   A3_UMBRAL_MAGNITUD: 180,
@@ -36,7 +36,7 @@ const CONFIG_DEFAULTS = {
 
   // A3 para VERTICALES (independiente de las horizontales)
   // Permisivo para detectar columnas angostas
-  A3_UMBRAL_MAGNITUD_V: 130,
+  A3_UMBRAL_MAGNITUD_V: 80,
   A3_UMBRAL_ORTOGONALIDAD_V: 0.75,
   A3_COBERTURA_MINIMA_V: 0.20,
 
