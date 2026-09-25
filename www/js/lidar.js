@@ -123,9 +123,9 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   console.log('   ✅ Aceptadas: ' + lineasHFinal.length + 'H, ' + lineasVFinal.length + 'V');
   console.log('   ❌ Descartadas: ' + descartadasH.length + 'H, ' + descartadasV.length + 'V');
 
-  // Filtro adaptativo: elimina lineas demasiado cercanas (se auto-calibra con la mediana)
+  // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
-  const lineasVFiltered = filtrarLineasAdaptativo(lineasVFinal, 0.5);
+  const lineasVFiltered = lineasVFinal;
 
   return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
 }
