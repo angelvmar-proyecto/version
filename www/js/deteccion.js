@@ -291,3 +291,39 @@ function ejecutarDeteccion(brillo, ancho, alto) {
 }
 
 console.log('✅ Detección cargada (Óptica + A3 + Ecografía)');
+
+// ============================================
+// ALGORITMO 4: LVC — COHERENCIA VERTICAL
+// Detecta lineas verticales debiles contando cuantas filas son "valle"
+// (funciona para columnas angostas donde Eco y A3 fallan)
+// ============================================
+function detectarCoherenciaV(brillo, ancho, alto) {
+  console.log('📊 LVC: coherencia vertical');
+
+  const ventana = CONFIG.LVC_VENTANA || 2;
+  const umbralDif = CONFIG.LVC_UMBRAL_DIF || 15;
+  const coherenciaMin = CONFIG.LVC_COHERENCIA_MIN || 0.60;
+
+  const lineasV = [];
+
+  for (let x = ventana; x < ancho - ventana; x++) {
+    let filasValle = 0;
+    for (let y = 0; y < alto; y++) {
+      const b = brillo[y][x];
+      const bIzq = brillo[y][x - ventana];
+      const bDer = brillo[y][x + ventana];
+      if (b < bIzq - umbralDif && b < bDer - umbralDif) {
+        filasValle++;
+      }
+    }
+    const coherencia = filasValle / alto;
+    if (coherencia >= coherenciaMin) {
+      lineasV.push(x);
+    }
+  }
+
+  const lineasVFiltradas = filtrarLineasCercanas(lineasV, CONFIG.LVC_DISTANCIA_MIN || 10);
+
+  console.log('   → ' + lineasVFiltradas.length + 'V (coherencia min ' + coherenciaMin + ')');
+  return { lineasV: lineasVFiltradas };
+}

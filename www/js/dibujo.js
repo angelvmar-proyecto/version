@@ -12,6 +12,7 @@ window.lineasA3H = [];
 window.lineasA3V = [];
 window.lineasLidarH = [];
 window.lineasLidarV = [];
+window.lineasLVCV = [];
 window.lineasVisibles = true;
 
 function dibujarTodo() {
@@ -104,6 +105,18 @@ function dibujarTodo() {
       ctx.stroke();
     });
 
+    // 💗 LVC (coherencia vertical)
+    if (window.lineasLVCV && window.lineasLVCV.length > 0) {
+      ctx.strokeStyle = CONFIG.COLOR_LVC || '#ec4899';
+      ctx.lineWidth = grosor;
+      window.lineasLVCV.forEach(function(x) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, fuente.height);
+        ctx.stroke();
+      });
+    }
+
     // ⚫ LIDAR
     if (window.lineasLidarH.length > 0 || window.lineasLidarV.length > 0) {
       ctx.strokeStyle = CONFIG.COLOR_LIDAR;
@@ -148,6 +161,7 @@ function limpiarLineas() {
   window.lineasA3V = [];
   window.lineasLidarH = [];
   window.lineasLidarV = [];
+  window.lineasLVCV = [];
 }
 
 document.addEventListener('DOMContentLoaded', function() {

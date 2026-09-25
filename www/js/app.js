@@ -230,6 +230,12 @@ async function analizarTodo() {
     log('   🟡 Óptica: ' + det.optica.lineasH.length + 'H, ' + det.optica.lineasV.length + 'V', 'info');
     log('   🔴🔵 Eco: ' + det.ecografia.lineasH.length + 'H, ' + det.ecografia.lineasV.length + 'V', 'info');
     log('   🟣 A3: ' + det.a3.lineasH.length + 'H, ' + det.a3.lineasV.length + 'V', 'info');
+
+    // LVC: 4to algoritmo (coherencia vertical para columnas angostas)
+    const lvc = detectarCoherenciaV(brillo, canvasP1.width, canvasP1.height);
+    window.lineasLVCV = lvc.lineasV;
+    log('   📊 LVC: ' + lvc.lineasV.length + 'V', 'info');
+
     marcarPasoCompletado(3);
     marcarPasoCompletado(4);
     marcarPasoCompletado(5);
