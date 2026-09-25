@@ -30,8 +30,8 @@ const CONFIG_DEFAULTS = {
 
   // LVC (Coherencia Vertical) - 4to algoritmo para verticales
   LVC_VENTANA: 2,
-  LVC_UMBRAL_DIF: 15,
-  LVC_COHERENCIA_MIN: 0.60,
+  LVC_UMBRAL_DIF: 10,
+  LVC_COHERENCIA_MIN: 0.45,
   LVC_DISTANCIA_MIN: 10,
 
   // A3 (calibrado: 21→40+ verticales en tabla densa)
