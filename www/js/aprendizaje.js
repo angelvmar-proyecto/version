@@ -542,7 +542,6 @@ function aprendizajeAplicar(matrizOCR) {
   let correccionesSust = 0;
   let correccionesDicc = 0;
 
-  // Sustituciones que superan el umbral
   const sustitucionesConf = {};
   Object.keys(window.APRENDIZAJE.sustituciones).forEach(clave => {
     const s = window.APRENDIZAJE.sustituciones[clave];
@@ -555,50 +554,63 @@ function aprendizajeAplicar(matrizOCR) {
   const dicc = window.APRENDIZAJE.diccionarios;
 
   for (let f = 0; f < matrizOCR.length; f++) {
+    // REGLA 1: NO tocar la fila 0 (encabezados)
+    if (f === 0) continue;
+
     for (let c = 0; c < matrizOCR[f].length; c++) {
       let valor = matrizOCR[f][c] || '';
       if (!valor) continue;
+      // REGLA 2: NO tocar celdas largas (> 30 chars)
+      if (valor.length > 30) continue;
       const original = valor;
 
       const hayDiccionario = dicc[c] && Object.keys(dicc[c]).length > 0;
+      if (!hayDiccionario) continue;
 
-      // REGLA: solo aplicar sustituciones si hay diccionario para esta columna
-      if (hayDiccionario) {
-        let reconstruido = '';
-        let huboSust = false;
-        for (let i = 0; i < valor.length; i++) {
-          const ch = valor[i];
-          if (sustitucionesConf[ch]) {
-            reconstruido += sustitucionesConf[ch];
-            huboSust = true;
-          } else {
-            reconstruido += ch;
-          }
-        }
+      // REGLA 4: si el valor ya esta exacto en el diccionario, no tocar
+      const valorLower = valor.toLowerCase();
+      const yaExacto = Object.keys(dicc[c]).some(
+        k => k.toLowerCase() === valorLower
+      );
+      if (yaExacto) continue;
 
-        // Solo aceptar si el resultado está mas cerca del diccionario
-        if (huboSust && reconstruido !== valor) {
-          const distOrig = mejorDistanciaDiccionario(valor, dicc[c]);
-          const distNuevo = mejorDistanciaDiccionario(reconstruido, dicc[c]);
-          if (distNuevo < distOrig) {
-            correccionesSust++;
-            valor = reconstruido;
-          }
+      // Sustituciones
+      let reconstruido = '';
+      let huboSust = false;
+      for (let i = 0; i < valor.length; i++) {
+        const ch = valor[i];
+        if (sustitucionesConf[ch]) {
+          reconstruido += sustitucionesConf[ch];
+          huboSust = true;
+        } else {
+          reconstruido += ch;
         }
       }
 
-      // Diccionario de la columna (Levenshtein <= 2)
-      if (hayDiccionario) {
-        let mejorMatch = null;
-        let mejorDist = 999;
-        Object.keys(dicc[c]).forEach(candidato => {
-          const dist = levenshtein(valor.toLowerCase(), candidato.toLowerCase());
-          if (dist < mejorDist && dist <= 2) {
-            mejorDist = dist;
-            mejorMatch = candidato;
-          }
-        });
-        if (mejorMatch && mejorMatch !== valor) {
+      if (huboSust && reconstruido !== valor) {
+        const distOrig = mejorDistanciaDiccionario(valor, dicc[c]);
+        const distNuevo = mejorDistanciaDiccionario(reconstruido, dicc[c]);
+        if (distNuevo < distOrig) {
+          correccionesSust++;
+          valor = reconstruido;
+        }
+      }
+
+      // Diccionario Levenshtein
+      let mejorMatch = null;
+      let mejorDist = 999;
+      Object.keys(dicc[c]).forEach(candidato => {
+        const dist = levenshtein(valor.toLowerCase(), candidato.toLowerCase());
+        if (dist < mejorDist && dist <= 2) {
+          mejorDist = dist;
+          mejorMatch = candidato;
+        }
+      });
+      // REGLA 3: solo si la distancia es <= 20% del largo
+      if (mejorMatch && mejorMatch !== valor) {
+        const maxLargo = Math.max(valor.length, mejorMatch.length);
+        const ratioDist = mejorDist / maxLargo;
+        if (ratioDist <= 0.2) {
           correccionesDicc++;
           valor = mejorMatch;
         }
