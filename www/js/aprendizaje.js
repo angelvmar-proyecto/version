@@ -542,7 +542,7 @@ function aprendizajeAplicar(matrizOCR) {
   let correccionesSust = 0;
   let correccionesDicc = 0;
 
-  // 1. Preparar sustituciones que superan el umbral
+  // Sustituciones que superan el umbral
   const sustitucionesConf = {};
   Object.keys(window.APRENDIZAJE.sustituciones).forEach(clave => {
     const s = window.APRENDIZAJE.sustituciones[clave];
@@ -554,39 +554,45 @@ function aprendizajeAplicar(matrizOCR) {
 
   const dicc = window.APRENDIZAJE.diccionarios;
 
-  // 2. Recorrer cada celda
   for (let f = 0; f < matrizOCR.length; f++) {
     for (let c = 0; c < matrizOCR[f].length; c++) {
       let valor = matrizOCR[f][c] || '';
       if (!valor) continue;
       const original = valor;
 
-      // Sustituciones carácter por carácter
-      let reconstruido = '';
-      let huboSust = false;
-      for (let i = 0; i < valor.length; i++) {
-        const ch = valor[i];
-        if (sustitucionesConf[ch]) {
-          reconstruido += sustitucionesConf[ch];
-          huboSust = true;
-        } else {
-          reconstruido += ch;
+      const hayDiccionario = dicc[c] && Object.keys(dicc[c]).length > 0;
+
+      // REGLA: solo aplicar sustituciones si hay diccionario para esta columna
+      if (hayDiccionario) {
+        let reconstruido = '';
+        let huboSust = false;
+        for (let i = 0; i < valor.length; i++) {
+          const ch = valor[i];
+          if (sustitucionesConf[ch]) {
+            reconstruido += sustitucionesConf[ch];
+            huboSust = true;
+          } else {
+            reconstruido += ch;
+          }
+        }
+
+        // Solo aceptar si el resultado está mas cerca del diccionario
+        if (huboSust && reconstruido !== valor) {
+          const distOrig = mejorDistanciaDiccionario(valor, dicc[c]);
+          const distNuevo = mejorDistanciaDiccionario(reconstruido, dicc[c]);
+          if (distNuevo < distOrig) {
+            correccionesSust++;
+            valor = reconstruido;
+          }
         }
       }
-      if (huboSust && reconstruido !== valor) {
-        correccionesSust++;
-        valor = reconstruido;
-      }
 
-      // Diccionario de la columna (distancia Levenshtein <= 2)
-      if (dicc[c]) {
+      // Diccionario de la columna (Levenshtein <= 2)
+      if (hayDiccionario) {
         let mejorMatch = null;
         let mejorDist = 999;
         Object.keys(dicc[c]).forEach(candidato => {
-          const dist = levenshtein(
-            valor.toLowerCase(),
-            candidato.toLowerCase()
-          );
+          const dist = levenshtein(valor.toLowerCase(), candidato.toLowerCase());
           if (dist < mejorDist && dist <= 2) {
             mejorDist = dist;
             mejorMatch = candidato;
@@ -611,6 +617,16 @@ function aprendizajeAplicar(matrizOCR) {
     correccionesDicc: correccionesDicc,
     sustitucionesActivas: Object.keys(sustitucionesConf).length
   };
+}
+
+function mejorDistanciaDiccionario(texto, dicc) {
+  let mejor = 999;
+  const t = texto.toLowerCase();
+  Object.keys(dicc).forEach(candidato => {
+    const d = levenshtein(t, candidato.toLowerCase());
+    if (d < mejor) mejor = d;
+  });
+  return mejor;
 }
 
 // ============================================
