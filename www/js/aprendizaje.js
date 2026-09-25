@@ -475,7 +475,7 @@ function aprendizajeAnalizarPar(matrizOCR, matrizExcel, nombre) {
   if (typeof log === 'function') {
     log('🔍 [DIAG] OCR: ' + matrizOCR.length + ' filas × ' + (matrizOCR[0] ? matrizOCR[0].length : 0) + ' cols', 'info');
     log('🔍 [DIAG] Excel: ' + matrizExcel.length + ' filas × ' + (matrizExcel[0] ? matrizExcel[0].length : 0) + ' cols', 'info');
-    const nf = Math.min(2, matrizOCR.length, matrizExcel.length);
+    const nf = Math.min(10, matrizOCR.length, matrizExcel.length);
     for (let i = 0; i < nf; i++) {
       const o = (matrizOCR[i] || []).slice(0, 6).join(' | ');
       const e = (matrizExcel[i] || []).slice(0, 6).join(' | ');
