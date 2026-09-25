@@ -381,10 +381,88 @@ function fusionarPatrones(nuevos) {
 // ============================================
 // ANALIZAR UN PAR (función principal)
 // ============================================
+// ============================================
+// ALINEACION DE COLUMNAS POR CABECERAS
+// Quita del Excel las columnas que el OCR no detecta
+// (por ejemplo, columnas ocultas en el Excel)
+// ============================================
+function normalizarCabecera(h) {
+  return String(h || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+function similitudCabecera(a, b) {
+  const na = normalizarCabecera(a);
+  const nb = normalizarCabecera(b);
+  if (!na && !nb) return 1;
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  const dist = levenshtein(na, nb);
+  return 1 - dist / Math.max(na.length, nb.length);
+}
+
+function alinearColumnasExcel(matrizOCR, matrizExcel) {
+  if (!matrizOCR.length || !matrizExcel.length) return matrizExcel;
+  const cabeceraOCR = matrizOCR[0] || [];
+  const cabeceraXLS = matrizExcel[0] || [];
+  const numColsOCR = cabeceraOCR.length;
+
+  // Matching secuencial: recorrer columnas del Excel y buscar su equivalente en OCR
+  const mapeo = [];   // mapeo[i] = índice en OCR, o -1 si no existe
+  let jOCR = 0;
+
+  for (let iXLS = 0; iXLS < cabeceraXLS.length; iXLS++) {
+    const cabXLS = cabeceraXLS[iXLS];
+    let mejorJ = -1;
+    let mejorSim = 0;
+
+    for (let j = jOCR; j < numColsOCR; j++) {
+      const sim = similitudCabecera(cabXLS, cabeceraOCR[j]);
+      if (sim > mejorSim) {
+        mejorSim = sim;
+        mejorJ = j;
+      }
+      if (sim >= 0.9) break;
+    }
+
+    if (mejorSim >= 0.5) {
+      mapeo.push(mejorJ);
+      jOCR = mejorJ + 1;
+    } else {
+      mapeo.push(-1);
+    }
+  }
+
+  const indicesValidos = mapeo.map((v, i) => v >= 0 ? i : -1).filter(i => i >= 0);
+  const colQuitadas = mapeo.map((v, i) => v < 0 ? i : -1).filter(i => i >= 0);
+
+  if (colQuitadas.length === 0) {
+    // No hay columnas que quitar
+    return matrizExcel;
+  }
+
+  if (typeof log === 'function') {
+    log('📋 Alineación columnas: Excel ' + cabeceraXLS.length + ' → ' + indicesValidos.length + ' (quitadas: ' + colQuitadas.join(',') + ')', 'info');
+    colQuitadas.forEach(i => {
+      log('   ↳ quitada "' + (cabeceraXLS[i] || '(vacío)') + '" (col ' + i + ')', 'info');
+    });
+  }
+
+  return matrizExcel.map(fila =>
+    indicesValidos.map(idx => fila[idx] || '')
+  );
+}
+
 function aprendizajeAnalizarPar(matrizOCR, matrizExcel, nombre) {
   if (!matrizOCR || !matrizExcel) {
     return { ok: false, error: 'Falta una de las matrices' };
   }
+
+  // Alinear columnas del Excel con las que el OCR detectó
+  matrizExcel = alinearColumnasExcel(matrizOCR, matrizExcel);
 
   // 🔍 DIAGNÓSTICO DE ALINEACIÓN
   if (typeof log === 'function') {
