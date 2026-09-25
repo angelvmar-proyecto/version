@@ -47,7 +47,7 @@ function leerExcelDesdeBase64(base64) {
 }
 
 function matrizExcelALimpia(matriz) {
-  // Normaliza: trim a cada celda, elimina filas/columnas vacías al final
+  // Normaliza: trim, quita filas vacías (inicio/final) y columnas vacías (cualquier pos)
   if (!matriz || !matriz.length) return [];
 
   // Trim de cada celda
@@ -55,20 +55,40 @@ function matrizExcelALimpia(matriz) {
     fila.map(celda => String(celda == null ? '' : celda).trim())
   );
 
+  // Quitar filas completamente vacías del inicio
+  while (limpia.length > 0 && limpia[0].every(c => !c)) {
+    limpia.shift();
+  }
+
   // Quitar filas completamente vacías del final
   while (limpia.length > 0 && limpia[limpia.length - 1].every(c => !c)) {
     limpia.pop();
   }
 
-  // Quitar columnas completamente vacías del final
+  // Quitar columnas COMPLETAMENTE vacías en cualquier posición
+  // (el OCR no las detecta y desplazan la alineación)
   const maxAncho = limpia.reduce((m, f) => Math.max(m, f.length), 0);
-  let ultimaColConDatos = maxAncho - 1;
-  while (ultimaColConDatos >= 0) {
-    const hayDatos = limpia.some(f => f[ultimaColConDatos]);
-    if (hayDatos) break;
-    ultimaColConDatos--;
+  const colVacia = new Array(maxAncho).fill(true);
+  for (let c = 0; c < maxAncho; c++) {
+    for (let f = 0; f < limpia.length; f++) {
+      if (limpia[f][c] && limpia[f][c].length > 0) {
+        colVacia[c] = false;
+        break;
+      }
+    }
   }
-  limpia = limpia.map(f => f.slice(0, ultimaColConDatos + 1));
+  const colEliminadas = colVacia.map((v, i) => v ? i : -1).filter(i => i >= 0);
+  if (colEliminadas.length > 0) {
+    console.log('📋 Excel: quitando ' + colEliminadas.length + ' columnas vacías: ' + colEliminadas.join(','));
+  }
+  limpia = limpia.map(f => f.filter((_, i) => !colVacia[i]));
+
+  // Rellenar filas cortas con '' hasta el ancho máximo
+  const anchoFinal = limpia.reduce((m, f) => Math.max(m, f.length), 0);
+  limpia = limpia.map(f => {
+    while (f.length < anchoFinal) f.push('');
+    return f;
+  });
 
   return limpia;
 }
