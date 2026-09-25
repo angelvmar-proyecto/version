@@ -34,8 +34,7 @@ function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4) {
 function clasificarLinea(votos, eco) {
   if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_ALTO) return { aceptar: true, razon: '3v+eco alto' };
   if (votos >= CONFIG.LIDAR_VOTOS_MINIMOS && eco >= CONFIG.LIDAR_ECO_ALTO) return { aceptar: true, razon: '2v+eco alto' };
-  if (votos >= 3 && eco < CONFIG.LIDAR_ECO_BAJO) return { aceptar: false, razon: '3v eco bajo' };
-  if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_BAJO) return { aceptar: true, razon: '3v+eco medio' };
+  if (votos >= 3) return { aceptar: true, razon: '3v (confianza alta)' };
   if (votos >= 2 && eco >= CONFIG.LIDAR_ECO_BAJO) return { aceptar: true, razon: '2v+eco medio' };
   if (votos < CONFIG.LIDAR_VOTOS_MINIMOS) return { aceptar: false, razon: votos + 'v' };
   if (votos >= 2 && eco < CONFIG.LIDAR_ECO_BAJO) return { aceptar: false, razon: '2v eco bajo' };
