@@ -136,7 +136,37 @@ function aprendizajeReset() {
 // NORMALIZACIÓN
 // ============================================
 function normalizarCelda(texto) {
-  return String(texto || '').toLowerCase().replace(/\s+/g, '').trim();
+  let t = String(texto || '').toLowerCase().replace(/\s+/g, '').trim();
+  if (!t) return '';
+
+  // Horas: "07:30:00" / "07:30am" → "0730"
+  const mHora = t.match(/^(\d{1,2}):(\d{2})(?::00)?(am|pm)?$/);
+  if (mHora) {
+    let h = parseInt(mHora[1], 10);
+    const m = mHora[2];
+    if (mHora[3] === 'pm' && h < 12) h += 12;
+    if (mHora[3] === 'am' && h === 12) h = 0;
+    return String(h).padStart(2, '0') + m;
+  }
+
+  // Fechas ISO: "2026-09-01 00:00:00" → "0109"
+  const mFechaIso = t.match(/^\d{4}-(\d{2})-(\d{2})/);
+  if (mFechaIso) return mFechaIso[2] + mFechaIso[1];
+
+  // Fechas texto: "tue01sep" / "01sep" → "0109"
+  const mFechaTxt = t.match(/^(?:mon|tue|wed|thu|fri|sat|sun)?(\d{1,2})(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+  if (mFechaTxt) {
+    const meses = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+    return mFechaTxt[1].padStart(2, '0') + meses[mFechaTxt[2]];
+  }
+
+  // TDC: "40usdtdc(6328)" → "40usd"
+  t = t.replace(/tdc\([^)]*\)/g, '');
+
+  // Paréntesis genéricos: quitar
+  t = t.replace(/\([^)]*\)/g, '');
+
+  return t;
 }
 
 // ============================================
