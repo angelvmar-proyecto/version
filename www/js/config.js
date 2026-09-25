@@ -34,6 +34,12 @@ const CONFIG_DEFAULTS = {
   A3_COBERTURA_MINIMA: 0.50,
   A3_DISTANCIA_MIN: 10,
 
+  // A3 para VERTICALES (independiente de las horizontales)
+  // Permisivo para detectar columnas angostas
+  A3_UMBRAL_MAGNITUD_V: 130,
+  A3_UMBRAL_ORTOGONALIDAD_V: 0.75,
+  A3_COBERTURA_MINIMA_V: 0.20,
+
   // Ajuste local
   RANGO_AJUSTE: 2,
 
@@ -87,8 +93,8 @@ const CONFIG_DEFAULTS = {
 
   // Retina global (antes de detección de líneas)
   RETINA_GLOBAL_ACTIVO: true,
-  RETINA_GLOBAL_FUERZA: 1.0,
-  RETINA_GLOBAL_RADIO: 25,
+  RETINA_GLOBAL_FUERZA: 1.3,
+  RETINA_GLOBAL_RADIO: 15,
 
   // Diccionario
   DICCIONARIO: [

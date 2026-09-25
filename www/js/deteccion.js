@@ -134,13 +134,13 @@ function detectarA3(brillo, ancho, alto) {
   for (let x = 1; x < ancho - 1; x++) {
     let ortogonales = 0;
     for (let y = 1; y < alto - 1; y++) {
-      if (magnitud[y][x] > CONFIG.A3_UMBRAL_MAGNITUD) {
+      if (magnitud[y][x] > CONFIG.A3_UMBRAL_MAGNITUD_V) {
         const ratio = Math.abs(gradX[y][x]) /
           (Math.abs(gradX[y][x]) + Math.abs(gradY[y][x]) + 0.001);
-        if (ratio > CONFIG.A3_UMBRAL_ORTOGONALIDAD) ortogonales++;
+        if (ratio > CONFIG.A3_UMBRAL_ORTOGONALIDAD_V) ortogonales++;
       }
     }
-    if (ortogonales / alto > CONFIG.A3_COBERTURA_MINIMA) {
+    if (ortogonales / alto > CONFIG.A3_COBERTURA_MINIMA_V) {
       lineasV.push(x);
     }
   }
