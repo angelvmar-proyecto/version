@@ -41,6 +41,28 @@ function clasificarLinea(votos, eco) {
   return { aceptar: false, razon: 'no cumple' };
 }
 
+function filtrarLineasAdaptativo(lineas, minRatio) {
+  minRatio = minRatio || 0.5;
+  if (!lineas || lineas.length < 3) return lineas;
+  const distancias = [];
+  for (let i = 1; i < lineas.length; i++) {
+    distancias.push(lineas[i] - lineas[i - 1]);
+  }
+  distancias.sort(function(a, b) { return a - b; });
+  const mediana = distancias[Math.floor(distancias.length / 2)];
+  const minimoAceptable = mediana * minRatio;
+  const resultado = [lineas[0]];
+  for (let i = 1; i < lineas.length; i++) {
+    const dist = lineas[i] - resultado[resultado.length - 1];
+    if (dist >= minimoAceptable) {
+      resultado.push(lineas[i]);
+    }
+  }
+  console.log('   🔬 Filtro adaptativo: ' + lineas.length + ' → ' + resultado.length +
+              ' (mediana=' + mediana.toFixed(0) + 'px, min=' + minimoAceptable.toFixed(0) + 'px)');
+  return resultado;
+}
+
 function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto) {
   console.log('📐 LIDAR: votación + eco');
   console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ' (total=' + (opticaV.length + ecoV.length + a3V.length) + ')');
@@ -101,7 +123,11 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   console.log('   ✅ Aceptadas: ' + lineasHFinal.length + 'H, ' + lineasVFinal.length + 'V');
   console.log('   ❌ Descartadas: ' + descartadasH.length + 'H, ' + descartadasV.length + 'V');
 
-  return { lineasH: lineasHFinal, lineasV: lineasVFinal, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
+  // Filtro adaptativo: elimina lineas demasiado cercanas (se auto-calibra con la mediana)
+  const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
+  const lineasVFiltered = filtrarLineasAdaptativo(lineasVFinal, 0.5);
+
+  return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
 }
 
 function resumenVotacion(votos) {
