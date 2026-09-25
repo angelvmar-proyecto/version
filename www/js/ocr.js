@@ -223,6 +223,47 @@ function añadirPadding(canvas, margen) {
 function preprocesarCelda(canvasOriginal, modo) {
   let canvas = canvasOriginal;
 
+  if (modo === 'rapido_x2' || modo === 'rapido_x3') {
+    canvas = bsLocalCelda(canvas);
+    const factor = (modo === 'rapido_x3') ? 3 : 2;
+    if (typeof escalarInteligenteForzado === 'function') {
+      canvas = escalarInteligenteForzado(canvas, factor);
+    }
+    canvas = añadirPadding(canvas);
+    return canvas;
+  }
+
+  if (modo === 'medio_x2') {
+    canvas = bsLocalCelda(canvas);
+    if (CONFIG.RETINA_ACTIVO && typeof aplicarRetina === 'function') {
+      canvas = aplicarRetina(canvas);
+    }
+    if (typeof escalarInteligenteForzado === 'function') {
+      canvas = escalarInteligenteForzado(canvas, 2);
+    } else {
+      canvas = escalarInteligente(canvas);
+    }
+    canvas = contrastarAdaptativo(canvas);
+    canvas = añadirPadding(canvas);
+    return canvas;
+  }
+
+  if (modo === 'retry') {
+    canvas = bsLocalCelda(canvas);
+    if (typeof aplicarRetinaForzado === 'function') {
+      canvas = aplicarRetinaForzado(canvas, 12, 2.0, 0.7);
+    }
+    if (typeof escalarInteligenteForzado === 'function') {
+      canvas = escalarInteligenteForzado(canvas, 2);
+    }
+    canvas = contrastarAdaptativo(canvas);
+    if (typeof binarizarZonasTexto === 'function') {
+      canvas = binarizarZonasTexto(canvas);
+    }
+    canvas = añadirPadding(canvas);
+    return canvas;
+  }
+
   // ⚡ RÁPIDO
   if (modo === 'rapido') {
     canvas = bsLocalCelda(canvas);
@@ -615,4 +656,155 @@ async function procesarFotoParaEntrenar(file) {
   } finally {
     window._modoEntrenamiento = false;
   }
+}
+
+async function ocrMultiPasada(canvasFuente, celdas, modos, estrategia) {
+  if (!modos || modos.length < 2) throw new Error('se necesitan >=2 modos');
+  const lecturas = [];
+  for (let i = 0; i < modos.length; i++) {
+    if (typeof log === 'function') log('   🔄 Pasada ' + (i+1) + '/' + modos.length + ': ' + modos[i], 'info');
+    lecturas.push(await ocrMatrizCruda(canvasFuente, celdas, modos[i]));
+  }
+  const nF = lecturas[0].matrizTexto.length;
+  const nC = lecturas[0].matrizTexto[0].length;
+  const finalTexto = Array(nF).fill(null).map(() => Array(nC).fill(''));
+  const finalConf = Array(nF).fill(null).map(() => Array(nC).fill(0));
+  let c3 = 0, c2 = 0, cd = 0, sc = 0;
+  const dicc = (estrategia && estrategia.usarDiccionario && window.APRENDIZAJE) ? window.APRENDIZAJE.diccionarios : null;
+
+  for (let f = 0; f < nF; f++) {
+    for (let c = 0; c < nC; c++) {
+      const vals = lecturas.map(L => (L.matrizTexto[f] && L.matrizTexto[f][c]) || '');
+      const con = lecturas.map(L => (L.matrizConfianza[f] && L.matrizConfianza[f][c]) || 0);
+      const grupos = [];
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i].trim();
+        if (!v) continue;
+        let enc = false;
+        for (const g of grupos) {
+          const d = levenshtein(v.toLowerCase(), g.valor.toLowerCase());
+          const m = Math.max(v.length, g.valor.length);
+          if (d <= 2 && d / m <= 0.2) { g.votos++; g.indices.push(i); enc = true; break; }
+        }
+        if (!enc) grupos.push({ valor: v, votos: 1, indices: [i] });
+      }
+      if (grupos.length === 0) { finalConf[f][c] = 100; continue; }
+      grupos.sort((a,b) => b.votos - a.votos);
+      const mejor = grupos[0];
+      let elegido = mejor.valor;
+      let conf = Math.max(...mejor.indices.map(i => con[i]));
+      if (mejor.votos >= 3) c3++;
+      else if (mejor.votos === 2) c2++;
+      else {
+        if (dicc && dicc[c] && Object.keys(dicc[c]).length > 0) {
+          let mm = null, md = 999;
+          Object.keys(dicc[c]).forEach(cand => {
+            const d = levenshtein(elegido.toLowerCase(), cand.toLowerCase());
+            if (d < md && d <= 3) { md = d; mm = cand; }
+          });
+          if (mm) { elegido = mm; cd++; } else sc++;
+        } else sc++;
+      }
+      finalTexto[f][c] = elegido;
+      finalConf[f][c] = conf;
+    }
+  }
+  if (typeof log === 'function') log('   📊 Consenso: ' + c3 + ' (3/3), ' + c2 + ' (2/3), ' + cd + ' (dicc), ' + sc + ' (sin)', 'info');
+  return { matrizTexto: finalTexto, matrizConfianza: finalConf };
+}
+
+function binarizarZonasTexto(canvas) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const datos = imageData.data;
+  const w = canvas.width, h = canvas.height;
+  const bloque = 8;
+  const numBX = Math.ceil(w / bloque);
+  const numBY = Math.ceil(h / bloque);
+  const bloquesTexto = new Array(numBX * numBY).fill(false);
+  for (let by = 0; by < numBY; by++) {
+    for (let bx = 0; bx < numBX; bx++) {
+      const x0 = bx * bloque, y0 = by * bloque;
+      const x1 = Math.min(w, x0 + bloque), y1 = Math.min(h, y0 + bloque);
+      let minB = 255, maxB = 0, maxSat = 0, sumB = 0, cnt = 0;
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) {
+          const idx = (y * w + x) * 4;
+          const r = datos[idx], g = datos[idx+1], b = datos[idx+2];
+          const lum = (r + g + b) / 3;
+          if (lum < minB) minB = lum;
+          if (lum > maxB) maxB = lum;
+          const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+          const sat = mx === 0 ? 0 : (mx - mn) / mx;
+          if (sat > maxSat) maxSat = sat;
+          sumB += lum; cnt++;
+        }
+      const contraste = maxB - minB;
+      const bm = sumB / cnt;
+      bloquesTexto[by * numBX + bx] = (contraste > 60 || maxSat > 0.25) && bm > 30 && bm < 240;
+    }
+  }
+  for (let by = 0; by < numBY; by++) {
+    for (let bx = 0; bx < numBX; bx++) {
+      if (!bloquesTexto[by * numBX + bx]) continue;
+      const x0 = bx * bloque, y0 = by * bloque;
+      const x1 = Math.min(w, x0 + bloque), y1 = Math.min(h, y0 + bloque);
+      let sum = 0, n = 0;
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) {
+          const idx = (y * w + x) * 4;
+          sum += (datos[idx] + datos[idx+1] + datos[idx+2]) / 3; n++;
+        }
+      const umbral = (sum / n) * 0.85;
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) {
+          const idx = (y * w + x) * 4;
+          const lum = (datos[idx] + datos[idx+1] + datos[idx+2]) / 3;
+          const val = lum < umbral ? 0 : 255;
+          datos[idx] = val; datos[idx+1] = val; datos[idx+2] = val;
+        }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+async function ocrMatrizConRetry(canvasFuente, celdas, modoBase, umbralConfianza) {
+  umbralConfianza = umbralConfianza || 70;
+  if (typeof log === 'function') log('   🔄 Pasada 1 (' + modoBase + ')...', 'info');
+  const r1 = await ocrMatrizCruda(canvasFuente, celdas, modoBase);
+  const matrizTexto = r1.matrizTexto;
+  const matrizConfianza = r1.matrizConfianza;
+  const aReintentar = [];
+  for (let f = 0; f < matrizConfianza.length; f++)
+    for (let c = 0; c < matrizConfianza[f].length; c++)
+      if (matrizConfianza[f][c] < umbralConfianza) {
+        const celda = celdas.find(x => x.fila === f && x.col === c);
+        if (celda) aReintentar.push({ f, c, celda });
+      }
+  if (aReintentar.length === 0) {
+    if (typeof log === 'function') log('   ✅ Todas con confianza alta', 'exito');
+    return r1;
+  }
+  if (typeof log === 'function') log('   🔁 Retry: ' + aReintentar.length + ' celdas', 'alerta');
+  let idx = 100000, mejoras = 0;
+  for (const it of aReintentar) {
+    idx++;
+    const c = it.celda;
+    if (medirDensidadCelda(canvasFuente, c.x1, c.y1, c.x2, c.y2) < CONFIG.OCR_DENSIDAD_MIN) continue;
+    const cc = extraerCeldaCanvas(canvasFuente, c.x1, c.y1, c.x2, c.y2);
+    const cp = preprocesarCelda(cc, 'retry');
+    const res = await leerCeldaMLKit(cp, idx);
+    const txt = limpiarTexto(res.texto);
+    if (txt && txt.length > 0) {
+      const orig = matrizTexto[it.f][it.c] || '';
+      if (!orig || txt.length >= orig.length * 0.5) {
+        matrizTexto[it.f][it.c] = txt;
+        matrizConfianza[it.f][it.c] = 95;
+        mejoras++;
+      }
+    }
+  }
+  if (typeof log === 'function') log('   ✅ Retry: ' + mejoras + '/' + aReintentar.length, 'exito');
+  return { matrizTexto, matrizConfianza };
 }

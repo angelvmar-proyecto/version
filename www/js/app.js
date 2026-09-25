@@ -476,6 +476,15 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnLeerMedio').onclick = () => ejecutarOCR('medio');
   document.getElementById('btnLeerPreciso').onclick = () => ejecutarOCR('preciso');
 
+  const btnT1 = document.getElementById('btnLeerTripleEscala');
+  if (btnT1) btnT1.onclick = () => ejecutarOCRMulti(['rapido', 'rapido_x2', 'rapido_x3'], {}, 'TRIPLE ESCALA');
+  const btnT2 = document.getElementById('btnLeerTripleDicc');
+  if (btnT2) btnT2.onclick = () => ejecutarOCRMulti(['rapido', 'medio', 'preciso'], { usarDiccionario: true }, 'TRIPLE + DICC');
+  const btnT3 = document.getElementById('btnLeerUltra');
+  if (btnT3) btnT3.onclick = () => ejecutarOCRMulti(['rapido_x2', 'medio_x2', 'preciso'], { usarDiccionario: true }, 'ULTRA');
+  const btnRetry = document.getElementById('btnLeerRetry');
+  if (btnRetry) btnRetry.onclick = () => ejecutarOCRRetry();
+
   document.querySelectorAll('.tab').forEach(tab => {
     tab.onclick = function() {
       const target = this.dataset.tab;
@@ -554,3 +563,63 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ App cargada');
+
+// ============================================================
+// v13-fase2: OCR multi-pasada + retry
+// ============================================================
+async function _ejecutarOCRGenerico(fn, nombre) {
+  if (window.estadoPasos.celdas.length === 0) {
+    log('⚠️ Analiza primero', 'alerta');
+    alert('⚠️ Primero ejecuta "Analizar"');
+    return;
+  }
+  const fuente = window.estadoPasos.imagenProcesada || imagenActual;
+  const celdas = window.estadoPasos.celdas;
+  log('═══════════════════════════════════', 'etapa');
+  log('🔬 OCR ' + nombre, 'etapa');
+  log('═══════════════════════════════════', 'etapa');
+  const inicio = Date.now();
+  try {
+    const r = await fn(fuente, celdas);
+    const duracion = ((Date.now() - inicio) / 1000).toFixed(1);
+    log('✅ OCR ' + nombre + ' en ' + duracion + 's', 'exito');
+
+    const matrizTexto = r.matrizTexto;
+    const matrizConfianza = r.matrizConfianza;
+    window.estadoPasos.matrizTexto = matrizTexto;
+    window.estadoPasos.matrizConfianza = matrizConfianza;
+    window.estadoPasos.matrizColores = extraerColoresCelda(fuente, celdas);
+
+    if (typeof aprendizajeAplicar === 'function' && CONFIG.APRENDIZAJE_ACTIVO) {
+      const apr = aprendizajeAplicar(matrizTexto);
+      if (apr.aplicado && apr.correcciones > 0) log('🎓 Aprendizaje: ' + apr.correcciones + ' celdas', 'exito');
+    }
+    const corr = aplicarConsistenciaCruzada(matrizTexto);
+    if (corr > 0) log('🧠 Consistencia: ' + corr + ' celdas', 'exito');
+
+    mostrarTabla(matrizTexto, window.estadoPasos.matrizColores, matrizConfianza);
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('[data-tab="tabla"]').classList.add('active');
+    document.getElementById('tab-tabla').classList.add('active');
+    marcarPasoCompletado(9);
+    log('✅ Resultados en 📊 Tabla', 'exito');
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+async function ejecutarOCRMulti(modos, estrategia, nombre) {
+  return _ejecutarOCRGenerico(
+    (f, c) => ocrMultiPasada(f, c, modos, estrategia || {}),
+    nombre + ' (' + modos.length + ' pasadas)'
+  );
+}
+
+async function ejecutarOCRRetry() {
+  return _ejecutarOCRGenerico(
+    (f, c) => ocrMatrizConRetry(f, c, 'rapido', 70),
+    'RETRY SELECTIVO'
+  );
+}
