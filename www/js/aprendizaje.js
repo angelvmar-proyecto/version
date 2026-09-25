@@ -163,8 +163,12 @@ function normalizarCelda(texto) {
   // TDC: "40usdtdc(6328)" → "40usd"
   t = t.replace(/tdc\([^)]*\)/g, '');
 
-  // Paréntesis genéricos: quitar
+  // Paréntesis genéricos
   t = t.replace(/\([^)]*\)/g, '');
+
+  // Quitar TODOS los caracteres no alfanuméricos
+  // ("N°" → "n", "P.SAM-FINEST" → "psamfinest", "USA -NEW YORK" → "usanewyork")
+  t = t.replace(/[^a-z0-9]/g, '');
 
   return t;
 }
@@ -409,50 +413,38 @@ function alinearColumnasExcel(matrizOCR, matrizExcel) {
   const cabeceraOCR = matrizOCR[0] || [];
   const cabeceraXLS = matrizExcel[0] || [];
   const numColsOCR = cabeceraOCR.length;
+  const numColsXLS = cabeceraXLS.length;
 
-  // Matching secuencial: recorrer columnas del Excel y buscar su equivalente en OCR
-  const mapeo = [];   // mapeo[i] = índice en OCR, o -1 si no existe
-  let jOCR = 0;
-
-  for (let iXLS = 0; iXLS < cabeceraXLS.length; iXLS++) {
-    const cabXLS = cabeceraXLS[iXLS];
-    let mejorJ = -1;
-    let mejorSim = 0;
-
-    for (let j = jOCR; j < numColsOCR; j++) {
-      const sim = similitudCabecera(cabXLS, cabeceraOCR[j]);
-      if (sim > mejorSim) {
-        mejorSim = sim;
-        mejorJ = j;
-      }
-      if (sim >= 0.9) break;
-    }
-
-    if (mejorSim >= 0.5) {
-      mapeo.push(mejorJ);
-      jOCR = mejorJ + 1;
-    } else {
-      mapeo.push(-1);
-    }
-  }
-
-  const indicesValidos = mapeo.map((v, i) => v >= 0 ? i : -1).filter(i => i >= 0);
-  const colQuitadas = mapeo.map((v, i) => v < 0 ? i : -1).filter(i => i >= 0);
-
-  if (colQuitadas.length === 0) {
-    // No hay columnas que quitar
+  // Cuántas columnas hay que quitar del Excel
+  const numAEliminar = numColsXLS - numColsOCR;
+  if (numAEliminar <= 0) {
     return matrizExcel;
   }
 
+  // Similitud de cada columna Excel con su mejor match en OCR
+  const similitudes = [];
+  for (let i = 0; i < numColsXLS; i++) {
+    let mejorSim = 0;
+    for (let j = 0; j < numColsOCR; j++) {
+      const sim = similitudCabecera(cabeceraXLS[i], cabeceraOCR[j]);
+      if (sim > mejorSim) mejorSim = sim;
+    }
+    similitudes.push({ idx: i, sim: mejorSim, cab: cabeceraXLS[i] });
+  }
+
+  // Quitar solo las N con MENOR similitud (las que no existen en OCR)
+  const ordenadas = similitudes.slice().sort((a, b) => a.sim - b.sim);
+  const aEliminar = new Set(ordenadas.slice(0, numAEliminar).map(s => s.idx));
+
   if (typeof log === 'function') {
-    log('📋 Alineación columnas: Excel ' + cabeceraXLS.length + ' → ' + indicesValidos.length + ' (quitadas: ' + colQuitadas.join(',') + ')', 'info');
-    colQuitadas.forEach(i => {
-      log('   ↳ quitada "' + (cabeceraXLS[i] || '(vacío)') + '" (col ' + i + ')', 'info');
+    log('📋 Alineación: Excel ' + numColsXLS + ' → ' + numColsOCR + ' cols', 'info');
+    ordenadas.slice(0, numAEliminar).forEach(s => {
+      log('   ↳ quitada "' + (s.cab || '(vacío)') + '" (col ' + s.idx + ', sim ' + s.sim.toFixed(2) + ')', 'info');
     });
   }
 
   return matrizExcel.map(fila =>
-    indicesValidos.map(idx => fila[idx] || '')
+    fila.filter((_, i) => !aEliminar.has(i))
   );
 }
 
