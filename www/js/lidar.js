@@ -3,11 +3,12 @@
 // Votación + distancia adaptativa + auto-bordes agresivos
 // ==============================================
 
-function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup) {
+function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4) {
   const todos = [];
   lineas1.forEach(pos => todos.push({ pos, alg: 1 }));
   lineas2.forEach(pos => todos.push({ pos, alg: 2 }));
   lineas3.forEach(pos => todos.push({ pos, alg: 3 }));
+  if (lineas4) lineas4.forEach(pos => todos.push({ pos, alg: 4 }));
   if (todos.length === 0) return [];
   todos.sort((a, b) => a.pos - b.pos);
   const grupos = [];
@@ -63,9 +64,10 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
   return resultado;
 }
 
-function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto) {
+function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV) {
   console.log('📐 LIDAR: votación + eco');
-  console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ' (total=' + (opticaV.length + ecoV.length + a3V.length) + ')');
+  const lvcLen = (lvcV && lvcV.length) || 0;
+  console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ', lvc=' + lvcLen + ' (total=' + (opticaV.length + ecoV.length + a3V.length + lvcLen) + ')');
   console.log('   📥 ENTRADA H: optica=' + opticaH.length + ', eco=' + ecoH.length + ', a3=' + a3H.length + ' (total=' + (opticaH.length + ecoH.length + a3H.length) + ')');
 
   const distH = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
@@ -79,7 +81,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
     return { posicion: v.posicion, votos: v.votos, algoritmos: v.algoritmos, eco: Math.round(eco), aceptar: clasif.aceptar, razon: clasif.razon };
   });
 
-  const votosV = votarLineas(opticaV, ecoV, a3V, distV);
+  const votosV = votarLineas(opticaV, ecoV, a3V, distV, lvcV);
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);

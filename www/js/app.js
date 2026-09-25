@@ -247,7 +247,8 @@ async function analizarTodo() {
       det.optica.lineasH, det.optica.lineasV,
       det.ecografia.lineasH, det.ecografia.lineasV,
       det.a3.lineasH, det.a3.lineasV,
-      brillo, canvasP1.width, canvasP1.height
+      brillo, canvasP1.width, canvasP1.height,
+      lvc.lineasV
     );
     window.lineasLidarH = lidar.lineasH;
     window.lineasLidarV = lidar.lineasV;
