@@ -482,6 +482,14 @@ function aprendizajeAnalizarPar(matrizOCR, matrizExcel, nombre) {
       log('🔍 [DIAG] Fila ' + i + ' OCR: ' + o, 'info');
       log('🔍 [DIAG] Fila ' + i + ' XLS: ' + e, 'info');
     }
+    // Últimas 5 filas
+    const nO = matrizOCR.length, nX = matrizExcel.length;
+    for (let k = 0; k < 5; k++) {
+      const io = nO - 5 + k, ix = nX - 5 + k;
+      const o = (io >= 0 && matrizOCR[io]) ? (matrizOCR[io] || []).slice(0, 3).join('|') : '(n/a)';
+      const e = (ix >= 0 && matrizExcel[ix]) ? (matrizExcel[ix] || []).slice(0, 3).join('|') : '(n/a)';
+      log('🔍 [DIAG] Last-' + (4-k) + ' OCR[' + o + '] XLS[' + e + ']', 'info');
+    }
   }
 
   const comparacion = compararMatrices(matrizOCR, matrizExcel);
