@@ -181,6 +181,14 @@ async function analizarTodo() {
     canvasP1.height = imagenActual.height;
     const ctxP1 = canvasP1.getContext('2d');
     ctxP1.drawImage(imagenActual, 0, 0);
+
+    // v13-fase2: guardar COPIA ORIGINAL antes de filtros (para OCR limpio)
+    const canvasOriginal = document.createElement('canvas');
+    canvasOriginal.width = canvasP1.width;
+    canvasOriginal.height = canvasP1.height;
+    canvasOriginal.getContext('2d').drawImage(canvasP1, 0, 0);
+    window.estadoPasos.imagenOriginal = canvasOriginal;
+
     let imageData = ctxP1.getImageData(0, 0, canvasP1.width, canvasP1.height);
     const preproc = preprocesarImagen(imageData);
     log('   Color: ' + (preproc.tieneColor ? 'SÍ' : 'NO') + ' | Ruido: ' + (preproc.tieneRuido ? 'SÍ' : 'NO'), 'info');
@@ -313,7 +321,10 @@ async function ejecutarOCR(modo) {
     alert('⚠️ Primero ejecuta "Analizar"');
     return;
   }
-  const fuente = window.estadoPasos.imagenProcesada || imagenActual;
+  // v13-fase2: usar imagen ORIGINAL (sin filtros) para OCR limpio
+  const fuente = window.estadoPasos.imagenOriginal
+              || window.estadoPasos.imagenProcesada
+              || imagenActual;
   try {
     await ejecutarOCRCompleto(fuente, window.estadoPasos.celdas, modo);
   } catch (e) {
@@ -573,7 +584,10 @@ async function _ejecutarOCRGenerico(fn, nombre) {
     alert('⚠️ Primero ejecuta "Analizar"');
     return;
   }
-  const fuente = window.estadoPasos.imagenProcesada || imagenActual;
+  // v13-fase2: usar imagen ORIGINAL (sin filtros) para OCR limpio
+  const fuente = window.estadoPasos.imagenOriginal
+              || window.estadoPasos.imagenProcesada
+              || imagenActual;
   const celdas = window.estadoPasos.celdas;
   log('═══════════════════════════════════', 'etapa');
   log('🔬 OCR ' + nombre, 'etapa');
