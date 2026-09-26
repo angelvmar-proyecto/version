@@ -106,7 +106,7 @@ const CONFIG_DEFAULTS = {
   RETINA_UMBRAL_APLICAR: 60,
 
   // Retina global (antes de detección de líneas)
-  RETINA_GLOBAL_ACTIVO: true,
+  RETINA_GLOBAL_ACTIVO: false,
   RETINA_GLOBAL_FUERZA: 1.3,
   RETINA_GLOBAL_RADIO: 15,
 
