@@ -80,7 +80,18 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
     return { posicion: v.posicion, votos: v.votos, algoritmos: v.algoritmos, eco: Math.round(eco), aceptar: clasif.aceptar, razon: clasif.razon };
   });
 
-  const votosV = votarLineas(opticaV, ecoV, a3V, distV, lvcV);
+  // Filtrar A3: solo mantener lineas A3 que tengan Optica cerca (evita bordes de texto)
+  const a3VFiltradas = [];
+  for (const a of a3V) {
+    let opticaCerca = false;
+    for (const o of opticaV) {
+      if (Math.abs(a - o) <= 5) { opticaCerca = true; break; }
+    }
+    if (opticaCerca) a3VFiltradas.push(a);
+  }
+  console.log('   🔍 A3V filtrada: ' + a3V.length + ' → ' + a3VFiltradas.length + ' (solo con Optica cerca)');
+
+  const votosV = votarLineas(opticaV, ecoV, a3VFiltradas, distV, lvcV);
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
