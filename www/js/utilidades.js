@@ -210,20 +210,22 @@ function clusterLineas(lineas, radio) {
   const ordenadas = lineas.slice().sort(function(a, b) { return a - b; });
   const clusters = [];
   let cluster = [ordenadas[0]];
+  let primero = ordenadas[0];
 
   for (let i = 1; i < ordenadas.length; i++) {
     const actual = ordenadas[i];
-    const ultimo = cluster[cluster.length - 1];
-    if (actual - ultimo <= radio) {
+    // Distancia al PRIMERO del cluster (no al ultimo) para evitar efecto cadena
+    if (actual - primero <= radio) {
       cluster.push(actual);
     } else {
       const promedio = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
       clusters.push(promedio);
       cluster = [actual];
+      primero = actual;
     }
   }
-  const promedio = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
-  clusters.push(promedio);
+  const promedioFinal = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
+  clusters.push(promedioFinal);
 
   return clusters;
 }
