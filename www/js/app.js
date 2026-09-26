@@ -757,6 +757,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // de los algoritmos funcionen en cualquier resolucion
 // ============================================================
 function normalizarResolucion(img) {
+  // TEMPORAL TEST 1: desactivada
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  canvas.getContext('2d').drawImage(img, 0, 0);
+  return canvas;
+  // FIN TEMPORAL
+}
+
+function normalizarResolucionVIEJO(img) {
   const ancho = img.width;
   const alto = img.height;
   let factor = 1;
