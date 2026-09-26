@@ -198,6 +198,33 @@ function detectarEcografia(brillo, ancho, alto) {
     ecoV[x] = suma / alto;
   }
 
+  // ─── DIAGNÓSTICO ECO V ───
+  (function() {
+    const topN = 30;
+    const ecoVCopia = ecoV.slice().sort(function(a, b) { return b - a; });
+    const top = ecoVCopia.slice(0, topN);
+    const topMediana = top[Math.floor(top.length / 2)];
+    const umbralActual = CONFIG.ECO_UMBRAL_V;
+    const umbralAdaptativo = Math.round(topMediana * 0.75);
+
+    let sobreActual = 0;
+    for (let x = 0; x < ecoV.length; x++) {
+      if (ecoV[x] > umbralActual) sobreActual++;
+    }
+    let sobreAdaptativo = 0;
+    for (let x = 0; x < ecoV.length; x++) {
+      if (ecoV[x] > umbralAdaptativo) sobreAdaptativo++;
+    }
+
+    console.log('📊 ECO V DIAGNÓSTICO:');
+    console.log('   Top 30 gradientes: min=' + top[top.length-1] + ', max=' + top[0] + ', mediana=' + topMediana);
+    console.log('   Umbral actual: ' + umbralActual + ' → ' + sobreActual + ' candidatas');
+    console.log('   Umbral adaptativo (0.75×): ' + umbralAdaptativo + ' → ' + sobreAdaptativo + ' candidatas');
+    if (typeof log === 'function') {
+      log('📊 ECO V: mediana top30=' + topMediana + ', actuales=' + sobreActual + ', adapt=' + umbralAdaptativo + '→' + sobreAdaptativo, 'info');
+    }
+  })();
+
   // Detectar líneas HORIZONTALES
   const lineasH = [];
   let ultH = -9999;
