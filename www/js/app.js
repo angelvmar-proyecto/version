@@ -176,11 +176,8 @@ async function analizarTodo() {
   try {
     actualizarProgreso(5);
     log('🔧 Paso 1: Preprocesamiento', 'etapa');
-    const canvasP1 = document.createElement('canvas');
-    canvasP1.width = imagenActual.width;
-    canvasP1.height = imagenActual.height;
+    const canvasP1 = normalizarResolucion(imagenActual);
     const ctxP1 = canvasP1.getContext('2d');
-    ctxP1.drawImage(imagenActual, 0, 0);
 
     // v13-fase2: guardar COPIA ORIGINAL antes de filtros (para OCR limpio)
     const canvasOriginal = document.createElement('canvas');
@@ -752,3 +749,44 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) btn.onclick = exportarCapasDiag;
   }, 800);
 });
+
+
+// ============================================================
+// v13-fase2: Normalizar resolucion antes de procesar
+// Escala la imagen a un rango estandar para que los umbrales
+// de los algoritmos funcionen en cualquier resolucion
+// ============================================================
+function normalizarResolucion(img) {
+  const ancho = img.width;
+  const alto = img.height;
+  let factor = 1;
+
+  if (ancho < 1200) {
+    factor = 1400 / ancho;
+  } else if (ancho > 2200) {
+    factor = 2000 / ancho;
+  }
+
+  if (factor === 1) {
+    const canvas = document.createElement('canvas');
+    canvas.width = ancho;
+    canvas.height = alto;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    return canvas;
+  }
+
+  const nuevoAncho = Math.round(ancho * factor);
+  const nuevoAlto = Math.round(alto * factor);
+  const canvas = document.createElement('canvas');
+  canvas.width = nuevoAncho;
+  canvas.height = nuevoAlto;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, nuevoAncho, nuevoAlto);
+
+  if (typeof log === 'function') {
+    log('   📐 Normalizado: ' + ancho + 'x' + alto + ' → ' + nuevoAncho + 'x' + nuevoAlto + ' (factor ' + factor.toFixed(2) + ')', 'info');
+  }
+  return canvas;
+}
