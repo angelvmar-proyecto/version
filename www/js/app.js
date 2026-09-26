@@ -177,6 +177,7 @@ async function analizarTodo() {
     actualizarProgreso(5);
     log('🔧 Paso 1: Preprocesamiento', 'etapa');
     const canvasP1 = normalizarResolucion(imagenActual);
+    escalarConfig(canvasP1.width, canvasP1.height);
     const ctxP1 = canvasP1.getContext('2d');
 
     // v13-fase2: guardar COPIA ORIGINAL antes de filtros (para OCR limpio)
@@ -799,4 +800,40 @@ function normalizarResolucionVIEJO(img) {
     log('   📐 Normalizado: ' + ancho + 'x' + alto + ' → ' + nuevoAncho + 'x' + nuevoAlto + ' (factor ' + factor.toFixed(2) + ')', 'info');
   }
   return canvas;
+}
+
+
+// ============================================================
+// v13-fase2: Escalar parámetros según tamaño de imagen
+// Referencia: imagen 1600x1377 donde los algoritmos funcionan
+// ============================================================
+function escalarConfig(ancho, alto) {
+  window.CONFIG_ESC = Object.assign({}, CONFIG);
+  const dimMin = Math.min(ancho, alto);
+
+  // Verticales (distancias entre columnas) escalan con ANCHO
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(5, Math.round(ancho * 0.0075));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(8, Math.round(ancho * 0.0125));
+  window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(ancho * 0.006));
+  window.CONFIG_ESC.LVC_VENTANA = Math.max(1, Math.round(ancho * 0.00125));
+  window.CONFIG_ESC.OPENV_DISTANCIA_MIN = Math.max(4, Math.round(ancho * 0.006));
+
+  // Horizontales (distancias entre filas) escalan con ALTO
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(8, Math.round(alto * 0.0109));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(10, Math.round(alto * 0.0131));
+  window.CONFIG_ESC.OPENV_KERNEL_ALTO = Math.max(20, Math.round(alto * 0.029));
+
+  // Compartidos: escalan con la dimensión menor
+  window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(dimMin * 0.006));
+  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(2, Math.round(ancho * 0.0025));
+  window.CONFIG_ESC.LIDAR_MARGEN_BORDE = Math.max(4, Math.round(ancho * 0.005));
+  window.CONFIG_ESC.RANGO_AJUSTE = Math.max(1, Math.round(ancho * 0.00125));
+
+  if (typeof log === 'function') {
+    log('📏 Config escalada: ECO_V=' + window.CONFIG_ESC.ECO_DISTANCIA_MIN_V +
+        ', OPT_V=' + window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V +
+        ', A3=' + window.CONFIG_ESC.A3_DISTANCIA_MIN +
+        ', LIDAR=' + window.CONFIG_ESC.LIDAR_AGRUPAR_DIST +
+        ', OPENV_K=' + window.CONFIG_ESC.OPENV_KERNEL_ALTO, 'info');
+  }
 }

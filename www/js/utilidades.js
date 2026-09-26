@@ -95,10 +95,10 @@ function ajustarLineaV(x, brillo, alto, ancho, rango) {
 // ============================================
 function aplicarAjusteLocal(lineasH, lineasV, brillo, alto, ancho) {
   const lineasHAjustadas = lineasH.map(y =>
-    ajustarLineaH(y, brillo, alto, ancho, CONFIG.RANGO_AJUSTE)
+    ajustarLineaH(y, brillo, alto, ancho, CONFIG_ESC.RANGO_AJUSTE)
   );
   const lineasVAjustadas = lineasV.map(x =>
-    ajustarLineaV(x, brillo, alto, ancho, CONFIG.RANGO_AJUSTE)
+    ajustarLineaV(x, brillo, alto, ancho, CONFIG_ESC.RANGO_AJUSTE)
   );
   return { lineasH: lineasHAjustadas, lineasV: lineasVAjustadas };
 }

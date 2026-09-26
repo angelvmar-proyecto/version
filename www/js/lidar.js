@@ -69,8 +69,8 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ', lvc=' + lvcLen + ' (total=' + (opticaV.length + ecoV.length + a3V.length + lvcLen) + ')');
   console.log('   📥 ENTRADA H: optica=' + opticaH.length + ', eco=' + ecoH.length + ', a3=' + a3H.length + ' (total=' + (opticaH.length + ecoH.length + a3H.length) + ')');
 
-  const distH = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
-  const distV = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
+  const distH = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
+  const distV = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
   console.log('   📏 distAgrup: H=' + distH + ', V=' + distV);
 
   const votosH = votarLineas(opticaH, ecoH, a3H, distH);
@@ -106,7 +106,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   // 🔲 AUTO-BORDES v2: más agresivo
   // Siempre garantiza que existan bordes en las 4 orillas de la imagen
-  const MARGEN = (CONFIG.LIDAR_MARGEN_BORDE !== undefined) ? CONFIG.LIDAR_MARGEN_BORDE : 8;
+  const MARGEN = (CONFIG_ESC.LIDAR_MARGEN_BORDE !== undefined) ? CONFIG_ESC.LIDAR_MARGEN_BORDE : 8;
 
   if (lineasVFinal.length > 0) {
     if (lineasVFinal[0] > MARGEN) {

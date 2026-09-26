@@ -49,7 +49,7 @@ function detectarOptica(brillo, ancho, alto) {
         perfilHSuave[y] < perfilHSuave[y + 2]) {
 
       if (lineasH.length === 0 ||
-          y - lineasH[lineasH.length - 1] >= CONFIG.OPTICA_DISTANCIA_MIN_H) {
+          y - lineasH[lineasH.length - 1] >= CONFIG_ESC.OPTICA_DISTANCIA_MIN_H) {
         lineasH.push(y);
       } else if (perfilHSuave[y] < perfilHSuave[lineasH[lineasH.length - 1]]) {
         lineasH[lineasH.length - 1] = y;
@@ -67,7 +67,7 @@ function detectarOptica(brillo, ancho, alto) {
         perfilVSuave[x] < perfilVSuave[x + 2]) {
 
       if (lineasV.length === 0 ||
-          x - lineasV[lineasV.length - 1] >= CONFIG.OPTICA_DISTANCIA_MIN_V) {
+          x - lineasV[lineasV.length - 1] >= CONFIG_ESC.OPTICA_DISTANCIA_MIN_V) {
         lineasV.push(x);
       } else if (perfilVSuave[x] < perfilVSuave[lineasV[lineasV.length - 1]]) {
         lineasV[lineasV.length - 1] = x;
@@ -149,8 +149,8 @@ function detectarA3(brillo, ancho, alto) {
   }
 
   // Filtrar líneas cercanas
-  const lineasHFiltradas = filtrarLineasCercanas(lineasH, CONFIG.A3_DISTANCIA_MIN);
-  const lineasVFiltradas = filtrarLineasCercanas(lineasV, CONFIG.A3_DISTANCIA_MIN);
+  const lineasHFiltradas = filtrarLineasCercanas(lineasH, CONFIG_ESC.A3_DISTANCIA_MIN);
+  const lineasVFiltradas = filtrarLineasCercanas(lineasV, CONFIG_ESC.A3_DISTANCIA_MIN);
 
   console.log(`   → ${lineasHFiltradas.length}H, ${lineasVFiltradas.length}V`);
   return { lineasH: lineasHFiltradas, lineasV: lineasVFiltradas };
@@ -230,7 +230,7 @@ function detectarEcografia(brillo, ancho, alto) {
   let ultH = -9999;
   for (let y = 0; y < alto; y++) {
     if (ecoH[y] > CONFIG.ECO_UMBRAL_H &&
-        y - ultH >= CONFIG.ECO_DISTANCIA_MIN_H) {
+        y - ultH >= CONFIG_ESC.ECO_DISTANCIA_MIN_H) {
       // Verificar continuidad horizontal
       let fuertes = 0;
       for (let x = 0; x < ancho; x++) {
@@ -253,7 +253,7 @@ function detectarEcografia(brillo, ancho, alto) {
   let ultV = -9999;
   for (let x = 0; x < ancho; x++) {
     if (ecoV[x] > CONFIG.ECO_UMBRAL_V &&
-        x - ultV >= CONFIG.ECO_DISTANCIA_MIN_V) {
+        x - ultV >= CONFIG_ESC.ECO_DISTANCIA_MIN_V) {
       let fuertes = 0;
       for (let y = 0; y < alto; y++) {
         let maxDif = 0;
@@ -330,7 +330,7 @@ console.log('✅ Detección cargada (Óptica + A3 + Ecografía)');
 function detectarCoherenciaV(brillo, ancho, alto) {
   console.log('📊 LVC: coherencia vertical');
 
-  const ventana = CONFIG.LVC_VENTANA || 2;
+  const ventana = CONFIG_ESC.LVC_VENTANA || 2;
   const umbralDif = CONFIG.LVC_UMBRAL_DIF || 15;
   const coherenciaMin = CONFIG.LVC_COHERENCIA_MIN || 0.60;
 
@@ -352,7 +352,7 @@ function detectarCoherenciaV(brillo, ancho, alto) {
     }
   }
 
-  const lineasVFiltradas = filtrarLineasCercanas(lineasV, CONFIG.LVC_DISTANCIA_MIN || 10);
+  const lineasVFiltradas = filtrarLineasCercanas(lineasV, CONFIG_ESC.LVC_DISTANCIA_MIN || 10);
 
   console.log('   → ' + lineasVFiltradas.length + 'V (coherencia min ' + coherenciaMin + ')');
   return { lineasV: lineasVFiltradas };
@@ -366,9 +366,9 @@ function detectarCoherenciaV(brillo, ancho, alto) {
 function detectarOpeningVertical(brillo, ancho, alto) {
   console.log('🔷 OPENV: opening vertical morfológico');
 
-  const kernelAlto = CONFIG.OPENV_KERNEL_ALTO || 60;
+  const kernelAlto = CONFIG_ESC.OPENV_KERNEL_ALTO || 60;
   const umbralValle = CONFIG.OPENV_UMBRAL_VALLE || 15;
-  const distanciaMin = CONFIG.OPENV_DISTANCIA_MIN || 10;
+  const distanciaMin = CONFIG_ESC.OPENV_DISTANCIA_MIN || 10;
 
   // 1) Mapa binario: píxel oscuro local (valle contra vecinos ±2)
   const esValle = [];

@@ -140,4 +140,9 @@ let CONFIG = JSON.parse(JSON.stringify(CONFIG_DEFAULTS));
   }
 })();
 
+// CONFIG_ESC: copia modificable, se recalcula con escalado por imagen
+if (typeof window !== 'undefined') {
+  window.CONFIG_ESC = Object.assign({}, CONFIG);
+}
+
 console.log('✅ CONFIG v' + CONFIG.VERSION + ' cargado');
