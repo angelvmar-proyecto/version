@@ -23,10 +23,12 @@ const CONFIG_DEFAULTS = {
   // Ecografía
   ECO_VENTANA: 3,
   ECO_UMBRAL_H: 38,
-  ECO_UMBRAL_V: 42,
+  ECO_UMBRAL_V: 30,
   ECO_CONTINUIDAD: 0.55,
   ECO_DISTANCIA_MIN_H: 18,
   ECO_DISTANCIA_MIN_V: 20,
+  ECO_ADAPTATIVO: false,
+  ECO_FACTOR_ADAPT: 0.35,
 
   // LVC (Coherencia Vertical) - 4to algoritmo para verticales
   LVC_VENTANA: 2,
@@ -56,9 +58,9 @@ const CONFIG_DEFAULTS = {
   ML_COLOR: '#84cc16',
 
   // A3 (calibrado: 21→40+ verticales en tabla densa)
-  A3_UMBRAL_MAGNITUD: 180,
+  A3_UMBRAL_MAGNITUD: 130,
   A3_UMBRAL_ORTOGONALIDAD: 0.75,
-  A3_COBERTURA_MINIMA: 0.50,
+  A3_COBERTURA_MINIMA: 0.35,
   A3_DISTANCIA_MIN: 10,
 
   // A3 para VERTICALES (independiente de las horizontales)

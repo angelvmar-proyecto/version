@@ -198,6 +198,19 @@ function detectarEcografia(brillo, ancho, alto) {
     ecoV[x] = suma / alto;
   }
 
+  // ─── CÁLCULO DE UMBRAL ADAPTATIVO PARA ECO V ───
+  let umbralEcoV = CONFIG.ECO_UMBRAL_V;
+  if (CONFIG.ECO_ADAPTATIVO && CONFIG.ECO_FACTOR_ADAPT) {
+    const ecoVCopia = ecoV.slice().sort(function(a, b) { return b - a; });
+    const top30 = ecoVCopia.slice(0, 30);
+    const mediana = top30[Math.floor(top30.length / 2)];
+    const umbralAdapt = Math.round(mediana * CONFIG.ECO_FACTOR_ADAPT);
+    umbralEcoV = Math.max(CONFIG.ECO_UMBRAL_V, umbralAdapt);
+    if (typeof log === 'function') {
+      log('   🔧 Eco V adaptativo: mediana=' + mediana.toFixed(1) + ' → umbral=' + umbralEcoV, 'info');
+    }
+  }
+
   // ─── DIAGNÓSTICO ECO V ───
   (function() {
     const topN = 30;
@@ -252,7 +265,7 @@ function detectarEcografia(brillo, ancho, alto) {
   const lineasV = [];
   let ultV = -9999;
   for (let x = 0; x < ancho; x++) {
-    if (ecoV[x] > CONFIG.ECO_UMBRAL_V &&
+    if (ecoV[x] > umbralEcoV &&
         x - ultV >= CONFIG_ESC.ECO_DISTANCIA_MIN_V) {
       let fuertes = 0;
       for (let y = 0; y < alto; y++) {
@@ -261,7 +274,7 @@ function detectarEcografia(brillo, ancho, alto) {
           const dif = Math.abs(brillo[y][x] - brillo[y][xx]);
           if (dif > maxDif) maxDif = dif;
         }
-        if (maxDif > CONFIG.ECO_UMBRAL_V * 0.5) fuertes++;
+        if (maxDif > umbralEcoV * 0.5) fuertes++;
       }
       if (fuertes / alto >= CONFIG.ECO_CONTINUIDAD) {
         lineasV.push(x);
