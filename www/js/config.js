@@ -42,7 +42,7 @@ const CONFIG_DEFAULTS = {
   // ML (Minimo Local) - 6to algoritmo, detecta lineas delgadas/oscilantes
   // Preprocesamiento de DETECCION (no afecta al OCR)
   DET_BLUR_ACTIVO: true,
-  DET_BLUR_RADIO: 0.8,
+  DET_BLUR_RADIO: 0.3,
 
   ML_COHERENCIA_MIN: 0.65,
   ML_DISTANCIA_MIN: 8,
