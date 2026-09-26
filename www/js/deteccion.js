@@ -327,3 +327,61 @@ function detectarCoherenciaV(brillo, ancho, alto) {
   console.log('   → ' + lineasVFiltradas.length + 'V (coherencia min ' + coherenciaMin + ')');
   return { lineasV: lineasVFiltradas };
 }
+
+// ============================================
+// ALGORITMO 5: OPENV — Opening Vertical Morfologico
+// Erosion vertical: solo sobrevive lo continuo verticalmente
+// No usa brillo ni gradiente -> detecta lineas tenues
+// ============================================
+function detectarOpeningVertical(brillo, ancho, alto) {
+  console.log('🔷 OPENV: opening vertical morfológico');
+
+  const kernelAlto = CONFIG.OPENV_KERNEL_ALTO || 60;
+  const umbralValle = CONFIG.OPENV_UMBRAL_VALLE || 15;
+  const distanciaMin = CONFIG.OPENV_DISTANCIA_MIN || 10;
+
+  // 1) Mapa binario: píxel oscuro local (valle contra vecinos ±2)
+  const esValle = [];
+  for (let y = 0; y < alto; y++) {
+    esValle[y] = new Uint8Array(ancho);
+    for (let x = 2; x < ancho - 2; x++) {
+      const b = brillo[y][x];
+      const bIzq = brillo[y][x - 2];
+      const bDer = brillo[y][x + 2];
+      if (b < bIzq - umbralValle && b < bDer - umbralValle) {
+        esValle[y][x] = 1;
+      }
+    }
+  }
+
+  // 2) Erosion vertical: una columna X es "linea" si TODAS las Y en ventana
+  //    consecutiva de kernelAlto son valle. Buscamos rachas.
+  const lineasV = [];
+  const numBloques = Math.ceil(alto / kernelAlto);
+
+  for (let x = 2; x < ancho - 2; x++) {
+    let bloquesContinuos = 0;
+    for (let b = 0; b < numBloques; b++) {
+      const y0 = b * kernelAlto;
+      const y1 = Math.min(alto, y0 + kernelAlto);
+      let valleEnBloque = 0;
+      for (let y = y0; y < y1; y++) {
+        if (esValle[y][x]) valleEnBloque++;
+      }
+      const ratioBloque = valleEnBloque / (y1 - y0);
+      if (ratioBloque >= 0.75) {
+        bloquesContinuos++;
+      } else {
+        break;
+      }
+    }
+    if (bloquesContinuos >= 2) {
+      lineasV.push(x);
+    }
+  }
+
+  const lineasVFiltradas = filtrarLineasCercanas(lineasV, distanciaMin);
+
+  console.log('   → ' + lineasVFiltradas.length + 'V (kernel=' + kernelAlto + 'px, umbral=' + umbralValle + ')');
+  return { lineasV: lineasVFiltradas };
+}

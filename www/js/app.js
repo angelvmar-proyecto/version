@@ -236,6 +236,11 @@ async function analizarTodo() {
     window.lineasLVCV = lvc.lineasV;
     log('   📊 LVC: ' + lvc.lineasV.length + 'V', 'info');
 
+    // OPENV: 5to algoritmo (opening vertical morfologico)
+    const openv = detectarOpeningVertical(brillo, canvasP1.width, canvasP1.height);
+    window.lineasOPENVV = openv.lineasV;
+    log('   🔷 OPENV: ' + openv.lineasV.length + 'V', 'info');
+
     marcarPasoCompletado(3);
     marcarPasoCompletado(4);
     marcarPasoCompletado(5);

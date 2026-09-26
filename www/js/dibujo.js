@@ -13,6 +13,7 @@ window.lineasA3V = [];
 window.lineasLidarH = [];
 window.lineasLidarV = [];
 window.lineasLVCV = [];
+window.lineasOPENVV = [];
 window.lineasVisibles = true;
 
 function dibujarTodo() {
@@ -117,6 +118,18 @@ function dibujarTodo() {
       });
     }
 
+    // 🔷 OPENV (opening vertical morfológico)
+    if (window.lineasOPENVV && window.lineasOPENVV.length > 0) {
+      ctx.strokeStyle = CONFIG.COLOR_OPENV || '#22d3ee';
+      ctx.lineWidth = grosor;
+      window.lineasOPENVV.forEach(function(x) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, fuente.height);
+        ctx.stroke();
+      });
+    }
+
     // ⚫ LIDAR
     if (window.lineasLidarH.length > 0 || window.lineasLidarV.length > 0) {
       ctx.strokeStyle = CONFIG.COLOR_LIDAR;
@@ -162,6 +175,7 @@ function limpiarLineas() {
   window.lineasLidarH = [];
   window.lineasLidarV = [];
   window.lineasLVCV = [];
+  window.lineasOPENVV = [];
 }
 
 document.addEventListener('DOMContentLoaded', function() {

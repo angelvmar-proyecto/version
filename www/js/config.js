@@ -34,6 +34,11 @@ const CONFIG_DEFAULTS = {
   LVC_COHERENCIA_MIN: 0.35,
   LVC_DISTANCIA_MIN: 10,
 
+  // Opening Vertical (erosion vertical morfologica) - 5to algoritmo
+  OPENV_KERNEL_ALTO: 60,
+  OPENV_UMBRAL_VALLE: 15,
+  OPENV_DISTANCIA_MIN: 10,
+
   // A3 (calibrado: 21→40+ verticales en tabla densa)
   A3_UMBRAL_MAGNITUD: 180,
   A3_UMBRAL_ORTOGONALIDAD: 0.75,
@@ -69,6 +74,7 @@ const CONFIG_DEFAULTS = {
   COLOR_A3: '#8B5CF6',
   COLOR_LIDAR: '#000000',
   COLOR_LVC: '#ec4899',
+  COLOR_OPENV: '#22d3ee',
 
   // OCR
   TESS_IDIOMAS: 'spa+eng',
