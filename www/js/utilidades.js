@@ -198,3 +198,32 @@ function formatearBytes(bytes) {
 }
 
 console.log('✅ Utilidades cargadas');
+
+// ============================================
+// CLUSTER: Consolida lineas cercanas en una sola
+// Recibe array de posiciones y radio (en px)
+// Devuelve array de posiciones promediadas
+// ============================================
+function clusterLineas(lineas, radio) {
+  if (!lineas || lineas.length === 0) return [];
+  if (lineas.length === 1) return [lineas[0]];
+  const ordenadas = lineas.slice().sort(function(a, b) { return a - b; });
+  const clusters = [];
+  let cluster = [ordenadas[0]];
+
+  for (let i = 1; i < ordenadas.length; i++) {
+    const actual = ordenadas[i];
+    const ultimo = cluster[cluster.length - 1];
+    if (actual - ultimo <= radio) {
+      cluster.push(actual);
+    } else {
+      const promedio = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
+      clusters.push(promedio);
+      cluster = [actual];
+    }
+  }
+  const promedio = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
+  clusters.push(promedio);
+
+  return clusters;
+}

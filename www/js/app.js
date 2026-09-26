@@ -274,8 +274,14 @@ async function analizarTodo() {
     dibujarTodo();
 
     log('📐 Paso 6: LIDAR', 'etapa');
+    // TEST-1: cluster Optica antes de LIDAR (consolida duplicados)
+    const opticaRadio = Math.round(canvasP1.width * 0.04);
+    const opticaHCluster = clusterLineas(det.optica.lineasH, opticaRadio);
+    const opticaVCluster = clusterLineas(det.optica.lineasV, opticaRadio);
+    log('   🔗 Optica cluster: ' + det.optica.lineasH.length + '→' + opticaHCluster.length + 'H, ' + det.optica.lineasV.length + '→' + opticaVCluster.length + 'V (radio ' + opticaRadio + 'px)', 'info');
+
     const lidar = ejecutarLidar(
-      det.optica.lineasH, det.optica.lineasV,
+      opticaHCluster, opticaVCluster,
       det.ecografia.lineasH, det.ecografia.lineasV,
       det.a3.lineasH, det.a3.lineasV,
       brillo, canvasP1.width, canvasP1.height,
