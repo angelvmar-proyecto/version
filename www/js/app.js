@@ -262,6 +262,11 @@ async function analizarTodo() {
     window.lineasMLV = ml.lineasV;
     log('   🟢 ML: ' + ml.lineasV.length + 'V', 'info');
 
+    // WS: 7mo algoritmo (espacios blancos entre columnas)
+    const ws = detectarWhitespace(brillo, canvasP1.width, canvasP1.height);
+    window.lineasWSV = ws.lineasV;
+    log('   🟠 WS: ' + ws.lineasV.length + 'V', 'info');
+
     marcarPasoCompletado(3);
     marcarPasoCompletado(4);
     marcarPasoCompletado(5);

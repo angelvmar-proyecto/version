@@ -41,8 +41,15 @@ const CONFIG_DEFAULTS = {
 
   // ML (Minimo Local) - 6to algoritmo, detecta lineas delgadas/oscilantes
   // Preprocesamiento de DETECCION (no afecta al OCR)
-  DET_BLUR_ACTIVO: true,
+  DET_BLUR_ACTIVO: false,
   DET_BLUR_RADIO: 0.15,
+
+  // WS (Whitespace) - 7mo algoritmo, detecta espacios blancos entre columnas
+  WS_UMBRAL_BLANCO: 190,
+  WS_COHERENCIA_MIN: 0.75,
+  WS_ANCHO_MIN: 4,
+  WS_ANCHO_MAX: 35,
+  WS_DISTANCIA_MIN: 8,
 
   ML_COHERENCIA_MIN: 0.65,
   ML_DISTANCIA_MIN: 8,
@@ -86,6 +93,7 @@ const CONFIG_DEFAULTS = {
   COLOR_LVC: '#ec4899',
   COLOR_OPENV: '#22d3ee',
   COLOR_ML: '#84cc16',
+  COLOR_WS: '#f97316',
 
   // OCR
   TESS_IDIOMAS: 'spa+eng',

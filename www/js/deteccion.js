@@ -451,3 +451,54 @@ function detectarMinimoLocal(brillo, ancho, alto) {
   console.log('   → ' + filtradas.length + 'V (coherencia min ' + coherenciaMin + ')');
   return { lineasV: filtradas };
 }
+
+// ============================================
+// ALGORITMO 7: WS — Whitespace
+// Detecta espacios blancos entre columnas (bandas verticales sin texto)
+// Independiente de la nitidez de las líneas
+// ============================================
+function detectarWhitespace(brillo, ancho, alto) {
+  console.log('🟠 WS: espacios blancos entre columnas');
+
+  const umbralBlanco = CONFIG_ESC.WS_UMBRAL_BLANCO || CONFIG.WS_UMBRAL_BLANCO || 190;
+  const coherenciaMin = CONFIG_ESC.WS_COHERENCIA_MIN || CONFIG.WS_COHERENCIA_MIN || 0.75;
+  const anchoMin = CONFIG.WS_ANCHO_MIN || 4;
+  const anchoMax = CONFIG.WS_ANCHO_MAX || 35;
+  const distanciaMin = CONFIG_ESC.WS_DISTANCIA_MIN || CONFIG.WS_DISTANCIA_MIN || 8;
+
+  // 1) Marcar cada columna como "blanca" o no
+  const esBlanca = new Uint8Array(ancho);
+  for (let x = 0; x < ancho; x++) {
+    let blancos = 0;
+    for (let y = 0; y < alto; y++) {
+      if (brillo[y][x] > umbralBlanco) blancos++;
+    }
+    if (blancos / alto >= coherenciaMin) esBlanca[x] = 1;
+  }
+
+  // 2) Detectar runs de columnas blancas consecutivas
+  const lineasV = [];
+  let inicio = -1;
+  for (let x = 0; x < ancho; x++) {
+    if (esBlanca[x] && inicio === -1) {
+      inicio = x;
+    } else if (!esBlanca[x] && inicio !== -1) {
+      const anchoRun = x - inicio;
+      if (anchoRun >= anchoMin && anchoRun <= anchoMax) {
+        // Es una separacion: bordes en inicio y fin del run
+        lineasV.push(inicio);
+        lineasV.push(x - 1);
+      }
+      inicio = -1;
+    }
+  }
+  // Cerrar run al final
+  if (inicio !== -1 && (ancho - inicio) >= anchoMin) {
+    lineasV.push(inicio);
+    lineasV.push(ancho - 1);
+  }
+
+  const filtradas = filtrarLineasCercanas(lineasV, distanciaMin);
+  console.log('   → ' + filtradas.length + 'V (umbral ' + umbralBlanco + ', ancho ' + anchoMin + '-' + anchoMax + ')');
+  return { lineasV: filtradas };
+}
