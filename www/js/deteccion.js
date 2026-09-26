@@ -132,15 +132,18 @@ function detectarA3(brillo, ancho, alto) {
   // Detectar líneas VERTICALES (gradiente horizontal)
   const lineasV = [];
   for (let x = 1; x < ancho - 1; x++) {
-    let ortogonales = 0;
+    // ACUMULADOR: sumar gradiente horizontal ponderado por ortogonalidad
+    let sumaPonderada = 0;
     for (let y = 1; y < alto - 1; y++) {
-      if (magnitud[y][x] > CONFIG.A3_UMBRAL_MAGNITUD_V) {
-        const ratio = Math.abs(gradX[y][x]) /
-          (Math.abs(gradX[y][x]) + Math.abs(gradY[y][x]) + 0.001);
-        if (ratio > CONFIG.A3_UMBRAL_ORTOGONALIDAD_V) ortogonales++;
+      const gx = Math.abs(gradX[y][x]);
+      const gy = Math.abs(gradY[y][x]);
+      const ratio = gx / (gx + gy + 0.001);
+      if (ratio > CONFIG.A3_UMBRAL_ORTOGONALIDAD_V) {
+        sumaPonderada += gx;
       }
     }
-    if (ortogonales / alto > CONFIG.A3_COBERTURA_MINIMA_V) {
+    const promedio = sumaPonderada / alto;
+    if (promedio > CONFIG.A3_UMBRAL_V_PROMEDIO) {
       lineasV.push(x);
     }
   }
