@@ -208,24 +208,35 @@ function clusterLineas(lineas, radio) {
   if (!lineas || lineas.length === 0) return [];
   if (lineas.length === 1) return [lineas[0]];
   const ordenadas = lineas.slice().sort(function(a, b) { return a - b; });
-  const clusters = [];
+  const resultado = [];
   let cluster = [ordenadas[0]];
   let primero = ordenadas[0];
 
+  function volcarCluster(c) {
+    // Devuelve los BORDES del cluster: primero y ultimo
+    // Si tienen distancia > 3px, son 2 bordes reales (izq + der de la linea)
+    // Si estan muy cerca, es una sola linea, devolver solo el primero
+    const inicio = c[0];
+    const fin = c[c.length - 1];
+    if (fin - inicio > 3) {
+      resultado.push(inicio);
+      resultado.push(fin);
+    } else {
+      resultado.push(inicio);
+    }
+  }
+
   for (let i = 1; i < ordenadas.length; i++) {
     const actual = ordenadas[i];
-    // Distancia al PRIMERO del cluster (no al ultimo) para evitar efecto cadena
     if (actual - primero <= radio) {
       cluster.push(actual);
     } else {
-      const promedio = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
-      clusters.push(promedio);
+      volcarCluster(cluster);
       cluster = [actual];
       primero = actual;
     }
   }
-  const promedioFinal = Math.round(cluster.reduce(function(s, x) { return s + x; }, 0) / cluster.length);
-  clusters.push(promedioFinal);
+  volcarCluster(cluster);
 
-  return clusters;
+  return resultado;
 }
