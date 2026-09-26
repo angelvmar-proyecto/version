@@ -415,3 +415,41 @@ function detectarOpeningVertical(brillo, ancho, alto) {
   console.log('   → ' + lineasVFiltradas.length + 'V (kernel=' + kernelAlto + 'px, umbral=' + umbralValle + ')');
   return { lineasV: lineasVFiltradas };
 }
+
+// ============================================
+// ALGORITMO 6: ML — Minimo Local
+// Detecta lineas delgadas/oscilantes sin umbral de magnitud
+// Solo verifica que el pixel sea el MINIMO LOCAL de su vecindario
+// ============================================
+function detectarMinimoLocal(brillo, ancho, alto) {
+  console.log('🟢 ML: minimo local');
+
+  const coherenciaMin = CONFIG_ESC.ML_COHERENCIA_MIN || CONFIG.ML_COHERENCIA_MIN || 0.65;
+  const distanciaMin = CONFIG_ESC.ML_DISTANCIA_MIN || CONFIG.ML_DISTANCIA_MIN || 8;
+
+  const lineasV = [];
+
+  for (let x = 2; x < ancho - 2; x++) {
+    let filasMinimo = 0;
+    for (let y = 0; y < alto; y++) {
+      const b = brillo[y][x];
+      const bIzq = brillo[y][x - 1];
+      const bDer = brillo[y][x + 1];
+      // Es minimo local si es <= a sus vecinos izquierdo Y derecho
+      if (b <= bIzq && b <= bDer) {
+        // Exigir un minimo real: al menos 1 punto mas oscuro que la media
+        if (b < bIzq + bDer) {
+          filasMinimo++;
+        }
+      }
+    }
+    const coherencia = filasMinimo / alto;
+    if (coherencia >= coherenciaMin) {
+      lineasV.push(x);
+    }
+  }
+
+  const filtradas = filtrarLineasCercanas(lineasV, distanciaMin);
+  console.log('   → ' + filtradas.length + 'V (coherencia min ' + coherenciaMin + ')');
+  return { lineasV: filtradas };
+}

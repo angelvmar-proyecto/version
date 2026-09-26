@@ -239,6 +239,11 @@ async function analizarTodo() {
     window.lineasOPENVV = openv.lineasV;
     log('   🔷 OPENV: ' + openv.lineasV.length + 'V', 'info');
 
+    // ML: 6to algoritmo (minimo local, detecta lineas delgadas/oscilantes)
+    const ml = detectarMinimoLocal(brillo, canvasP1.width, canvasP1.height);
+    window.lineasMLV = ml.lineasV;
+    log('   🟢 ML: ' + ml.lineasV.length + 'V', 'info');
+
     marcarPasoCompletado(3);
     marcarPasoCompletado(4);
     marcarPasoCompletado(5);

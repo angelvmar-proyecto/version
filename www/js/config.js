@@ -39,6 +39,11 @@ const CONFIG_DEFAULTS = {
   OPENV_UMBRAL_VALLE: 15,
   OPENV_DISTANCIA_MIN: 10,
 
+  // ML (Minimo Local) - 6to algoritmo, detecta lineas delgadas/oscilantes
+  ML_COHERENCIA_MIN: 0.65,
+  ML_DISTANCIA_MIN: 8,
+  ML_COLOR: '#84cc16',
+
   // A3 (calibrado: 21→40+ verticales en tabla densa)
   A3_UMBRAL_MAGNITUD: 180,
   A3_UMBRAL_ORTOGONALIDAD: 0.75,
@@ -76,6 +81,7 @@ const CONFIG_DEFAULTS = {
   COLOR_LIDAR: '#000000',
   COLOR_LVC: '#ec4899',
   COLOR_OPENV: '#22d3ee',
+  COLOR_ML: '#84cc16',
 
   // OCR
   TESS_IDIOMAS: 'spa+eng',
