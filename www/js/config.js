@@ -45,10 +45,10 @@ const CONFIG_DEFAULTS = {
   DET_BLUR_RADIO: 0.15,
 
   // WS (Whitespace) - 7mo algoritmo, detecta espacios blancos entre columnas
-  WS_UMBRAL_BLANCO: 170,
-  WS_COHERENCIA_MIN: 0.65,
+  WS_UMBRAL_BLANCO: 190,
+  WS_COHERENCIA_MIN: 0.55,
   WS_ANCHO_MIN: 4,
-  WS_ANCHO_MAX: 35,
+  WS_ANCHO_MAX: 55,
   WS_DISTANCIA_MIN: 8,
 
   ML_COHERENCIA_MIN: 0.65,
