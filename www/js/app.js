@@ -649,3 +649,106 @@ async function ejecutarOCRRetry() {
     'RETRY SELECTIVO'
   );
 }
+
+
+// ============================================================
+// v13-fase2: Exportar capas individuales para diagnostico
+// ============================================================
+async function exportarCapasDiag() {
+  if (!window.estadoPasos || (!window.estadoPasos.imagenProcesada && !imagenActual)) {
+    alert('Primero carga y analiza una imagen');
+    return;
+  }
+  const fuente = window.estadoPasos.imagenProcesada || imagenActual;
+  const ts = Date.now();
+  const fs = (typeof Capacitor !== 'undefined' && Capacitor.Plugins)
+    ? Capacitor.Plugins.Filesystem : null;
+
+  const capas = [
+    { nombre: 'optica', color: '#FFD700', V: window.lineasOpticaV || [], H: window.lineasOpticaH || [] },
+    { nombre: 'a3', color: '#8B5CF6', V: window.lineasA3V || [], H: window.lineasA3H || [] },
+    { nombre: 'lvc', color: '#ec4899', V: window.lineasLVCV || [], H: [] },
+    { nombre: 'openv', color: '#22d3ee', V: window.lineasOPENVV || [], H: [] },
+    { nombre: 'lidar', color: '#000000', V: window.lineasLidarV || [], H: window.lineasLidarH || [] },
+  ];
+
+  let guardados = 0;
+
+  for (const capa of capas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = fuente.width;
+    canvas.height = fuente.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(fuente, 0, 0);
+
+    ctx.strokeStyle = capa.color;
+    ctx.lineWidth = Math.max(2, Math.floor(canvas.width / 500));
+
+    capa.V.forEach(function(x) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    });
+    capa.H.forEach(function(y) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    });
+
+    const dataURL = canvas.toDataURL('image/png');
+    const base64 = dataURL.replace(/^data:image\/png;base64,/, '');
+
+    if (fs) {
+      try {
+        await fs.writeFile({
+          path: 'capas_' + ts + '_' + capa.nombre + '.png',
+          data: base64,
+          directory: 'DOCUMENTS'
+        });
+        guardados++;
+      } catch(e) {
+        console.log('Error guardando ' + capa.nombre + ': ' + e.message);
+      }
+    }
+  }
+
+  const info = {
+    imagen: fuente.width + 'x' + fuente.height,
+    timestamp: new Date().toISOString(),
+    capas: capas.map(function(c) {
+      return {
+        nombre: c.nombre,
+        V_count: c.V.length,
+        H_count: c.H.length,
+        V: c.V,
+        H: c.H
+      };
+    })
+  };
+  const txt = JSON.stringify(info, null, 2);
+
+  if (fs) {
+    const txt64 = btoa(unescape(encodeURIComponent(txt)));
+    try {
+      await fs.writeFile({
+        path: 'capas_' + ts + '_posiciones.json',
+        data: txt64,
+        directory: 'DOCUMENTS'
+      });
+      guardados++;
+    } catch(e) {
+      console.log('Error guardando posiciones: ' + e.message);
+    }
+  }
+
+  alert('✅ Exportadas ' + guardados + ' archivos a Documentos.\n\nBusca archivos capas_' + ts + '_*.png y capas_' + ts + '_posiciones.json');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    const btn = document.getElementById('btnExportarCapas');
+    if (btn) btn.onclick = exportarCapasDiag;
+  }, 800);
+});
