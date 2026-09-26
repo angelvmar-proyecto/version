@@ -35,7 +35,7 @@ const CONFIG_DEFAULTS = {
   LVC_DISTANCIA_MIN: 10,
 
   // Opening Vertical (erosion vertical morfologica) - 5to algoritmo
-  OPENV_KERNEL_ALTO: 60,
+  OPENV_KERNEL_ALTO: 40,
   OPENV_UMBRAL_VALLE: 15,
   OPENV_DISTANCIA_MIN: 10,
 

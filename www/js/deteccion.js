@@ -369,7 +369,7 @@ function detectarOpeningVertical(brillo, ancho, alto) {
         if (esValle[y][x]) valleEnBloque++;
       }
       const ratioBloque = valleEnBloque / (y1 - y0);
-      if (ratioBloque >= 0.75) {
+      if (ratioBloque >= 0.55) {
         bloquesContinuos++;
       } else {
         break;
