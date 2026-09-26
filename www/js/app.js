@@ -178,6 +178,24 @@ async function analizarTodo() {
     log('🔧 Paso 1: Preprocesamiento', 'etapa');
     const canvasP1 = normalizarResolucion(imagenActual);
     escalarConfig(canvasP1.width, canvasP1.height);
+
+    // Blur ligero para eliminar artefactos JPEG SOLO en canvas de deteccion
+    if (CONFIG_ESC.DET_BLUR_ACTIVO || CONFIG.DET_BLUR_ACTIVO) {
+      const radio = CONFIG_ESC.DET_BLUR_RADIO || CONFIG.DET_BLUR_RADIO || 0.8;
+      const blurCanvas = document.createElement('canvas');
+      blurCanvas.width = canvasP1.width;
+      blurCanvas.height = canvasP1.height;
+      const bctx = blurCanvas.getContext('2d');
+      bctx.filter = 'blur(' + radio + 'px)';
+      bctx.drawImage(canvasP1, 0, 0);
+      const ctxDest = canvasP1.getContext('2d');
+      ctxDest.clearRect(0, 0, canvasP1.width, canvasP1.height);
+      ctxDest.drawImage(blurCanvas, 0, 0);
+      if (typeof log === 'function') {
+        log('   🔧 Blur deteccion: ' + radio + 'px', 'info');
+      }
+    }
+
     const ctxP1 = canvasP1.getContext('2d');
 
     // v13-fase2: guardar COPIA ORIGINAL antes de filtros (para OCR limpio)
