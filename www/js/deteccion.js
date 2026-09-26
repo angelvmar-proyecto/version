@@ -435,12 +435,10 @@ function detectarMinimoLocal(brillo, ancho, alto) {
       const b = brillo[y][x];
       const bIzq = brillo[y][x - 1];
       const bDer = brillo[y][x + 1];
-      // Es minimo local si es <= a sus vecinos izquierdo Y derecho
-      if (b <= bIzq && b <= bDer) {
-        // Exigir un minimo real: al menos 1 punto mas oscuro que la media
-        if (b < bIzq + bDer) {
-          filasMinimo++;
-        }
+      // Es minimo local si es AL MENOS 4 puntos mas oscuro que AMBOS vecinos
+      const umbral = 4;
+      if (b <= bIzq - umbral && b <= bDer - umbral) {
+        filasMinimo++;
       }
     }
     const coherencia = filasMinimo / alto;
