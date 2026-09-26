@@ -10,7 +10,7 @@ const CONFIG_DEFAULTS = {
   // Preprocesamiento
   CRR_ACTIVO: false,
   CRR_UMBRAL: 80,
-  BS_ACTIVO: true,
+  BS_ACTIVO: false,
   BS_TAMANIO_BLOQUE: 30,
   BS_UMBRAL_SATURACION: 0.20,
 
@@ -99,7 +99,7 @@ const CONFIG_DEFAULTS = {
   APRENDIZAJE_ACTIVO: true,
 
   // Retina por celda
-  RETINA_ACTIVO: true,
+  RETINA_ACTIVO: false,
   RETINA_RADIO: 15,
   RETINA_FUERZA_CONTRASTE: 1.5,
   RETINA_FUERZA_BORDES: 0.5,
