@@ -692,9 +692,12 @@ async function exportarCapasDiag() {
 
   const capas = [
     { nombre: 'optica', color: '#FFD700', V: window.lineasOpticaV || [], H: window.lineasOpticaH || [] },
+    { nombre: 'eco', color: '#FF0000', V: window.lineasEcografiaV || [], H: window.lineasEcografiaH || [] },
     { nombre: 'a3', color: '#8B5CF6', V: window.lineasA3V || [], H: window.lineasA3H || [] },
     { nombre: 'lvc', color: '#ec4899', V: window.lineasLVCV || [], H: [] },
     { nombre: 'openv', color: '#22d3ee', V: window.lineasOPENVV || [], H: [] },
+    { nombre: 'ml', color: '#84cc16', V: window.lineasMLV || [], H: [] },
+    { nombre: 'ws', color: '#f97316', V: window.lineasWSV || [], H: [] },
     { nombre: 'lidar', color: '#000000', V: window.lineasLidarV || [], H: window.lineasLidarH || [] },
   ];
 
