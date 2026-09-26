@@ -860,11 +860,22 @@ function escalarConfig(ancho, alto) {
   window.CONFIG_ESC.LIDAR_MARGEN_BORDE = Math.max(4, Math.round(ancho * 0.005));
   window.CONFIG_ESC.RANGO_AJUSTE = Math.max(1, Math.round(ancho * 0.00125));
 
+  // Verticales: ML y WS (faltaban en escalado)
+  window.CONFIG_ESC.ML_DISTANCIA_MIN = Math.max(4, Math.round(ancho * 0.006));
+  window.CONFIG_ESC.WS_DISTANCIA_MIN = Math.max(4, Math.round(ancho * 0.006));
+  window.CONFIG_ESC.WS_ANCHO_MIN = Math.max(2, Math.round(ancho * 0.003));
+  window.CONFIG_ESC.WS_ANCHO_MAX = Math.max(20, Math.round(ancho * 0.035));
+
+  // Ventana de Eco (según ancho)
+  window.CONFIG_ESC.ECO_VENTANA = Math.max(2, Math.round(ancho * 0.003));
+
   if (typeof log === 'function') {
     log('📏 Config escalada: ECO_V=' + window.CONFIG_ESC.ECO_DISTANCIA_MIN_V +
         ', OPT_V=' + window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V +
         ', A3=' + window.CONFIG_ESC.A3_DISTANCIA_MIN +
         ', LIDAR=' + window.CONFIG_ESC.LIDAR_AGRUPAR_DIST +
-        ', OPENV_K=' + window.CONFIG_ESC.OPENV_KERNEL_ALTO, 'info');
+        ', OPENV_K=' + window.CONFIG_ESC.OPENV_KERNEL_ALTO +
+        ', ECO_WIN=' + window.CONFIG_ESC.ECO_VENTANA +
+        ', WS_MAX=' + window.CONFIG_ESC.WS_ANCHO_MAX, 'info');
   }
 }
