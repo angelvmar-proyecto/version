@@ -862,7 +862,7 @@ function escalarConfig(ancho, alto) {
 
   // Compartidos: escalan con la dimensión menor
   window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(dimMin * 0.006));
-  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(2, Math.round(ancho * 0.0025));
+  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(2, Math.round(ancho * 0.008));
   window.CONFIG_ESC.LIDAR_MARGEN_BORDE = Math.max(4, Math.round(ancho * 0.005));
   window.CONFIG_ESC.RANGO_AJUSTE = Math.max(1, Math.round(ancho * 0.00125));
 
