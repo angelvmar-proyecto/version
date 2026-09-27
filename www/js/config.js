@@ -53,6 +53,13 @@ const CONFIG_DEFAULTS = {
   WS_ANCHO_MAX: 55,
   WS_DISTANCIA_MIN: 8,
 
+  // IO (Interseccion Ortogonal) - 8vo algoritmo
+  // Detecta cruces en forma de + entre verticales y horizontales
+  IO_VENTANA_CRUCE: 3,
+  IO_UMBRAL_CRUCE: 140,
+  IO_CRUCES_MIN: 5,
+  IO_DISTANCIA_MIN: 10,
+
   ML_COHERENCIA_MIN: 0.65,
   ML_DISTANCIA_MIN: 8,
   ML_COLOR: '#84cc16',
@@ -96,6 +103,7 @@ const CONFIG_DEFAULTS = {
   COLOR_OPENV: '#22d3ee',
   COLOR_ML: '#84cc16',
   COLOR_WS: '#f97316',
+  COLOR_IO: '#eab308',
 
   // OCR
   TESS_IDIOMAS: 'spa+eng',

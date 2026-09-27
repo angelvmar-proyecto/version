@@ -267,6 +267,13 @@ async function analizarTodo() {
     window.lineasWSV = ws.lineasV;
     log('   🟠 WS: ' + ws.lineasV.length + 'V', 'info');
 
+    // IO: 8vo algoritmo (interseccion ortogonal)
+    const io = detectarIntersecciones(brillo, canvasP1.width, canvasP1.height,
+                                       det.optica.lineasH, det.optica.lineasV);
+    window.lineasIOV = io.lineasV;
+    window.lineasIOH = io.lineasH;
+    log('   ✚ IO: ' + io.lineasV.length + 'V, ' + io.lineasH.length + 'H', 'info');
+
     marcarPasoCompletado(3);
     marcarPasoCompletado(4);
     marcarPasoCompletado(5);

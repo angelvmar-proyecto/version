@@ -515,3 +515,75 @@ function detectarWhitespace(brillo, ancho, alto) {
   console.log('   → ' + filtradas.length + 'V (umbral ' + umbralBlanco + ', ancho ' + anchoMin + '-' + anchoMax + ')');
   return { lineasV: filtradas };
 }
+
+// ============================================
+// ALGORITMO 8: IO — Interseccion Ortogonal
+// Detecta cruces en forma de + entre verticales y horizontales
+// Cada cruce confirma simultaneamente una V y una H
+// ============================================
+function detectarIntersecciones(brillo, ancho, alto, opticaH, opticaV) {
+  console.log('✚ IO: interseccion ortogonal');
+
+  const ventana = CONFIG_ESC.IO_VENTANA_CRUCE || CONFIG.IO_VENTANA_CRUCE || 3;
+  const umbral = CONFIG_ESC.IO_UMBRAL_CRUCE || CONFIG.IO_UMBRAL_CRUCE || 140;
+  const crucesMin = CONFIG.IO_CRUCES_MIN || 5;
+  const distanciaMin = CONFIG_ESC.IO_DISTANCIA_MIN || CONFIG.IO_DISTANCIA_MIN || 10;
+
+  // Para cada vertical candidata, contar cuantos cruces tiene con las horizontales
+  const scoreV = new Array(opticaV.length).fill(0);
+  const scoreH = new Array(opticaH.length).fill(0);
+
+  // Probar cada par (V, H)
+  for (let vi = 0; vi < opticaV.length; vi++) {
+    const x = opticaV[vi];
+    if (x < ventana || x >= ancho - ventana) continue;
+
+    for (let hi = 0; hi < opticaH.length; hi++) {
+      const y = opticaH[hi];
+      if (y < ventana || y >= alto - ventana) continue;
+
+      // Verificar patron "+" en (x, y):
+      // 1) Pixel central oscuro
+      const centro = brillo[y][x];
+      if (centro > umbral) continue;
+
+      // 2) Vecinos horizontales oscuros (parte de la linea horizontal)
+      let horizOk = 0;
+      for (let dx = -ventana; dx <= ventana; dx++) {
+        if (dx === 0) continue;
+        if (brillo[y][x + dx] <= umbral) horizOk++;
+      }
+
+      // 3) Vecinos verticales oscuros (parte de la linea vertical)
+      let vertOk = 0;
+      for (let dy = -ventana; dy <= ventana; dy++) {
+        if (dy === 0) continue;
+        if (brillo[y + dy][x] <= umbral) vertOk++;
+      }
+
+      // Cruz confirmado si tiene al menos 2 vecinos horizontales Y 2 verticales oscuros
+      if (horizOk >= 2 && vertOk >= 2) {
+        scoreV[vi]++;
+        scoreH[hi]++;
+      }
+    }
+  }
+
+  // Filtrar: solo aceptar candidatas con score >= crucesMin
+  const vAceptadas = [];
+  for (let vi = 0; vi < opticaV.length; vi++) {
+    if (scoreV[vi] >= crucesMin) vAceptadas.push(opticaV[vi]);
+  }
+
+  const hAceptadas = [];
+  for (let hi = 0; hi < opticaH.length; hi++) {
+    if (scoreH[hi] >= crucesMin) hAceptadas.push(opticaH[hi]);
+  }
+
+  const vFiltradas = filtrarLineasCercanas(vAceptadas, distanciaMin);
+  const hFiltradas = filtrarLineasCercanas(hAceptadas, distanciaMin);
+
+  console.log('   → V: ' + opticaV.length + '→' + vFiltradas.length +
+              ', H: ' + opticaH.length + '→' + hFiltradas.length);
+  return { lineasV: vFiltradas, lineasH: hFiltradas };
+}

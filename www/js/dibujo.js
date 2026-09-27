@@ -16,6 +16,8 @@ window.lineasLVCV = [];
 window.lineasOPENVV = [];
 window.lineasMLV = [];
 window.lineasWSV = [];
+window.lineasIOV = [];
+window.lineasIOH = [];
 window.lineasVisibles = true;
 
 function dibujarTodo() {
@@ -156,6 +158,25 @@ function dibujarTodo() {
       });
     }
 
+    // ✚ IO (interseccion ortogonal)
+    if ((window.lineasIOV && window.lineasIOV.length > 0) ||
+        (window.lineasIOH && window.lineasIOH.length > 0)) {
+      ctx.strokeStyle = CONFIG.COLOR_IO || '#eab308';
+      ctx.lineWidth = grosor;
+      (window.lineasIOV || []).forEach(function(x) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, fuente.height);
+        ctx.stroke();
+      });
+      (window.lineasIOH || []).forEach(function(y) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(fuente.width, y);
+        ctx.stroke();
+      });
+    }
+
     // ⚫ LIDAR
     if (window.lineasLidarH.length > 0 || window.lineasLidarV.length > 0) {
       ctx.strokeStyle = CONFIG.COLOR_LIDAR;
@@ -204,6 +225,8 @@ function limpiarLineas() {
   window.lineasOPENVV = [];
   window.lineasMLV = [];
   window.lineasWSV = [];
+  window.lineasIOV = [];
+  window.lineasIOH = [];
 }
 
 document.addEventListener('DOMContentLoaded', function() {
