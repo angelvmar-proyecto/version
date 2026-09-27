@@ -91,7 +91,10 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   }
   console.log('   🔍 A3V filtrada: ' + a3V.length + ' → ' + a3VFiltradas.length + ' (solo con Optica cerca)');
 
-  const votosV = votarLineas(opticaV, ecoV, a3VFiltradas, distV, lvcV);
+  // TEST-2: A3 fuera de votos V
+  // OPTICA-B: cluster de Optica cuenta doble (lineas1 + lineas3)
+  // Razon: el cluster consolida 2-3 detecciones, es señal de alta confianza
+  const votosV = votarLineas(opticaV, ecoV, opticaV, distV, lvcV);
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
