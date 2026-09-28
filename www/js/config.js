@@ -58,8 +58,7 @@ const CONFIG = {
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
-var CONFIG_ESC = Object.assign({}, CONFIG);
-window.CONFIG_ESC = CONFIG_ESC;
+window.CONFIG_ESC = Object.assign({}, CONFIG);
 
 // ==============================================
 // Escalado proporcional segun tamano de imagen
@@ -74,19 +73,19 @@ function escalarConfig(ancho, alto) {
   CONFIG_ESC = Object.assign({}, CONFIG);
 window.CONFIG_ESC = CONFIG_ESC;
 
-  CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(3, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_V * kAncho));
-  CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_H * kAlto));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(3, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_V * kAncho));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_H * kAlto));
 
-  CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_V * kAncho));
-  CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_H * kAlto));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_V * kAncho));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_H * kAlto));
 
-  CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.A3_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
-  CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
-  CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+  window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.A3_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+  window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
+  window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
 
-  CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(4, Math.round(ancho * CONFIG.LIDAR_AGRUPAR_DIST));
-  CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
-  CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
+  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(4, Math.round(ancho * CONFIG.LIDAR_AGRUPAR_DIST));
+  window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
+  window.CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
 
   return window.CONFIG_ESC;
 }

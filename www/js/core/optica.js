@@ -12,12 +12,12 @@ function detectarOptica(brillo, ancho, alto) {
   const pV = perfilV(brillo, alto, ancho);
 
   // Suavizado
-  const pH_suav = suavizar(pH, CONFIG_ESC.OPTICA_SUAVIZADO);
-  const pV_suav = suavizar(pV, CONFIG_ESC.OPTICA_SUAVIZADO);
+  const pH_suav = suavizar(pH, window.CONFIG_ESC.OPTICA_SUAVIZADO);
+  const pV_suav = suavizar(pV, window.CONFIG_ESC.OPTICA_SUAVIZADO);
 
   // Detectar valles (lineas oscuras)
-  const lineasH = buscarValles(pH_suav, CONFIG_ESC.OPTICA_DISTANCIA_MIN_H, CONFIG.OPTICA_UMBRAL_ADAPTATIVO);
-  const lineasV = buscarValles(pV_suav, CONFIG_ESC.OPTICA_DISTANCIA_MIN_V, CONFIG.OPTICA_UMBRAL_ADAPTATIVO);
+  const lineasH = buscarValles(pH_suav, window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H, CONFIG.OPTICA_UMBRAL_ADAPTATIVO);
+  const lineasV = buscarValles(pV_suav, window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V, CONFIG.OPTICA_UMBRAL_ADAPTATIVO);
 
   const t1 = performance.now();
   console.log('[Optica] H=' + lineasH.length + ' V=' + lineasV.length + ' en ' + (t1-t0).toFixed(0) + 'ms');
