@@ -4,6 +4,8 @@
 // ==============================================
 
 (function() {
+  // Blindaje: limpia cualquier override residual del panel de ajustes
+  try { localStorage.removeItem('mar_caribe_config_override'); } catch(e) {}
   let modoActual = 'ambas';
   let ultimoLog = '';
 
