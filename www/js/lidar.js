@@ -65,7 +65,7 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
 }
 
 function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
-  console.log('   >>> rellenarHuecosV invocada con ' + (lineasV ? lineasV.length : 0) + ' lineas V, distMin=' + distHuecoMin);
+  if (typeof log === 'function') log('   >>> rellenarHuecosV invocada: ' + (lineasV ? lineasV.length : 0) + ' V', 'info');
   if (!lineasV || lineasV.length < 2) return lineasV;
   const resultado = [];
   for (let i = 0; i < lineasV.length; i++) {
@@ -92,9 +92,9 @@ function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
     if (mejor && mejorCount >= 2) {
       const nuevaPos = Math.round(mejor.suma / mejor.count);
       resultado.push(nuevaPos);
-      console.log('   >>> Hueco ' + lineasV[i] + ' -> ' + lineasV[i+1] + ' rellenado con ' + nuevaPos + ' (' + mejorCount + ' votos)');
+      if (typeof log === 'function') log('   >>> Hueco ' + lineasV[i] + '-' + lineasV[i+1] + ' RELLENADO con ' + nuevaPos + ' (' + mejorCount + 'v)', 'exito');
     } else {
-      console.log('   >>> Hueco ' + lineasV[i] + ' -> ' + lineasV[i+1] + ' sin candidatos');
+      if (typeof log === 'function') log('   >>> Hueco ' + lineasV[i] + '-' + lineasV[i+1] + ' sin candidatos', 'info');
     }
   }
   return resultado;
@@ -178,7 +178,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
   const lineasVRellenas = rellenarHuecosV(lineasVFinal, opticaV, ioV, 60, 15);
-  console.log('   >>> Relleno V: ' + lineasVFinal.length + ' -> ' + lineasVRellenas.length);
+  if (typeof log === 'function') log('   >>> Relleno: ' + lineasVFinal.length + ' -> ' + lineasVRellenas.length + ' V', 'info');
   const lineasVFiltered = lineasVRellenas;
 
   return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
