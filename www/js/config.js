@@ -55,8 +55,8 @@ const CONFIG_DEFAULTS = {
 
   // IO (Interseccion Ortogonal) - 8vo algoritmo
   // Detecta cruces en forma de + entre verticales y horizontales
-  IO_VENTANA_CRUCE: 5,
-  IO_UMBRAL_CRUCE: 140,
+  IO_VENTANA_CRUCE: 4,
+  IO_UMBRAL_CRUCE: 220,
   IO_CRUCES_MIN: 2,
   IO_DISTANCIA_MIN: 10,
 
