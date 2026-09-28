@@ -64,6 +64,41 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
   return resultado;
 }
 
+function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
+  if (!lineasV || lineasV.length < 2) return lineasV;
+  const resultado = [];
+  for (let i = 0; i < lineasV.length; i++) {
+    resultado.push(lineasV[i]);
+    if (i + 1 >= lineasV.length) break;
+    const hueco = lineasV[i+1] - lineasV[i];
+    if (hueco <= distHuecoMin) continue;
+    const inicio = lineasV[i] + distBorde;
+    const fin = lineasV[i+1] - distBorde;
+    const buckets = {};
+    const add = function(pos) {
+      if (pos <= inicio || pos >= fin) return;
+      const k = Math.round(pos / 15) * 15;
+      if (!buckets[k]) buckets[k] = { suma: 0, count: 0 };
+      buckets[k].suma += pos;
+      buckets[k].count++;
+    };
+    opticaV.forEach(add);
+    ioV.forEach(add);
+    let mejor = null, mejorCount = 0;
+    for (const k in buckets) {
+      if (buckets[k].count > mejorCount) { mejorCount = buckets[k].count; mejor = buckets[k]; }
+    }
+    if (mejor && mejorCount >= 2) {
+      const nuevaPos = Math.round(mejor.suma / mejor.count);
+      resultado.push(nuevaPos);
+      console.log('   \u{1F527} Hueco ' + lineasV[i] + '\u2192' + lineasV[i+1] + ' rellenado con ' + nuevaPos + ' (' + mejorCount + ' votos)');
+    } else {
+      console.log('   \u26A0\uFE0F Hueco ' + lineasV[i] + '\u2192' + lineasV[i+1] + ' sin candidatos');
+    }
+  }
+  return resultado;
+}
+
 function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV, ioH, ioV) {
   console.log('📐 LIDAR: votación + eco');
   const lvcLen = (lvcV && lvcV.length) || 0;
@@ -141,7 +176,9 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
-  const lineasVFiltered = lineasVFinal;
+  const lineasVRellenas = rellenarHuecosV(lineasVFinal, opticaV, ioV, 60, 15);
+  console.log('   \u{1F527} Relleno V: ' + lineasVFinal.length + '\u2192' + lineasVRellenas.length);
+  const lineasVFiltered = lineasVRellenas;
 
   return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
 }
