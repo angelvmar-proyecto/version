@@ -194,6 +194,20 @@
     });
   }
 
+  function resetPanel() {
+    const ta = document.getElementById('ajParams');
+    if (ta) ta.value = '{\n}';
+    const canvas = document.getElementById('ajCanvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    limpiar();
+    log('🔄 Panel reseteado');
+  }
+
   function copiarLog() {
     navigator.clipboard.writeText(ultimoLog).then(function() {
       alert('📄 Log copiado');
@@ -225,6 +239,8 @@
     btnE.addEventListener('click', exportarPNG);
     btnP.addEventListener('click', copiarParams);
     btnL.addEventListener('click', copiarLog);
+    const btnR = document.getElementById('ajReset');
+    if (btnR) btnR.addEventListener('click', resetPanel);
     setupModo();
     console.log('✅ Panel Ajuste cargado');
   }

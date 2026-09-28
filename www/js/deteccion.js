@@ -244,19 +244,26 @@ function detectarEcografia(brillo, ancho, alto) {
   for (let y = 0; y < alto; y++) {
     if (ecoH[y] > CONFIG.ECO_UMBRAL_H &&
         y - ultH >= CONFIG_ESC.ECO_DISTANCIA_MIN_H) {
+      // Buscar pico maximo local de ecoH
+      let yPico = y;
+      let maxEco = ecoH[y];
+      const rangoPicoH = Math.max(2, V);
+      for (let yy2 = Math.max(0, y - rangoPicoH); yy2 <= Math.min(alto - 1, y + rangoPicoH); yy2++) {
+        if (ecoH[yy2] > maxEco) { maxEco = ecoH[yy2]; yPico = yy2; }
+      }
       // Verificar continuidad horizontal
       let fuertes = 0;
       for (let x = 0; x < ancho; x++) {
         let maxDif = 0;
-        for (let yy = Math.max(0, y - 2); yy <= Math.min(alto - 1, y + 2); yy++) {
-          const dif = Math.abs(brillo[y][x] - brillo[yy][x]);
+        for (let yy = Math.max(0, yPico - 2); yy <= Math.min(alto - 1, yPico + 2); yy++) {
+          const dif = Math.abs(brillo[yPico][x] - brillo[yy][x]);
           if (dif > maxDif) maxDif = dif;
         }
         if (maxDif > CONFIG.ECO_UMBRAL_H * 0.5) fuertes++;
       }
       if (fuertes / ancho >= CONFIG.ECO_CONTINUIDAD) {
-        lineasH.push(y);
-        ultH = y;
+        lineasH.push(yPico);
+        ultH = yPico;
       }
     }
   }
@@ -267,18 +274,25 @@ function detectarEcografia(brillo, ancho, alto) {
   for (let x = 0; x < ancho; x++) {
     if (ecoV[x] > umbralEcoV &&
         x - ultV >= CONFIG_ESC.ECO_DISTANCIA_MIN_V) {
+      // Buscar pico maximo local de ecoV
+      let xPico = x;
+      let maxEcoV = ecoV[x];
+      const rangoPicoV = Math.max(2, V);
+      for (let xx2 = Math.max(0, x - rangoPicoV); xx2 <= Math.min(ancho - 1, x + rangoPicoV); xx2++) {
+        if (ecoV[xx2] > maxEcoV) { maxEcoV = ecoV[xx2]; xPico = xx2; }
+      }
       let fuertes = 0;
       for (let y = 0; y < alto; y++) {
         let maxDif = 0;
-        for (let xx = Math.max(0, x - 2); xx <= Math.min(ancho - 1, x + 2); xx++) {
-          const dif = Math.abs(brillo[y][x] - brillo[y][xx]);
+        for (let xx = Math.max(0, xPico - 2); xx <= Math.min(ancho - 1, xPico + 2); xx++) {
+          const dif = Math.abs(brillo[y][xPico] - brillo[y][xx]);
           if (dif > maxDif) maxDif = dif;
         }
         if (maxDif > umbralEcoV * 0.5) fuertes++;
       }
       if (fuertes / alto >= CONFIG.ECO_CONTINUIDAD) {
-        lineasV.push(x);
-        ultV = x;
+        lineasV.push(xPico);
+        ultV = xPico;
       }
     }
   }
