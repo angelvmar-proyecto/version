@@ -1,176 +1,92 @@
 // ==============================================
-// MAR Caribe v12.0 - CONFIGURACIÓN GLOBAL
-// Valores calibrados sobre tabla densa real
-// Incluye: OCR_FILA0_ENCABEZADO y LIDAR_MARGEN_BORDE
+// MAR Caribe v14 - CONFIGURACION LIMPIA
+// 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const CONFIG_DEFAULTS = {
-  VERSION: '12.0',
+const CONFIG = {
+  VERSION: '14.0',
 
-  // Preprocesamiento
-  CRR_ACTIVO: false,
-  CRR_UMBRAL: 80,
-  BS_ACTIVO: false,
-  BS_TAMANIO_BLOQUE: 30,
-  BS_UMBRAL_SATURACION: 0.20,
-
-  // Óptica (calibrado: 37→50 verticales en tabla densa)
+  // --- Optica (proyeccion de brillo) ---
   OPTICA_UMBRAL_ADAPTATIVO: 0.30,
   OPTICA_DISTANCIA_MIN_H: 13,
   OPTICA_DISTANCIA_MIN_V: 7,
   OPTICA_SUAVIZADO: 20,
 
-  // Ecografía
+  // --- Eco (cambio de brillo) ---
   ECO_VENTANA: 3,
   ECO_UMBRAL_H: 38,
   ECO_UMBRAL_V: 30,
   ECO_CONTINUIDAD: 0.35,
   ECO_DISTANCIA_MIN_H: 18,
   ECO_DISTANCIA_MIN_V: 20,
-  ECO_ADAPTATIVO: false,
-  ECO_FACTOR_ADAPT: 0.35,
 
-  // LVC (Coherencia Vertical) - 4to algoritmo para verticales
-  LVC_VENTANA: 2,
-  LVC_UMBRAL_DIF: 6,
-  LVC_COHERENCIA_MIN: 0.35,
-  LVC_DISTANCIA_MIN: 10,
-
-  // Opening Vertical (erosion vertical morfologica) - 5to algoritmo
-  OPENV_KERNEL_ALTO: 40,
-  OPENV_UMBRAL_VALLE: 15,
-  OPENV_DISTANCIA_MIN: 10,
-
-  // ML (Minimo Local) - 6to algoritmo, detecta lineas delgadas/oscilantes
-  // Preprocesamiento de DETECCION (no afecta al OCR)
-  DET_BLUR_ACTIVO: false,
-  DET_BLUR_RADIO: 0.15,
-
-  // WS (Whitespace) - 7mo algoritmo, detecta espacios blancos entre columnas
-  WS_UMBRAL_BLANCO: 190,
-  WS_COHERENCIA_MIN: 0.55,
-  WS_ANCHO_MIN: 4,
-  WS_ANCHO_MAX: 55,
-  WS_DISTANCIA_MIN: 8,
-
-  // IO (Interseccion Ortogonal) - 8vo algoritmo
-  // Detecta cruces en forma de + entre verticales y horizontales
-  IO_VENTANA_CRUCE: 4,
-  IO_UMBRAL_CRUCE: 220,
-  IO_CRUCES_MIN: 2,
-  IO_DISTANCIA_MIN: 10,
-
-  ML_COHERENCIA_MIN: 0.65,
-  ML_DISTANCIA_MIN: 8,
-  ML_COLOR: '#84cc16',
-
-  // A3 (calibrado: 21→40+ verticales en tabla densa)
+  // --- A3 (Sobel ortogonal) ---
   A3_UMBRAL_MAGNITUD: 130,
   A3_UMBRAL_ORTOGONALIDAD: 0.75,
   A3_COBERTURA_MINIMA: 0.35,
   A3_DISTANCIA_MIN: 10,
 
-  // A3 para VERTICALES (independiente de las horizontales)
-  // Permisivo para detectar columnas angostas
-  A3_UMBRAL_MAGNITUD_V: 130,
-  A3_UMBRAL_ORTOGONALIDAD_V: 0.75,
-  A3_COBERTURA_MINIMA_V: 0.20,
-  A3_UMBRAL_V_PROMEDIO: 30,
+  // --- LVC (coherencia vertical) ---
+  LVC_VENTANA: 2,
+  LVC_UMBRAL_DIF: 6,
+  LVC_COHERENCIA_MIN: 0.35,
+  LVC_DISTANCIA_MIN: 10,
 
-  // Ajuste local
-  RANGO_AJUSTE: 2,
+  // --- IO (interseccion ortogonal) ---
+  IO_VENTANA_CRUCE: 4,
+  IO_UMBRAL_CRUCE: 220,
+  IO_CRUCES_MIN: 2,
+  IO_DISTANCIA_MIN: 10,
 
-  // LIDAR
+  // --- LIDAR (votacion) ---
   LIDAR_VOTOS_MINIMOS: 2,
   LIDAR_ECO_ALTO: 60,
   LIDAR_ECO_BAJO: 30,
-  LIDAR_AGRUPAR_DIST: 4,
+  LIDAR_AGRUPAR_DIST: 0.015,   // proporcion del ancho
   LIDAR_MARGEN_BORDE: 8,
+  LIDAR_HUECO_MIN: 60,
+  LIDAR_HUECO_BORDE: 15,
 
-  // Visualización
-  ANCHO_LINEA: 2,
-  ZOOM_MIN: 0.5,
-  ZOOM_MAX: 5,
-  ZOOM_PASO: 0.25,
-
-  // Colores
+  // --- Colores ---
   COLOR_OPTICA: '#FFD700',
   COLOR_ECO_H: '#FF0000',
   COLOR_ECO_V: '#0088FF',
   COLOR_A3: '#8B5CF6',
-  COLOR_LIDAR: '#000000',
   COLOR_LVC: '#ec4899',
-  COLOR_OPENV: '#22d3ee',
-  COLOR_ML: '#84cc16',
-  COLOR_WS: '#f97316',
   COLOR_IO: '#eab308',
-
-  // OCR
-  TESS_IDIOMAS: 'spa+eng',
-  TESS_PSM: 7,
-  TESS_OEM: 1,
-  TESS_CONF_MIN: 30,
-  OCR_DENSIDAD_MIN: 0.05,
-  OCR_ESCALA_UMBRAL_BAJO: 15,
-  OCR_ESCALA_UMBRAL_MEDIO: 30,
-  OCR_ESCALA_3X: 3,
-  OCR_ESCALA_2X: 2,
-  OCR_VOTING_ACTIVO: true,
-  OCR_VOTING_CONFIANZA: 75,
-  OCR_MARGEN_PADDING: 10,
-  OCR_MARGEN_CELDA: 3,
-  OCR_BINARIZAR: false,
-  OCR_FILA0_ENCABEZADO: false,
-  RETINA_EN_RAPIDO: false,
-  RETINA_RAPIDO_RADIO: 8,
-  RETINA_RAPIDO_FUERZA: 0.8,
-  APRENDIZAJE_ACTIVO: true,
-
-  // Retina por celda
-  RETINA_ACTIVO: false,
-  RETINA_RADIO: 15,
-  RETINA_FUERZA_CONTRASTE: 1.5,
-  RETINA_FUERZA_BORDES: 0.5,
-  RETINA_UMBRAL_APLICAR: 60,
-
-  // Retina global (antes de detección de líneas)
-  RETINA_GLOBAL_ACTIVO: false,
-  RETINA_GLOBAL_FUERZA: 1.3,
-  RETINA_GLOBAL_RADIO: 15,
-
-  // Diccionario
-  DICCIONARIO: [
-    'MARRIED', 'SINGLE', 'COUPLE', 'DIVORCED', 'WIDOWED',
-    'APTO', 'OLA', 'PROMOTOR', 'HOTEL', 'RESORT',
-    'MXN', 'USD', 'EUR',
-    'FECHA', 'NOMBRE', 'EDAD', 'TOTAL'
-  ]
+  COLOR_LIDAR: '#000000'
 };
 
-// CONFIG es una copia modificable de CONFIG_DEFAULTS
-let CONFIG = JSON.parse(JSON.stringify(CONFIG_DEFAULTS));
+// CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
+window.CONFIG_ESC = Object.assign({}, CONFIG);
 
-// Cargar ajustes guardados de localStorage si existen
-(function cargarAjustesGuardados() {
-  try {
-    const guardados = localStorage.getItem('mar_caribe_config_override');
-    if (guardados) {
-      const ajustes = JSON.parse(guardados);
-      Object.keys(ajustes).forEach(function(k) {
-        if (CONFIG[k] !== undefined) {
-          CONFIG[k] = ajustes[k];
-        }
-      });
-      console.log('✅ Ajustes cargados de localStorage:', Object.keys(ajustes).length, 'parámetros');
-    }
-  } catch (e) {
-    console.warn('⚠️ No se pudieron cargar ajustes guardados:', e);
-  }
-})();
+// ==============================================
+// Escalado proporcional segun tamano de imagen
+// ==============================================
+function escalarConfig(ancho, alto) {
+  // Base de calibracion: 990x1600
+  const refAncho = 990;
+  const refAlto = 1600;
+  const kAncho = ancho / refAncho;
+  const kAlto = alto / refAlto;
 
-// CONFIG_ESC: copia modificable, se recalcula con escalado por imagen
-if (typeof window !== 'undefined') {
   window.CONFIG_ESC = Object.assign({}, CONFIG);
+
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(3, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_V * kAncho));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_H * kAlto));
+
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_V * kAncho));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_H * kAlto));
+
+  window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.A3_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+  window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
+  window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+
+  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(4, Math.round(ancho * CONFIG.LIDAR_AGRUPAR_DIST));
+  window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
+  window.CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
+
+  return window.CONFIG_ESC;
 }
 
-console.log('✅ CONFIG v' + CONFIG.VERSION + ' cargado');
+console.log('CONFIG v14 cargado');

@@ -3,13 +3,12 @@
 // Votación + distancia adaptativa + auto-bordes agresivos
 // ==============================================
 
-function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4, lineas5) {
+function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4) {
   const todos = [];
   lineas1.forEach(pos => todos.push({ pos, alg: 1 }));
   lineas2.forEach(pos => todos.push({ pos, alg: 2 }));
   lineas3.forEach(pos => todos.push({ pos, alg: 3 }));
   if (lineas4) lineas4.forEach(pos => todos.push({ pos, alg: 4 }));
-  if (lineas5) lineas5.forEach(pos => todos.push({ pos, alg: 5 }));
   if (todos.length === 0) return [];
   todos.sort((a, b) => a.pos - b.pos);
   const grupos = [];
@@ -35,7 +34,8 @@ function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4, lineas5
 function clasificarLinea(votos, eco) {
   if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_ALTO) return { aceptar: true, razon: '3v+eco alto' };
   if (votos >= CONFIG.LIDAR_VOTOS_MINIMOS && eco >= CONFIG.LIDAR_ECO_ALTO) return { aceptar: true, razon: '2v+eco alto' };
-  if (votos >= 3) return { aceptar: true, razon: '3v (confianza alta)' };
+  if (votos >= 3 && eco < CONFIG.LIDAR_ECO_BAJO) return { aceptar: false, razon: '3v eco bajo' };
+  if (votos >= 3 && eco >= CONFIG.LIDAR_ECO_BAJO) return { aceptar: true, razon: '3v+eco medio' };
   if (votos >= 2 && eco >= CONFIG.LIDAR_ECO_BAJO) return { aceptar: true, razon: '2v+eco medio' };
   if (votos < CONFIG.LIDAR_VOTOS_MINIMOS) return { aceptar: false, razon: votos + 'v' };
   if (votos >= 2 && eco < CONFIG.LIDAR_ECO_BAJO) return { aceptar: false, razon: '2v eco bajo' };
@@ -64,74 +64,24 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
   return resultado;
 }
 
-function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
-  if (typeof log === 'function') log('   >>> rellenarHuecosV invocada: ' + (lineasV ? lineasV.length : 0) + ' V', 'info');
-  if (!lineasV || lineasV.length < 2) return lineasV;
-  const resultado = [];
-  for (let i = 0; i < lineasV.length; i++) {
-    resultado.push(lineasV[i]);
-    if (i + 1 >= lineasV.length) break;
-    const hueco = lineasV[i+1] - lineasV[i];
-    if (hueco <= distHuecoMin) continue;
-    const inicio = lineasV[i] + distBorde;
-    const fin = lineasV[i+1] - distBorde;
-    const buckets = {};
-    const add = function(pos) {
-      if (pos <= inicio || pos >= fin) return;
-      const k = Math.round(pos / 15) * 15;
-      if (!buckets[k]) buckets[k] = { suma: 0, count: 0 };
-      buckets[k].suma += pos;
-      buckets[k].count++;
-    };
-    opticaV.forEach(add);
-    ioV.forEach(add);
-    let mejor = null, mejorCount = 0;
-    for (const k in buckets) {
-      if (buckets[k].count > mejorCount) { mejorCount = buckets[k].count; mejor = buckets[k]; }
-    }
-    if (mejor && mejorCount >= 2) {
-      const nuevaPos = Math.round(mejor.suma / mejor.count);
-      resultado.push(nuevaPos);
-      if (typeof log === 'function') log('   >>> Hueco ' + lineasV[i] + '-' + lineasV[i+1] + ' RELLENADO con ' + nuevaPos + ' (' + mejorCount + 'v)', 'exito');
-    } else {
-      if (typeof log === 'function') log('   >>> Hueco ' + lineasV[i] + '-' + lineasV[i+1] + ' sin candidatos', 'info');
-    }
-  }
-  return resultado;
-}
-
-function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV, ioH, ioV) {
+function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV) {
   console.log('📐 LIDAR: votación + eco');
   const lvcLen = (lvcV && lvcV.length) || 0;
   console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ', lvc=' + lvcLen + ' (total=' + (opticaV.length + ecoV.length + a3V.length + lvcLen) + ')');
   console.log('   📥 ENTRADA H: optica=' + opticaH.length + ', eco=' + ecoH.length + ', a3=' + a3H.length + ' (total=' + (opticaH.length + ecoH.length + a3H.length) + ')');
 
-  const distH = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
-  const distV = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
+  const distH = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(alto / 300));
+  const distV = Math.max(CONFIG.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
   console.log('   📏 distAgrup: H=' + distH + ', V=' + distV);
 
-  const votosH = votarLineas(opticaH, ecoH, [], distH, null, ioH);
+  const votosH = votarLineas(opticaH, ecoH, a3H, distH);
   const analisisH = votosH.map(v => {
     const eco = medirEcoLineaH(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
     return { posicion: v.posicion, votos: v.votos, algoritmos: v.algoritmos, eco: Math.round(eco), aceptar: clasif.aceptar, razon: clasif.razon };
   });
 
-  // Filtrar A3: solo mantener lineas A3 que tengan Optica cerca (evita bordes de texto)
-  const a3VFiltradas = [];
-  for (const a of a3V) {
-    let opticaCerca = false;
-    for (const o of opticaV) {
-      if (Math.abs(a - o) <= 5) { opticaCerca = true; break; }
-    }
-    if (opticaCerca) a3VFiltradas.push(a);
-  }
-  console.log('   🔍 A3V filtrada: ' + a3V.length + ' → ' + a3VFiltradas.length + ' (solo con Optica cerca)');
-
-  // TEST-2: A3 fuera de votos V
-  // OPTICA-B: cluster de Optica cuenta doble (lineas1 + lineas3)
-  // Razon: el cluster consolida 2-3 detecciones, es señal de alta confianza
-  const votosV = votarLineas(opticaV, ecoV, opticaV, distV, lvcV, ioV);
+  const votosV = votarLineas(opticaV, ecoV, a3V, distV, lvcV);
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
@@ -146,7 +96,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   // 🔲 AUTO-BORDES v2: más agresivo
   // Siempre garantiza que existan bordes en las 4 orillas de la imagen
-  const MARGEN = (CONFIG_ESC.LIDAR_MARGEN_BORDE !== undefined) ? CONFIG_ESC.LIDAR_MARGEN_BORDE : 8;
+  const MARGEN = (CONFIG.LIDAR_MARGEN_BORDE !== undefined) ? CONFIG.LIDAR_MARGEN_BORDE : 8;
 
   if (lineasVFinal.length > 0) {
     if (lineasVFinal[0] > MARGEN) {
@@ -177,9 +127,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
-  const lineasVRellenas = rellenarHuecosV(lineasVFinal, (typeof window !== 'undefined' && window.lineasOpticaV) ? window.lineasOpticaV : opticaV, ioV, 60, 15);
-  if (typeof log === 'function') log('   >>> Relleno: ' + lineasVFinal.length + ' -> ' + lineasVRellenas.length + ' V', 'info');
-  const lineasVFiltered = lineasVRellenas;
+  const lineasVFiltered = lineasVFinal;
 
   return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
 }
