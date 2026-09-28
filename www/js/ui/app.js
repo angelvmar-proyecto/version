@@ -57,12 +57,22 @@ function analizar() {
   log('Brillo OK');
 
   // --- OPTICA ---
-  st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
-  log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length + ' (' + st.optica.tiempo.toFixed(0) + 'ms)');
+  try {
+    st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
+    log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length + ' (' + st.optica.tiempo.toFixed(0) + 'ms)');
+  } catch(e) {
+    log('ERROR Optica: ' + e.message);
+    st.optica = { lineasH: [], lineasV: [] };
+  }
 
   // --- ECO ---
-  st.eco = detectarEco(st.brillo, st.ancho, st.alto);
-  log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length + ' (' + st.eco.tiempo.toFixed(0) + 'ms)');
+  try {
+    st.eco = detectarEco(st.brillo, st.ancho, st.alto);
+    log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length + ' (' + st.eco.tiempo.toFixed(0) + 'ms)');
+  } catch(e) {
+    log('ERROR Eco: ' + e.message);
+    st.eco = { lineasH: [], lineasV: [] };
+  }
 
   // Redibujar imagen original y superponer capas
   ctx.drawImage(st.imagenActual, 0, 0);
