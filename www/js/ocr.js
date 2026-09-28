@@ -629,11 +629,13 @@ async function procesarFotoParaEntrenar(file) {
 
   // 5) Detección + LIDAR
   const det = ejecutarDeteccion(brillo, ancho, alto);
+  const io = detectarIntersecciones(brillo, ancho, alto, det.optica.lineasH, det.optica.lineasV);
   const lidar = ejecutarLidar(
     det.optica.lineasH, det.optica.lineasV,
     det.ecografia.lineasH, det.ecografia.lineasV,
     det.a3.lineasH, det.a3.lineasV,
-    brillo, ancho, alto
+    brillo, ancho, alto,
+    io.lineasH, io.lineasV
   );
 
   // 6) Celdas

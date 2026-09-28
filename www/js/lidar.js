@@ -3,12 +3,13 @@
 // Votación + distancia adaptativa + auto-bordes agresivos
 // ==============================================
 
-function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4) {
+function votarLineas(lineas1, lineas2, lineas3, distanciaAgrup, lineas4, lineas5) {
   const todos = [];
   lineas1.forEach(pos => todos.push({ pos, alg: 1 }));
   lineas2.forEach(pos => todos.push({ pos, alg: 2 }));
   lineas3.forEach(pos => todos.push({ pos, alg: 3 }));
   if (lineas4) lineas4.forEach(pos => todos.push({ pos, alg: 4 }));
+  if (lineas5) lineas5.forEach(pos => todos.push({ pos, alg: 5 }));
   if (todos.length === 0) return [];
   todos.sort((a, b) => a.pos - b.pos);
   const grupos = [];
@@ -63,7 +64,7 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
   return resultado;
 }
 
-function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV) {
+function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, alto, lvcV, ioH, ioV) {
   console.log('📐 LIDAR: votación + eco');
   const lvcLen = (lvcV && lvcV.length) || 0;
   console.log('   📥 ENTRADA V: optica=' + opticaV.length + ', eco=' + ecoV.length + ', a3=' + a3V.length + ', lvc=' + lvcLen + ' (total=' + (opticaV.length + ecoV.length + a3V.length + lvcLen) + ')');
@@ -73,7 +74,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   const distV = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
   console.log('   📏 distAgrup: H=' + distH + ', V=' + distV);
 
-  const votosH = votarLineas(opticaH, ecoH, a3H, distH);
+  const votosH = votarLineas(opticaH, ecoH, a3H, distH, null, ioH);
   const analisisH = votosH.map(v => {
     const eco = medirEcoLineaH(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
@@ -94,7 +95,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   // TEST-2: A3 fuera de votos V
   // OPTICA-B: cluster de Optica cuenta doble (lineas1 + lineas3)
   // Razon: el cluster consolida 2-3 detecciones, es señal de alta confianza
-  const votosV = votarLineas(opticaV, ecoV, opticaV, distV, lvcV);
+  const votosV = votarLineas(opticaV, ecoV, opticaV, distV, lvcV, ioV);
   const analisisV = votosV.map(v => {
     const eco = medirEcoLineaV(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);

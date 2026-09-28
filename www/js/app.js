@@ -292,7 +292,8 @@ async function analizarTodo() {
       det.ecografia.lineasH, det.ecografia.lineasV,
       det.a3.lineasH, det.a3.lineasV,
       brillo, canvasP1.width, canvasP1.height,
-      lvc.lineasV
+      lvc.lineasV,
+      io.lineasH, io.lineasV
     );
     window.lineasLidarH = lidar.lineasH;
     window.lineasLidarV = lidar.lineasV;
@@ -483,7 +484,8 @@ async function ejecutarPasoIndividual(num) {
           window.lineasOpticaH, window.lineasOpticaV,
           window.lineasEcografiaH, window.lineasEcografiaV,
           window.lineasA3H, window.lineasA3V,
-          brillo, ancho, alto
+          brillo, ancho, alto,
+          window.lineasIOH, window.lineasIOV
         );
         window.lineasLidarH = lidar.lineasH;
         window.lineasLidarV = lidar.lineasV;
