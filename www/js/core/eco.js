@@ -50,7 +50,7 @@ function detectarEco(brillo, ancho, alto) {
   // Buscar picos (lineas = cambio de brillo alto)
   const rangoPico = Math.max(2, V);
   const lineasH = buscarPicos(ecoH_suav, CONFIG.ECO_UMBRAL_H, window.CONFIG_ESC.ECO_DISTANCIA_MIN_H, rangoPico);
-  const lineasV = buscarPicos(ecoV_suav, CONFIG.ECO_UMBRAL_V, CONFIG.ESC.ECO_DISTANCIA_MIN_V, rangoPico);
+  const lineasV = buscarPicos(ecoV_suav, CONFIG.ECO_UMBRAL_V, window.CONFIG_ESC.ECO_DISTANCIA_MIN_V, rangoPico);
 
   const t1 = performance.now();
   console.log('[Eco] H=' + lineasH.length + ' V=' + lineasV.length + ' en ' + (t1-t0).toFixed(0) + 'ms');
