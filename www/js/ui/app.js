@@ -1,6 +1,6 @@
 // ==============================================
-// ui/app.js - Fase 1
-// Orquesta carga de imagen, brillo, perfiles.
+// ui/app.js - Fase 2
+// Optica + Eco. Dibuja capas.
 // ==============================================
 
 const el = function(id) { return document.getElementById(id); };
@@ -11,15 +11,15 @@ function log(msg) {
   cont.textContent = msg + '\n' + cont.textContent;
 }
 
-// --- Estado global ---
 window.estado = {
   imagenActual: null,
   brillo: null,
   ancho: 0,
-  alto: 0
+  alto: 0,
+  optica: null,
+  eco: null
 };
 
-// --- Cargar imagen ---
 function cargarImagen(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -32,8 +32,7 @@ function cargarImagen(file) {
       const canvas = el('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      canvas.getContext('2d').drawImage(img, 0, 0);
 
       log('Imagen cargada: ' + img.width + 'x' + img.height);
     };
@@ -42,43 +41,40 @@ function cargarImagen(file) {
   reader.readAsDataURL(file);
 }
 
-// --- Analizar ---
 function analizar() {
   const st = window.estado;
   if (!st.imagenActual) { log('Carga una imagen primero'); return; }
 
   const t0 = performance.now();
 
-  // Config escalada
   escalarConfig(st.ancho, st.alto);
-  log('Config escalada OK');
+  log('Config escalada');
 
-  // Calcular brillo
   const canvas = el('canvas');
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
-  log('Brillo calculado');
+  log('Brillo OK');
 
-  // Perfiles
-  const pH = perfilH(st.brillo, st.alto, st.ancho);
-  const pV = perfilV(st.brillo, st.alto, st.ancho);
-  log('Perfiles H/V calculados');
+  // --- OPTICA ---
+  st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
+  log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length + ' (' + st.optica.tiempo.toFixed(0) + 'ms)');
 
-  // Estadisticas simples
-  const minH = Math.min.apply(null, pH).toFixed(1);
-  const maxH = Math.max.apply(null, pH).toFixed(1);
-  const minV = Math.min.apply(null, pV).toFixed(1);
-  const maxV = Math.max.apply(null, pV).toFixed(1);
+  // --- ECO ---
+  st.eco = detectarEco(st.brillo, st.ancho, st.alto);
+  log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length + ' (' + st.eco.tiempo.toFixed(0) + 'ms)');
 
-  log('Perfil H: min=' + minH + ' max=' + maxH);
-  log('Perfil V: min=' + minV + ' max=' + maxV);
+  // Redibujar imagen original y superponer capas
+  ctx.drawImage(st.imagenActual, 0, 0);
+  dibujarLineas(canvas, st.optica.lineasH, st.optica.lineasV, CONFIG.COLOR_OPTICA, 2);
+  dibujarLineas(canvas, st.eco.lineasH, null, CONFIG.COLOR_ECO_H, 2);
+  dibujarLineas(canvas, null, st.eco.lineasV, CONFIG.COLOR_ECO_V, 2);
 
   const t1 = performance.now();
-  log('Tiempo total: ' + (t1 - t0).toFixed(0) + 'ms');
+  log('--- Total: ' + (t1-t0).toFixed(0) + 'ms ---');
+  log('Colores: Optica=amarillo, Eco H=rojo, Eco V=azul');
 }
 
-// --- Setup ---
 function setup() {
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
@@ -88,10 +84,10 @@ function setup() {
   el('btnLimpiar').onclick = function() {
     const canvas = el('canvas');
     canvas.width = 0; canvas.height = 0;
-    window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0 };
+    window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0, optica: null, eco: null };
     el('log').textContent = 'Limpiado';
   };
-  console.log('app.js listo');
+  console.log('app.js v2 listo');
 }
 
 if (document.readyState === 'loading') {

@@ -49,3 +49,62 @@ function suavizar(perfil, radio) {
 }
 
 console.log('core/proyecciones.js cargado');
+
+
+/**
+ * Encuentra valles (minimos locales) en un perfil.
+ * Usado por Optica: las lineas son mas oscuras que el fondo.
+ */
+function buscarValles(perfil, distanciaMin, factorUmbral) {
+  const valles = [];
+  for (let i = 2; i < perfil.length - 2; i++) {
+    if (perfil[i] < perfil[i-1] && perfil[i] < perfil[i+1] &&
+        perfil[i] < perfil[i-2] && perfil[i] < perfil[i+2]) {
+      valles.push({ pos: i, valor: perfil[i] });
+    }
+  }
+  if (valles.length === 0) return [];
+
+  // Umbral adaptativo: mediana de los 30 valles mas fuertes
+  const valores = valles.map(function(v) { return v.valor; }).sort(function(a, b) { return a - b; });
+  const N = Math.min(30, valores.length);
+  const topN = valores.slice(0, N);
+  const mediana = topN[Math.floor(topN.length / 2)];
+  const umbral = mediana * (1 + factorUmbral);
+
+  // Filtrar por umbral
+  const aceptados = valles.filter(function(v) { return v.valor <= umbral; });
+
+  // Aplicar distancia minima
+  const resultado = [];
+  let ultPos = -99999;
+  for (const v of aceptados) {
+    if (v.pos - ultPos >= distanciaMin) {
+      resultado.push(v.pos);
+      ultPos = v.pos;
+    }
+  }
+  return resultado;
+}
+
+/**
+ * Encuentra picos (maximos locales) con verificacion de pico real.
+ * Usado por Eco: cambio de brillo alto = linea.
+ */
+function buscarPicos(perfil, umbral, distanciaMin, rangoPico) {
+  const resultado = [];
+  let ultPos = -99999;
+  for (let i = 0; i < perfil.length; i++) {
+    if (perfil[i] > umbral && i - ultPos >= distanciaMin) {
+      // Buscar pico maximo local en +-rangoPico
+      let iPico = i;
+      let maxVal = perfil[i];
+      for (let j = Math.max(0, i - rangoPico); j <= Math.min(perfil.length - 1, i + rangoPico); j++) {
+        if (perfil[j] > maxVal) { maxVal = perfil[j]; iPico = j; }
+      }
+      resultado.push(iPico);
+      ultPos = iPico;
+    }
+  }
+  return resultado;
+}
