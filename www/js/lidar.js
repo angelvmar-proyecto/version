@@ -110,7 +110,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   const distV = Math.max(CONFIG_ESC.LIDAR_AGRUPAR_DIST, Math.round(ancho / 300));
   console.log('   📏 distAgrup: H=' + distH + ', V=' + distV);
 
-  const votosH = votarLineas(opticaH, ecoH, a3H, distH, null, ioH);
+  const votosH = votarLineas(opticaH, ecoH, [], distH, null, ioH);
   const analisisH = votosH.map(v => {
     const eco = medirEcoLineaH(v.posicion, brillo, alto, ancho, CONFIG.ECO_VENTANA);
     const clasif = clasificarLinea(v.votos, eco);
