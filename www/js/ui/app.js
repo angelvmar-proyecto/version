@@ -85,12 +85,53 @@ function analizar() {
   log('Colores: Optica=amarillo, Eco H=rojo, Eco V=azul');
 }
 
+
+// --- Exportar análisis al almacenamiento ---
+async function exportarAnalisis() {
+  const st = window.estado;
+  if (!st.imagenActual) { log('Carga una imagen primero'); return; }
+  if (!st.optica) { log('Analiza primero'); return; }
+
+  const canvas = el('canvas');
+  if (!canvas || canvas.width === 0) { log('Canvas vacío'); return; }
+
+  // Nombre descriptivo: algoritmo(s) + dimensiones + timestamp legible
+  const d = new Date();
+  const fecha = d.getFullYear() + '-' +
+                String(d.getMonth()+1).padStart(2,'0') + '-' +
+                String(d.getDate()).padStart(2,'0');
+  const hora = String(d.getHours()).padStart(2,'0') + 'h' +
+               String(d.getMinutes()).padStart(2,'0');
+  const nombre = 'analisis_v14_optica-eco_' + st.ancho + 'x' + st.alto + '_' + fecha + '_' + hora + '.png';
+
+  // Convertir canvas a base64
+  const dataURL = canvas.toDataURL('image/png');
+  const base64 = dataURL.split(',')[1];
+
+  try {
+    const fs = (typeof Capacitor !== 'undefined' && Capacitor.Plugins) ? Capacitor.Plugins.Filesystem : null;
+    if (!fs) { log('ERROR: Filesystem no disponible'); return; }
+    await fs.writeFile({
+      path: nombre,
+      data: base64,
+      directory: 'DOCUMENTS'
+    });
+    log('💾 Guardado: ' + nombre);
+    alert('Guardado en Documentos:\n' + nombre);
+  } catch(e) {
+    log('ERROR al guardar: ' + e.message);
+    alert('Error: ' + e.message);
+  }
+}
+
 function setup() {
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
     if (e.target.files && e.target.files[0]) cargarImagen(e.target.files[0]);
   };
   el('btnAnalizar').onclick = analizar;
+  const btnExp = el('btnExportar');
+  if (btnExp) btnExp.onclick = exportarAnalisis;
   el('btnLimpiar').onclick = function() {
     const canvas = el('canvas');
     canvas.width = 0; canvas.height = 0;
