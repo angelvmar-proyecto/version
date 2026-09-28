@@ -380,6 +380,7 @@
     <div class="tab active" data-tab="imagen">📷 Imagen</div>
     <div class="tab" data-tab="tabla">📊 Tabla</div>
     <div class="tab" data-tab="entrenar">🎓 Entrenar</div>
+      <div class="tab" data-tab="ajustar">🔬 Ajustar</div>
   </div>
 
   <!-- TAB IMAGEN -->
@@ -476,6 +477,48 @@
     <div id="entrenarContenido"></div>
   </div>
 
+  <!-- TAB AJUSTAR -->
+  <div class="tab-content" id="tab-ajustar" style="padding:15px; color:#ddd;">
+    <h3 style="margin-top:0;">🔬 Ajuste por algoritmo</h3>
+    <p style="font-size:12px; opacity:0.7;">Selecciona un algoritmo, pega sus parámetros y analiza solo ese.</p>
+
+    <label style="display:block; margin:10px 0 4px;">Algoritmo:</label>
+    <select id="ajAlgoritmo" style="width:100%; padding:8px; background:#222; color:#fff; border:1px solid #444; border-radius:6px;">
+      <option value="optica">🟡 Óptica</option>
+      <option value="eco">🔴🔵 Ecografía</option>
+      <option value="a3">🟣 A3 (Sobel ortogonal)</option>
+      <option value="lvc">💗 LVC (coherencia V)</option>
+      <option value="openv">🔷 OPENV (opening V)</option>
+      <option value="ml">🟢 ML (mínimo local)</option>
+      <option value="ws">🟠 WS (whitespace)</option>
+      <option value="io">✚ IO (intersección)</option>
+    </select>
+
+    <label style="display:block; margin:12px 0 4px;">Modo:</label>
+    <div style="display:flex; gap:8px;">
+      <button class="aj-modo" data-modo="ambas" style="flex:1; padding:10px; background:#0ea5e9; color:#fff; border:none; border-radius:6px;">Ambas</button>
+      <button class="aj-modo" data-modo="h" style="flex:1; padding:10px; background:#374151; color:#fff; border:none; border-radius:6px;">Solo H</button>
+      <button class="aj-modo" data-modo="v" style="flex:1; padding:10px; background:#374151; color:#fff; border:none; border-radius:6px;">Solo V</button>
+    </div>
+
+    <label style="display:block; margin:12px 0 4px;">Parámetros (JSON):</label>
+    <textarea id="ajParams" rows="8" style="width:100%; padding:10px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:12px;">{
+}</textarea>
+
+    <div style="display:flex; gap:6px; margin-top:12px;">
+      <button id="ajAnalizar" style="flex:2; padding:12px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold;">▶️ Analizar solo este</button>
+      <button id="ajExportar" style="flex:1; padding:12px; background:#f59e0b; color:#fff; border:none; border-radius:6px;">🖼️ PNG</button>
+    </div>
+    <div style="display:flex; gap:6px; margin-top:6px;">
+      <button id="ajCopiarParams" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Copiar Params</button>
+      <button id="ajCopiarLog" style="flex:1; padding:10px; background:#6366f1; color:#fff; border:none; border-radius:6px;">📄 Copiar Log</button>
+    </div>
+
+    <canvas id="ajCanvas" style="width:100%; margin-top:12px; border:1px solid #444; border-radius:6px; background:#000;"></canvas>
+
+    <pre id="ajLog" style="margin-top:10px; padding:10px; background:#0a0a0a; color:#9eff9e; border:1px solid #333; border-radius:6px; font-size:11px; max-height:200px; overflow:auto;"></pre>
+  </div>
+
   <!-- SCRIPTS: orden IMPORTANTE -->
   <script src="lib/xlsx.full.min.js"></script>
   <script src="js/config.js"></script>
@@ -491,6 +534,7 @@
   <script src="js/ocr.js"></script>
   <script src="js/panel-ajustes.js"></script>
   <script src="js/exportar.js"></script>
+  <script src="js/ajuste-algoritmos.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
