@@ -65,6 +65,7 @@ function filtrarLineasAdaptativo(lineas, minRatio) {
 }
 
 function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
+  console.log('   >>> rellenarHuecosV invocada con ' + (lineasV ? lineasV.length : 0) + ' lineas V, distMin=' + distHuecoMin);
   if (!lineasV || lineasV.length < 2) return lineasV;
   const resultado = [];
   for (let i = 0; i < lineasV.length; i++) {
@@ -91,9 +92,9 @@ function rellenarHuecosV(lineasV, opticaV, ioV, distHuecoMin, distBorde) {
     if (mejor && mejorCount >= 2) {
       const nuevaPos = Math.round(mejor.suma / mejor.count);
       resultado.push(nuevaPos);
-      console.log('   \u{1F527} Hueco ' + lineasV[i] + '\u2192' + lineasV[i+1] + ' rellenado con ' + nuevaPos + ' (' + mejorCount + ' votos)');
+      console.log('   >>> Hueco ' + lineasV[i] + ' -> ' + lineasV[i+1] + ' rellenado con ' + nuevaPos + ' (' + mejorCount + ' votos)');
     } else {
-      console.log('   \u26A0\uFE0F Hueco ' + lineasV[i] + '\u2192' + lineasV[i+1] + ' sin candidatos');
+      console.log('   >>> Hueco ' + lineasV[i] + ' -> ' + lineasV[i+1] + ' sin candidatos');
     }
   }
   return resultado;
@@ -177,7 +178,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
   // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
   const lineasVRellenas = rellenarHuecosV(lineasVFinal, opticaV, ioV, 60, 15);
-  console.log('   \u{1F527} Relleno V: ' + lineasVFinal.length + '\u2192' + lineasVRellenas.length);
+  console.log('   >>> Relleno V: ' + lineasVFinal.length + ' -> ' + lineasVRellenas.length);
   const lineasVFiltered = lineasVRellenas;
 
   return { lineasH: lineasHFiltered, lineasV: lineasVFiltered, analisisH, analisisV, descartadasH, descartadasV, votosH, votosV };
