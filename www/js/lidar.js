@@ -177,7 +177,7 @@ function ejecutarLidar(opticaH, opticaV, ecoH, ecoV, a3H, a3V, brillo, ancho, al
 
   // Filtro adaptativo: SOLO en horizontales (las verticales tienen anchos muy distintos y el filtro las elimina)
   const lineasHFiltered = filtrarLineasAdaptativo(lineasHFinal, 0.5);
-  const lineasVRellenas = rellenarHuecosV(lineasVFinal, opticaV, ioV, 60, 15);
+  const lineasVRellenas = rellenarHuecosV(lineasVFinal, (typeof window !== 'undefined' && window.lineasOpticaV) ? window.lineasOpticaV : opticaV, ioV, 60, 15);
   if (typeof log === 'function') log('   >>> Relleno: ' + lineasVFinal.length + ' -> ' + lineasVRellenas.length + ' V', 'info');
   const lineasVFiltered = lineasVRellenas;
 
