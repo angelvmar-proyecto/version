@@ -122,7 +122,7 @@ function analizar() {
 
   log('DEBUG pre-LIDAR: st=' + typeof st + ', st.optica=' + (st ? typeof st.optica : 'N/A') + ', optica.V=' + (st && st.optica ? st.optica.lineasV.length : 'N/A'));
   try {
-    st.lidar = ejecutarLidar(st);
+    st.lidar = votarLidarYRefinar(st);
     log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR LIDAR: ' + e.message); st.lidar = { lineasH: [], lineasV: [] }; }
 
@@ -252,7 +252,7 @@ function sandboxEjecutar() {
 
   try {
     if (fn === 'lidar') {
-      st.lidar = ejecutarLidar(st);
+      st.lidar = votarLidarYRefinar(st);
       log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
     } else if (fn === 'optica') {
       st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
@@ -279,7 +279,7 @@ function sandboxEjecutar() {
 
     // Si cambio un algoritmo, re-votar LIDAR
     if (fn !== 'lidar' && st.lidar !== null) {
-      st.lidar = ejecutarLidar(st);
+      st.lidar = votarLidarYRefinar(st);
       log('LIDAR (re-votado): H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length);
     }
     redibujar();

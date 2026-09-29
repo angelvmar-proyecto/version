@@ -3,7 +3,7 @@
 // Votacion de lineas entre los 7 algoritmos.
 // ==============================================
 
-function ejecutarLidar(st) {
+function votarLidarYRefinar(st) {
   const t0 = performance.now();
 
   const distH = CONFIG.LIDAR_DIST_AGRUPAR_H;
