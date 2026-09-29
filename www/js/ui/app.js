@@ -120,6 +120,7 @@ function analizar() {
     log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length + ' (' + st.cont.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Continuidad: ' + e.message); st.cont = { lineasH: [], lineasV: [] }; }
 
+  log('DEBUG pre-LIDAR: st=' + typeof st + ', st.optica=' + (st ? typeof st.optica : 'N/A') + ', optica.V=' + (st && st.optica ? st.optica.lineasV.length : 'N/A'));
   try {
     st.lidar = ejecutarLidar(st);
     log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
