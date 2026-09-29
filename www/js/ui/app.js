@@ -74,15 +74,45 @@ function analizar() {
     st.eco = { lineasH: [], lineasV: [] };
   }
 
+  // --- A3 ---
+  try {
+    st.a3 = detectarA3(st.brillo, st.ancho, st.alto);
+    log('A3: H=' + st.a3.lineasH.length + ' V=' + st.a3.lineasV.length + ' (' + st.a3.tiempo.toFixed(0) + 'ms)');
+  } catch(e) {
+    log('ERROR A3: ' + e.message);
+    st.a3 = { lineasH: [], lineasV: [] };
+  }
+
+  // --- LVC ---
+  try {
+    st.lvc = detectarLVC(st.brillo, st.ancho, st.alto);
+    log('LVC: V=' + st.lvc.lineasV.length + ' (' + st.lvc.tiempo.toFixed(0) + 'ms)');
+  } catch(e) {
+    log('ERROR LVC: ' + e.message);
+    st.lvc = { lineasH: [], lineasV: [] };
+  }
+
+  // --- IO (necesita H y V de Optica) ---
+  try {
+    st.io = detectarIO(st.brillo, st.ancho, st.alto, st.optica.lineasH, st.optica.lineasV);
+    log('IO: V=' + st.io.lineasV.length + ' H=' + st.io.lineasH.length + ' (' + st.io.tiempo.toFixed(0) + 'ms)');
+  } catch(e) {
+    log('ERROR IO: ' + e.message);
+    st.io = { lineasH: [], lineasV: [] };
+  }
+
   // Redibujar imagen original y superponer capas
   ctx.drawImage(st.imagenActual, 0, 0);
   dibujarLineas(canvas, st.optica.lineasH, st.optica.lineasV, CONFIG.COLOR_OPTICA, 2);
   dibujarLineas(canvas, st.eco.lineasH, null, CONFIG.COLOR_ECO_H, 2);
   dibujarLineas(canvas, null, st.eco.lineasV, CONFIG.COLOR_ECO_V, 2);
+  dibujarLineas(canvas, st.a3.lineasH, st.a3.lineasV, CONFIG.COLOR_A3, 1);
+  dibujarLineas(canvas, st.lvc.lineasH, st.lvc.lineasV, CONFIG.COLOR_LVC, 1);
+  dibujarLineas(canvas, st.io.lineasH, st.io.lineasV, CONFIG.COLOR_IO, 1);
 
   const t1 = performance.now();
   log('--- Total: ' + (t1-t0).toFixed(0) + 'ms ---');
-  log('Colores: Optica=amarillo, Eco H=rojo, Eco V=azul');
+  log('Colores: Optica=amarillo, EcoH=rojo, EcoV=azul, A3=morado, LVC=rosa, IO=ocre');
 }
 
 
