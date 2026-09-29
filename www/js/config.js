@@ -38,6 +38,12 @@ const CONFIG = {
   IO_CRUCES_MIN: 2,
   IO_DISTANCIA_MIN: 10,
 
+  // --- Frangi (vesselness, deteccion de lineas tenues) ---
+  FRANGI_SIGMA: 2.5,
+  FRANGI_BETA: 0.5,
+  FRANGI_C_FACTOR: 0.5,
+  FRANGI_DISTANCIA_MIN: 10,
+
   // --- LIDAR (votacion) ---
   LIDAR_VOTOS_MINIMOS: 2,
   LIDAR_ECO_ALTO: 60,
@@ -54,7 +60,8 @@ const CONFIG = {
   COLOR_A3: '#8B5CF6',
   COLOR_LVC: '#ec4899',
   COLOR_IO: '#eab308',
-  COLOR_LIDAR: '#000000'
+  COLOR_LIDAR: '#000000',
+  COLOR_FRANGI: '#14b8a6'
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
@@ -82,6 +89,8 @@ window.CONFIG_ESC = CONFIG_ESC;
   window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.A3_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
   window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
   window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+
+  window.CONFIG_ESC.FRANGI_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.FRANGI_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
 
   window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(4, Math.round(ancho * CONFIG.LIDAR_AGRUPAR_DIST));
   window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
