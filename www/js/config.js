@@ -59,11 +59,10 @@ const CONFIG = {
   REALCE_DISTANCIA_MIN_V: 10,
 
   // --- LIDAR (votacion) ---
-  LIDAR_VOTOS_MINIMOS: 2,
-  LIDAR_ECO_ALTO: 60,
-  LIDAR_ECO_BAJO: 30,
-  LIDAR_AGRUPAR_DIST: 0.015,   // proporcion del ancho
-  LIDAR_MARGEN_BORDE: 8,
+  LIDAR_DIST_AGRUPAR_H: 12,
+  LIDAR_DIST_AGRUPAR_V: 12,
+  LIDAR_MIN_VOTOS: 2,
+  LIDAR_PESOS: { optica: 2, eco: 1, io: 1, cont: 1, realce: 1, a3: 0, lvc: 0 },
   LIDAR_HUECO_MIN: 60,
   LIDAR_HUECO_BORDE: 15,
 
@@ -105,7 +104,6 @@ window.CONFIG_ESC = CONFIG_ESC;
   window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
   window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
 
-  window.CONFIG_ESC.LIDAR_AGRUPAR_DIST = Math.max(4, Math.round(ancho * CONFIG.LIDAR_AGRUPAR_DIST));
   window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
   window.CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
 
