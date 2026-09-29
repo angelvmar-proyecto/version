@@ -42,7 +42,7 @@ const CONFIG = {
   CONT_UMBRAL_OSCURO: 210,
   CONT_RATIO_MIN: 0.55,
   CONT_RUN_MIN: 0.30,
-  CONT_GAP_MAX: 20,
+  CONT_GAP_MAX: 35,
   CONT_DISTANCIA_MIN: 8,
 
   // --- LIDAR (votacion) ---
