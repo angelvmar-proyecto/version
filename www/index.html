@@ -47,7 +47,16 @@
   <button class="btn green" id="btnAnalizar">▶️ Analizar</button>
   <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
   <button class="btn" id="btnZoomReset" style="background:#7c3aed;">🔍 Resetear zoom</button>
-  <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar análisis</button>
+  <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar capas visibles</button>
+  <button class="btn" id="btnExportarTodo" style="background:#c2410c;">📦 Exportar todo (combinado + 5 sueltas)</button>
+
+  <div style="display:flex; flex-wrap:wrap; gap:10px; background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px;">
+    <label><input type="checkbox" id="chkOptica" checked> 🟡 Óptica</label>
+    <label><input type="checkbox" id="chkEco" checked> 🔴🔵 Eco</label>
+    <label><input type="checkbox" id="chkA3" checked> 🟣 A3</label>
+    <label><input type="checkbox" id="chkLVC" checked> 💗 LVC</label>
+    <label><input type="checkbox" id="chkIO" checked> ✚ IO</label>
+  </div>
 
   <div id="canvasWrap" style="position:relative; overflow:hidden; width:100%; max-height:65vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
     <canvas id="canvas" style="display:block; transform-origin:top left;"></canvas>
