@@ -39,8 +39,8 @@ const CONFIG = {
   IO_DISTANCIA_MIN: 10,
 
   // --- Continuidad (lineas por píxeles oscuros consecutivos) ---
-  CONT_UMBRAL_OSCURO: 210,
-  CONT_RATIO_MIN: 0.55,
+  CONT_UMBRAL_OSCURO: 225,
+  CONT_RATIO_MIN: 0.40,
   CONT_RUN_MIN: 0.30,
   CONT_GAP_MAX: 35,
   CONT_DISTANCIA_MIN: 8,
