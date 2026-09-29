@@ -39,11 +39,15 @@ const CONFIG = {
   IO_DISTANCIA_MIN: 10,
 
   // --- Continuidad (lineas por píxeles oscuros consecutivos) ---
-  CONT_UMBRAL_OSCURO: 225,
-  CONT_RATIO_MIN: 0.40,
-  CONT_RUN_MIN: 0.30,
+  CONT_UMBRAL_OSCURO_H: 210,
+  CONT_RATIO_MIN_H: 0.55,
+  CONT_RUN_MIN_H: 0.40,
+  CONT_UMBRAL_OSCURO_V: 225,
+  CONT_RATIO_MIN_V: 0.35,
+  CONT_RUN_MIN_V: 0.25,
   CONT_GAP_MAX: 35,
-  CONT_DISTANCIA_MIN: 8,
+  CONT_DISTANCIA_MIN_H: 15,
+  CONT_DISTANCIA_MIN_V: 8,
 
   // --- LIDAR (votacion) ---
   LIDAR_VOTOS_MINIMOS: 2,

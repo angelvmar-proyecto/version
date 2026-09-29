@@ -9,14 +9,19 @@
 function detectarContinuidad(brillo, ancho, alto) {
   const t0 = performance.now();
 
-  const umbral = CONFIG.CONT_UMBRAL_OSCURO;
-  const ratioMin = CONFIG.CONT_RATIO_MIN;
-  const runMinPct = CONFIG.CONT_RUN_MIN;
   const gapMax = CONFIG.CONT_GAP_MAX;
-  const distMin = CONFIG.CONT_DISTANCIA_MIN;
 
-  const runMinH = ancho * runMinPct;
-  const runMinV = alto * runMinPct;
+  // H: parametros H
+  const umbralH = CONFIG.CONT_UMBRAL_OSCURO_H;
+  const ratioMinH = CONFIG.CONT_RATIO_MIN_H;
+  const runMinH = ancho * CONFIG.CONT_RUN_MIN_H;
+  const distMinH = CONFIG.CONT_DISTANCIA_MIN_H;
+
+  // V: parametros V
+  const umbralV = CONFIG.CONT_UMBRAL_OSCURO_V;
+  const ratioMinV = CONFIG.CONT_RATIO_MIN_V;
+  const runMinV = alto * CONFIG.CONT_RUN_MIN_V;
+  const distMinV = CONFIG.CONT_DISTANCIA_MIN_V;
 
   // ============ HORIZONTALES ============
   const hCandidatas = [];
@@ -27,7 +32,7 @@ function detectarContinuidad(brillo, ancho, alto) {
     let gap = 0;
     const fila = brillo[y];
     for (let x = 0; x < ancho; x++) {
-      if (fila[x] < umbral) {
+      if (fila[x] < umbralH) {
         runActual += gap + 1;
         gap = 0;
         oscuros++;
@@ -38,7 +43,7 @@ function detectarContinuidad(brillo, ancho, alto) {
       }
     }
     const ratio = oscuros / ancho;
-    if (ratio >= ratioMin && runMax >= runMinH) {
+    if (ratio >= ratioMinH && runMax >= runMinH) {
       hCandidatas.push({ pos: y, ratio: ratio, run: runMax, score: ratio + runMax / ancho });
     }
   }
@@ -51,7 +56,7 @@ function detectarContinuidad(brillo, ancho, alto) {
     let runMax = 0;
     let gap = 0;
     for (let y = 0; y < alto; y++) {
-      if (brillo[y][x] < umbral) {
+      if (brillo[y][x] < umbralV) {
         runActual += gap + 1;
         gap = 0;
         oscuros++;
@@ -62,14 +67,14 @@ function detectarContinuidad(brillo, ancho, alto) {
       }
     }
     const ratio = oscuros / alto;
-    if (ratio >= ratioMin && runMax >= runMinV) {
+    if (ratio >= ratioMinV && runMax >= runMinV) {
       vCandidatas.push({ pos: x, ratio: ratio, run: runMax, score: ratio + runMax / alto });
     }
   }
 
   // Filtrar grupos contiguos (líneas gruesas = 2-3 filas juntas)
-  const lineasH = filtrarGruposContiguos(hCandidatas, distMin).map(function(c) { return c.pos; });
-  const lineasV = filtrarGruposContiguos(vCandidatas, distMin).map(function(c) { return c.pos; });
+  const lineasH = filtrarGruposContiguos(hCandidatas, distMinH).map(function(c) { return c.pos; });
+  const lineasV = filtrarGruposContiguos(vCandidatas, distMinV).map(function(c) { return c.pos; });
 
   const t1 = performance.now();
   console.log('[Continuidad] H=' + lineasH.length + ' V=' + lineasV.length + ' (' + (t1-t0).toFixed(0) + 'ms)');
