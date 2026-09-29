@@ -57,6 +57,27 @@
     <label><input type="checkbox" id="chkLVC" checked> 💗 LVC</label>
     <label><input type="checkbox" id="chkIO" checked> ✚ IO</label>
     <label><input type="checkbox" id="chkCont" checked> 💠 Continuidad</label>
+    <label><input type="checkbox" id="chkRealce" checked> 🎨 Realce</label>
+    <label><input type="checkbox" id="chkLidar" checked> ⚫ LIDAR</label>
+  </div>
+
+  <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #444;">
+    <h3 style="margin:0 0 8px; font-size:14px; color:#4ea3f5;">🧪 Sandbox (sin rebuild)</h3>
+    <select id="sbFunc" style="width:100%; padding:8px; margin-bottom:8px; background:#222; color:#fff; border:1px solid #444; border-radius:6px;">
+      <option value="lidar">⚫ LIDAR (votacion)</option>
+      <option value="optica">🟡 Optica</option>
+      <option value="eco">🔴🔵 Eco</option>
+      <option value="a3">🟣 A3</option>
+      <option value="lvc">💗 LVC</option>
+      <option value="io">✚ IO</option>
+      <option value="cont">💠 Continuidad</option>
+      <option value="realce">🎨 Realce</option>
+    </select>
+    <textarea id="sbParams" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;">{}</textarea>
+    <div style="display:flex; gap:6px; margin-top:8px;">
+      <button id="sbRun" style="flex:2; padding:10px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold;">▶️ Ejecutar</button>
+      <button id="sbAutoFill" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Params actuales</button>
+    </div>
   </div>
 
   <div id="canvasWrap" style="position:relative; overflow:hidden; width:100%; max-height:65vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">

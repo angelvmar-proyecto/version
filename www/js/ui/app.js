@@ -120,6 +120,11 @@ function analizar() {
     log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length + ' (' + st.cont.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Continuidad: ' + e.message); st.cont = { lineasH: [], lineasV: [] }; }
 
+  try {
+    st.lidar = ejecutarLidar(st);
+    log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR LIDAR: ' + e.message); st.lidar = { lineasH: [], lineasV: [] }; }
+
   redibujar();
 
   const t1 = performance.now();
@@ -195,12 +200,103 @@ async function exportarTodo() {
 }
 
 // --- Setup ---
+
+// ==============================================
+// Sandbox: aplicar parametros sin rebuild
+// ==============================================
+
+function sandboxParamsActuales(fn) {
+  const teclas = {
+    lidar: ['LIDAR_DIST_AGRUPAR_H','LIDAR_DIST_AGRUPAR_V','LIDAR_MIN_VOTOS','LIDAR_HUECO_MIN','LIDAR_HUECO_BORDE'],
+    optica: ['OPTICA_UMBRAL_ADAPTATIVO','OPTICA_DISTANCIA_MIN_H','OPTICA_DISTANCIA_MIN_V','OPTICA_SUAVIZADO'],
+    eco: ['ECO_VENTANA','ECO_UMBRAL_H','ECO_UMBRAL_V','ECO_CONTINUIDAD','ECO_DISTANCIA_MIN_H','ECO_DISTANCIA_MIN_V'],
+    a3: ['A3_UMBRAL_MAGNITUD','A3_UMBRAL_ORTOGONALIDAD','A3_COBERTURA_MINIMA','A3_DISTANCIA_MIN'],
+    lvc: ['LVC_VENTANA','LVC_UMBRAL_DIF','LVC_COHERENCIA_MIN','LVC_DISTANCIA_MIN'],
+    io: ['IO_VENTANA_CRUCE','IO_UMBRAL_CRUCE','IO_CRUCES_MIN','IO_DISTANCIA_MIN'],
+    cont: ['CONT_UMBRAL_OSCURO_H','CONT_RATIO_MIN_H','CONT_RUN_MIN_H','CONT_UMBRAL_OSCURO_V','CONT_RATIO_MIN_V','CONT_RUN_MIN_V','CONT_GAP_MAX','CONT_DISTANCIA_MIN_H','CONT_DISTANCIA_MIN_V'],
+    realce: ['REALCE_CONTRASTE_MIN','REALCE_UMBRAL_FACTOR','REALCE_MIN_RUN_H','REALCE_MIN_RUN_V','REALCE_GAP_MAX','REALCE_DISTANCIA_MIN_H','REALCE_DISTANCIA_MIN_V']
+  };
+  const lista = teclas[fn] || [];
+  const obj = {};
+  lista.forEach(function(k) { obj[k] = CONFIG[k]; });
+  return obj;
+}
+
+function sandboxAutoFill() {
+  const fn = el('sbFunc').value;
+  const obj = sandboxParamsActuales(fn);
+  el('sbParams').value = JSON.stringify(obj, null, 2);
+}
+
+function sandboxEjecutar() {
+  const st = window.estado;
+  if (!st.brillo) { log('Analiza primero'); return; }
+
+  let params;
+  try {
+    const txt = el('sbParams').value.trim();
+    params = (txt && txt !== '{}') ? JSON.parse(txt) : {};
+  } catch(e) {
+    log('ERROR JSON: ' + e.message);
+    return;
+  }
+
+  Object.keys(params).forEach(function(k) {
+    if (CONFIG[k] !== undefined) CONFIG[k] = params[k];
+    if (window.CONFIG_ESC && window.CONFIG_ESC[k] !== undefined) window.CONFIG_ESC[k] = params[k];
+  });
+
+  const fn = el('sbFunc').value;
+  log('🧪 Sandbox: ' + fn + ' con ' + Object.keys(params).length + ' params');
+
+  try {
+    if (fn === 'lidar') {
+      st.lidar = ejecutarLidar(st);
+      log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
+    } else if (fn === 'optica') {
+      st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
+      log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length);
+    } else if (fn === 'eco') {
+      st.eco = detectarEco(st.brillo, st.ancho, st.alto);
+      log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length);
+    } else if (fn === 'a3') {
+      st.a3 = detectarA3(st.brillo, st.ancho, st.alto);
+      log('A3: H=' + st.a3.lineasH.length + ' V=' + st.a3.lineasV.length);
+    } else if (fn === 'lvc') {
+      st.lvc = detectarLVC(st.brillo, st.ancho, st.alto);
+      log('LVC: V=' + st.lvc.lineasV.length);
+    } else if (fn === 'io') {
+      st.io = detectarIO(st.brillo, st.ancho, st.alto, st.optica.lineasH, st.optica.lineasV);
+      log('IO: V=' + st.io.lineasV.length + ' H=' + st.io.lineasH.length);
+    } else if (fn === 'cont') {
+      st.cont = detectarContinuidad(st.brillo, st.ancho, st.alto);
+      log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length);
+    } else if (fn === 'realce') {
+      st.realce = detectarRealce(st.brillo, st.ancho, st.alto);
+      log('Realce: H=' + st.realce.lineasH.length + ' V=' + st.realce.lineasV.length);
+    }
+
+    // Si cambio un algoritmo, re-votar LIDAR
+    if (fn !== 'lidar' && st.lidar !== null) {
+      st.lidar = ejecutarLidar(st);
+      log('LIDAR (re-votado): H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length);
+    }
+    redibujar();
+  } catch(e) {
+    log('ERROR: ' + e.message);
+  }
+}
+
 function setup() {
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
     if (e.target.files && e.target.files[0]) cargarImagen(e.target.files[0]);
   };
   el('btnAnalizar').onclick = analizar;
+  const sbRun = el('sbRun');
+  if (sbRun) sbRun.onclick = sandboxEjecutar;
+  const sbAF = el('sbAutoFill');
+  if (sbAF) sbAF.onclick = sandboxAutoFill;
   el('btnExportar').onclick = exportarVisible;
   el('btnExportarTodo').onclick = exportarTodo;
 

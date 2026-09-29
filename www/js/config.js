@@ -49,6 +49,15 @@ const CONFIG = {
   CONT_DISTANCIA_MIN_H: 15,
   CONT_DISTANCIA_MIN_V: 8,
 
+  // --- Realce (umbral adaptativo por fila/columna) ---
+  REALCE_CONTRASTE_MIN: 35,
+  REALCE_UMBRAL_FACTOR: 0.5,
+  REALCE_MIN_RUN_H: 0.50,
+  REALCE_MIN_RUN_V: 0.45,
+  REALCE_GAP_MAX: 30,
+  REALCE_DISTANCIA_MIN_H: 12,
+  REALCE_DISTANCIA_MIN_V: 10,
+
   // --- LIDAR (votacion) ---
   LIDAR_VOTOS_MINIMOS: 2,
   LIDAR_ECO_ALTO: 60,
@@ -66,7 +75,8 @@ const CONFIG = {
   COLOR_LVC: '#ec4899',
   COLOR_IO: '#eab308',
   COLOR_LIDAR: '#000000',
-  COLOR_CONTINUIDAD: '#00FFFF'
+  COLOR_CONTINUIDAD: '#00FFFF',
+  COLOR_REALCE: '#fb923c'
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
