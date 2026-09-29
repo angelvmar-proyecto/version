@@ -21,8 +21,8 @@ window.estado = {
   a3: null,
   lvc: null,
   io: null,
-  frangi: null,
-  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, frangi: true }
+  cont: null,
+  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true }
 };
 
 // --- Carga de imagen ---
@@ -70,8 +70,8 @@ function redibujar() {
   if (st.capasVisibles.io && st.io) {
     dibujarLineas(canvas, st.io.lineasH, st.io.lineasV, CONFIG.COLOR_IO, 1);
   }
-  if (st.capasVisibles.frangi && st.frangi) {
-    dibujarLineas(canvas, st.frangi.lineasH, st.frangi.lineasV, CONFIG.COLOR_FRANGI, 1);
+  if (st.capasVisibles.cont && st.cont) {
+    dibujarLineas(canvas, st.cont.lineasH, st.cont.lineasV, CONFIG.COLOR_CONTINUIDAD, 1);
   }
 }
 
@@ -116,9 +116,9 @@ function analizar() {
   } catch(e) { log('ERROR IO: ' + e.message); st.io = { lineasH: [], lineasV: [] }; }
 
   try {
-    st.frangi = detectarFrangi(st.brillo, st.ancho, st.alto);
-    log('Frangi: H=' + st.frangi.lineasH.length + ' V=' + st.frangi.lineasV.length + ' (' + st.frangi.tiempo.toFixed(0) + 'ms)');
-  } catch(e) { log('ERROR Frangi: ' + e.message); st.frangi = { lineasH: [], lineasV: [] }; }
+    st.cont = detectarContinuidad(st.brillo, st.ancho, st.alto);
+    log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length + ' (' + st.cont.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR Continuidad: ' + e.message); st.cont = { lineasH: [], lineasV: [] }; }
 
   redibujar();
 
@@ -176,7 +176,7 @@ async function exportarTodo() {
   guardadas.push('combinado');
 
   // 2. Uno por uno
-  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'frangi'];
+  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'cont'];
   for (let i = 0; i < algoritmos.length; i++) {
     const alg = algoritmos[i];
     Object.keys(st.capasVisibles).forEach(function(k){ st.capasVisibles[k] = false; });
@@ -208,13 +208,13 @@ function setup() {
     const canvas = el('canvas');
     canvas.width = 0; canvas.height = 0;
     window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0,
-                     optica: null, eco: null, a3: null, lvc: null, io: null, frangi: null,
-                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, frangi: true } };
+                     optica: null, eco: null, a3: null, lvc: null, io: null, cont: null,
+                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true } };
     el('log').textContent = 'Limpiado';
   };
 
   // Checkboxes
-  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkFrangi: 'frangi' };
+  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont' };
   Object.keys(map).forEach(function(id) {
     const c = el(id);
     if (c) c.addEventListener('change', function() {
