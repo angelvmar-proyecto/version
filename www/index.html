@@ -6,86 +6,129 @@
   <title>MAR Caribe v14</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 12px;
-      background: #0d1421; color: #ddd;
-      font-family: -apple-system, sans-serif;
-    }
+    body { margin: 0; padding: 12px; background: #0d1421; color: #ddd; font-family: -apple-system, sans-serif; }
     h1 { font-size: 18px; color: #4ea3f5; margin: 0 0 4px; }
     .sub { font-size: 11px; color: #888; margin: 0 0 14px; }
-    .btn {
-      padding: 12px 16px; border-radius: 8px; border: none;
-      background: #2563eb; color: #fff; font-size: 14px;
-      font-weight: bold; width: 100%; margin-bottom: 10px;
-      cursor: pointer;
-    }
+    .btn { padding: 12px 16px; border-radius: 8px; border: none; background: #2563eb; color: #fff; font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer; }
     .btn.green { background: #16a34a; }
     .btn.gray { background: #4b5563; }
-    canvas {
-      width: 100%; display: block;
-      border-radius: 6px; border: 1px solid #333;
-      margin-bottom: 10px;
-    }
-    #log {
-      background: #0a0a0a; color: #9eff9e;
-      padding: 10px; border-radius: 6px;
-      font-family: monospace; font-size: 11px;
-      max-height: 220px; overflow-y: auto;
-      border: 1px solid #333;
-    }
+    canvas { width: 100%; display: block; border-radius: 6px; border: 1px solid #333; margin-bottom: 10px; }
+    #log { background: #0a0a0a; color: #9eff9e; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; border: 1px solid #333; }
     input[type=file] { display: none; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid #333; }
+    .tab { padding: 10px 14px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 13px; color: #888; }
+    .tab.active { background: #1a1a2e; color: #4ea3f5; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .chip { padding: 6px 12px; border-radius: 6px; background: #333; color: #ccc; cursor: pointer; font-size: 13px; }
+    .chip.active { background: #2563eb; color: #fff; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <h1>MAR Caribe v14</h1>
-  <p class="sub">Fase 1: Carga y brillo</p>
+  <p class="sub">Análisis + Calibración</p>
 
-  <input type="file" id="inputImagen" accept="image/*">
-
-  <button class="btn" id="btnCargar">📷 Cargar imagen</button>
-  <button class="btn green" id="btnAnalizar">▶️ Analizar</button>
-  <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
-  <button class="btn" id="btnZoomReset" style="background:#7c3aed;">🔍 Resetear zoom</button>
-  <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar capas visibles</button>
-  <button class="btn" id="btnExportarTodo" style="background:#c2410c;">📦 Exportar todo (combinado + 5 sueltas)</button>
-
-  <div style="display:flex; flex-wrap:wrap; gap:10px; background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px;">
-    <label><input type="checkbox" id="chkOptica" checked> 🟡 Óptica</label>
-    <label><input type="checkbox" id="chkEco" checked> 🔴🔵 Eco</label>
-    <label><input type="checkbox" id="chkA3" checked> 🟣 A3</label>
-    <label><input type="checkbox" id="chkLVC" checked> 💗 LVC</label>
-    <label><input type="checkbox" id="chkIO" checked> ✚ IO</label>
-    <label><input type="checkbox" id="chkCont" checked> 💠 Continuidad</label>
-    <label><input type="checkbox" id="chkRealce" checked> 🎨 Realce</label>
-    <label><input type="checkbox" id="chkLidar" checked> ⚫ LIDAR</label>
+  <div class="tabs">
+    <div class="tab active" data-tab="analisis">🔬 Análisis</div>
+    <div class="tab" data-tab="calibrar">🎯 Calibrar</div>
   </div>
 
-  <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #444;">
-    <h3 style="margin:0 0 8px; font-size:14px; color:#4ea3f5;">🧪 Sandbox (sin rebuild)</h3>
-    <select id="sbFunc" style="width:100%; padding:8px; margin-bottom:8px; background:#222; color:#fff; border:1px solid #444; border-radius:6px;">
-      <option value="lidar">⚫ LIDAR (votacion)</option>
-      <option value="optica">🟡 Optica</option>
-      <option value="eco">🔴🔵 Eco</option>
-      <option value="a3">🟣 A3</option>
-      <option value="lvc">💗 LVC</option>
-      <option value="io">✚ IO</option>
-      <option value="cont">💠 Continuidad</option>
-      <option value="realce">🎨 Realce</option>
-    </select>
-    <textarea id="sbParams" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;">{}</textarea>
-    <div style="display:flex; gap:6px; margin-top:8px;">
-      <button id="sbRun" style="flex:2; padding:10px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold;">▶️ Ejecutar</button>
-      <button id="sbAutoFill" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Params actuales</button>
+  <!-- ============ TAB ANALISIS ============ -->
+  <div class="tab-content active" id="tab-analisis">
+
+    <input type="file" id="inputImagen" accept="image/*">
+
+    <button class="btn" id="btnCargar">📷 Cargar imagen</button>
+    <button class="btn green" id="btnAnalizar">▶️ Analizar</button>
+    <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
+    <button class="btn" id="btnZoomReset" style="background:#7c3aed;">🔍 Resetear zoom</button>
+    <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar capas visibles</button>
+    <button class="btn" id="btnExportarTodo" style="background:#c2410c;">📦 Exportar todo</button>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px;">
+      <label><input type="checkbox" id="chkOptica" checked> 🟡 Óptica</label>
+      <label><input type="checkbox" id="chkEco" checked> 🔴🔵 Eco</label>
+      <label><input type="checkbox" id="chkA3" checked> 🟣 A3</label>
+      <label><input type="checkbox" id="chkLVC" checked> 💗 LVC</label>
+      <label><input type="checkbox" id="chkIO" checked> ✚ IO</label>
+      <label><input type="checkbox" id="chkCont" checked> 💠 Continuidad</label>
+      <label><input type="checkbox" id="chkRealce" checked> 🎨 Realce</label>
+      <label><input type="checkbox" id="chkLidar" checked> ⚫ LIDAR</label>
     </div>
+
+    <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #444;">
+      <h3 style="margin:0 0 8px; font-size:14px; color:#4ea3f5;">🧪 Sandbox (sin rebuild)</h3>
+      <select id="sbFunc" style="width:100%; padding:8px; margin-bottom:8px; background:#222; color:#fff; border:1px solid #444; border-radius:6px;">
+        <option value="lidar">⚫ LIDAR (votacion)</option>
+        <option value="optica">🟡 Optica</option>
+        <option value="eco">🔴🔵 Eco</option>
+        <option value="a3">🟣 A3</option>
+        <option value="lvc">💗 LVC</option>
+        <option value="io">✚ IO</option>
+        <option value="cont">💠 Continuidad</option>
+        <option value="realce">🎨 Realce</option>
+      </select>
+      <textarea id="sbParams" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;">{}</textarea>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <button id="sbRun" style="flex:2; padding:10px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold;">▶️ Ejecutar</button>
+        <button id="sbAutoFill" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Params actuales</button>
+      </div>
+    </div>
+
+    <div id="canvasWrap" style="position:relative; overflow:hidden; width:100%; max-height:65vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
+      <canvas id="canvas" style="display:block; transform-origin:top left;"></canvas>
+    </div>
+
+    <div id="log">Listo. Carga una imagen.</div>
   </div>
 
-  <div id="canvasWrap" style="position:relative; overflow:hidden; width:100%; max-height:65vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
-    <canvas id="canvas" style="display:block; transform-origin:top left;"></canvas>
+  <!-- ============ TAB CALIBRAR ============ -->
+  <div class="tab-content" id="tab-calibrar">
+
+    <input type="file" id="inputCalib" accept="image/*">
+
+    <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+      <div class="chip active" data-slot="0">Slot 1</div>
+      <div class="chip" data-slot="1">Slot 2</div>
+      <div class="chip" data-slot="2">Slot 3</div>
+      <div class="chip" data-slot="3">Slot 4</div>
+    </div>
+
+    <div id="calibInfo" style="background:#1a1a2e; padding:10px; border-radius:6px; margin-bottom:12px; font-size:12px; line-height:1.6;">
+      <div>Slot: <b id="calibSlotNombre">—</b></div>
+      <div>Imagen: <b id="calibImgNombre">vacío</b></div>
+      <div>Benchmark: <b id="calibBmEstado">no guardado</b></div>
+      <div>Marcas: <b id="calibConteo">H=0, V=0</b></div>
+    </div>
+
+    <button class="btn" id="btnCalibCargar">📷 Cargar imagen</button>
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <div class="chip active" id="modeH" style="flex:1; text-align:center; padding:10px;">⬌ H</div>
+      <div class="chip" id="modeV" style="flex:1; text-align:center; padding:10px;">⬍ V</div>
+      <div class="chip" id="modeVer" style="flex:1; text-align:center; padding:10px;">✋ Ver</div>
+    </div>
+
+    <div id="calibWrap" style="position:relative; overflow:hidden; width:100%; max-height:60vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
+      <canvas id="canvasCalib" style="display:block; transform-origin:top left;"></canvas>
+    </div>
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button id="btnCalibBorrar" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px; font-size:13px;">↩️ Borrar última</button>
+      <button id="btnCalibLimpiar" style="flex:1; padding:10px; background:#7c3aed; color:#fff; border:none; border-radius:6px; font-size:13px;">🗑️ Limpiar marcas</button>
+      <button id="btnCalibZoomRst" style="flex:1; padding:10px; background:#4b5563; color:#fff; border:none; border-radius:6px; font-size:13px;">🔍 Reset zoom</button>
+    </div>
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button id="btnCalibGuardar" style="flex:1; padding:12px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold;">💾 Guardar bm</button>
+      <button id="btnCalibCopiar" style="flex:1; padding:12px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Copiar JSON</button>
+    </div>
+
+    <div id="calibLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:150px; overflow-y:auto; border:1px solid #333;">Listo. Carga una imagen y marca las líneas.</div>
   </div>
 
-  <div id="log">Listo. Carga una imagen.</div>
-
+  <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
   <script src="js/core/proyecciones.js"></script>
@@ -100,6 +143,7 @@
   <script src="js/ui/dibujo.js"></script>
   <script src="js/ui/zoom.js"></script>
   <script src="js/ui/app.js"></script>
+  <script src="js/ui/calibrar.js"></script>
 
 </body>
 </html>
