@@ -22,6 +22,37 @@
       - Rectificar orientacion del texto (angulo de linea base)
 - [ ] Medir mejora: precision antes vs despues
 
+
+## Fase C - Post-procesamiento por espaciamiento regular
+**Inspirado en CRF (Conditional Random Fields), pero simplificado.**
+
+### Concepto
+Después de LIDAR, validar que las líneas detectadas forman un patrón de espaciamiento coherente.
+
+### Reglas propuestas
+1. Calcular las distancias entre líneas consecutivas.
+2. Obtener la MEDIANA de esas distancias (ej: 30px en una tabla regular).
+3. Reglas de limpieza:
+   - Si dos líneas están a < 0.5 × mediana → eliminar la de menor voto.
+   - Si un hueco es > 1.5 × mediana → buscar línea candidata en el centro.
+   - Si un hueco es > 2.5 × mediana → buscar 2 líneas candidatas.
+4. Validar que después del filtro el patrón sea más regular.
+
+### Por qué funciona
+- Tablas reales tienen espaciamiento regular (aunque variable entre filas, es consistente).
+- CRF explota esto con probabilidades; nosotros con reglas explícitas.
+- Es equivalente al 90% del resultado de CRF sin necesitar entrenamiento.
+
+### Diferencia con CRF real
+- CRF: modelo probabilístico que aprende los pesos de un dataset etiquetado.
+- Regular Spacing: reglas explícitas basadas en la mediana.
+- CRF necesita ~500+ imágenes etiquetadas para entrenar. Nosotros con 4 vamos bien.
+- Viterbi + CRF son ~500 líneas más. Regular Spacing son ~50 líneas.
+
+### Cuándo aplicarlo
+Solo después de que LIDAR y las fórmulas escaladas estén afinadas.
+Si LIDAR ya da el 95% de aciertos, el post-procesamiento se vuelve opcional.
+
 ## Fase 7 - Panel Multi-imagen
 - [ ] Cargar 3+ imagenes a la vez
 - [ ] Correr analisis en todas en paralelo
