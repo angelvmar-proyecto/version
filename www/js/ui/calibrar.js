@@ -236,23 +236,35 @@ function calSetupTouch() {
       if (st.modo === 'H' || st.modo === 'V') {
         const coords = calTapACoords(e.touches[0]);
         const slot = st.slots[st.slotActivo];
-        const umbral = 25 / st.zoom; // 25px reales, ajustados al zoom
+        const umbral = 45 / st.zoom; // 45px reales (era 25)
 
         if (st.modo === 'H') {
+          // Buscar la H MÁS CERCANA dentro del umbral
+          let mejorIdx = -1, mejorDist = umbral;
           for (let i = 0; i < slot.H.length; i++) {
-            if (Math.abs(slot.H[i] - coords.y) < umbral) {
-              st.dragging = { tipo: 'H', idx: i };
-              calLog('🔧 Agarró H y=' + slot.H[i]);
-              return;
-            }
+            const dist = Math.abs(slot.H[i] - coords.y);
+            if (dist < mejorDist) { mejorDist = dist; mejorIdx = i; }
+          }
+          if (mejorIdx >= 0) {
+            st.dragging = { tipo: 'H', idx: mejorIdx };
+            calLog('🔧 Agarró H y=' + slot.H[mejorIdx] + ' (dist=' + mejorDist.toFixed(0) + 'px)');
+            return;
+          } else {
+            calLog('📍 Tap H en y=' + coords.y + ' (sin línea cerca)');
           }
         } else {
+          // Buscar la V MÁS CERCANA dentro del umbral
+          let mejorIdx = -1, mejorDist = umbral;
           for (let i = 0; i < slot.V.length; i++) {
-            if (Math.abs(slot.V[i] - coords.x) < umbral) {
-              st.dragging = { tipo: 'V', idx: i };
-              calLog('🔧 Agarró V x=' + slot.V[i]);
-              return;
-            }
+            const dist = Math.abs(slot.V[i] - coords.x);
+            if (dist < mejorDist) { mejorDist = dist; mejorIdx = i; }
+          }
+          if (mejorIdx >= 0) {
+            st.dragging = { tipo: 'V', idx: mejorIdx };
+            calLog('🔧 Agarró V x=' + slot.V[mejorIdx] + ' (dist=' + mejorDist.toFixed(0) + 'px)');
+            return;
+          } else {
+            calLog('📍 Tap V en x=' + coords.x + ' (sin línea cerca)');
           }
         }
       }
