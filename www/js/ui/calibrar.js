@@ -117,6 +117,12 @@ function calAgregarMarca(x, y) {
   const slot = window.calibState.slots[window.calibState.slotActivo];
   if (!slot.imagen) return;
 
+  // Rechazar taps fuera del canvas
+  if (x < 0 || x >= slot.ancho || y < 0 || y >= slot.alto) {
+    calLog('⚠️ Tap fuera del canvas (x=' + x + ', y=' + y + ') ignorado');
+    return;
+  }
+
   if (window.calibState.modo === 'H') {
     // Evitar duplicados cercanos
     if (slot.H.some(function(v) { return Math.abs(v - y) < 5; })) {
@@ -349,8 +355,8 @@ function calSetSlot(idx) {
     if (stored) {
       const bm = JSON.parse(stored);
       const slot = window.calibState.slots[idx];
-      slot.H = bm.H || [];
-      slot.V = bm.V || [];
+      slot.H = (bm.H || []).filter(function(v) { return v >= 0 && v < slot.alto; });
+      slot.V = (bm.V || []).filter(function(v) { return v >= 0 && v < slot.ancho; });
       slot.bmGuardado = true;
       calLog('Benchmark cargado del slot ' + (idx+1) + ': H=' + slot.H.length + ', V=' + slot.V.length);
     }
