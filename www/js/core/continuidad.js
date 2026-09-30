@@ -9,19 +9,19 @@
 function detectarContinuidad(brillo, ancho, alto) {
   const t0 = performance.now();
 
-  const gapMax = CONFIG.CONT_GAP_MAX;
+  const gapMax = window.CONFIG_ESC.CONT_GAP_MAX;
 
   // H: parametros H
-  const umbralH = CONFIG.CONT_UMBRAL_OSCURO_H;
+  const umbralH = window.CONFIG_ESC.CONT_UMBRAL_OSCURO_H;
   const ratioMinH = CONFIG.CONT_RATIO_MIN_H;
   const runMinH = ancho * CONFIG.CONT_RUN_MIN_H;
-  const distMinH = CONFIG.CONT_DISTANCIA_MIN_H;
+  const distMinH = window.CONFIG_ESC.CONT_DISTANCIA_MIN_H;
 
   // V: parametros V
-  const umbralV = CONFIG.CONT_UMBRAL_OSCURO_V;
+  const umbralV = window.CONFIG_ESC.CONT_UMBRAL_OSCURO_V;
   const ratioMinV = CONFIG.CONT_RATIO_MIN_V;
   const runMinV = alto * CONFIG.CONT_RUN_MIN_V;
-  const distMinV = CONFIG.CONT_DISTANCIA_MIN_V;
+  const distMinV = window.CONFIG_ESC.CONT_DISTANCIA_MIN_V;
 
   // ============ HORIZONTALES ============
   const hCandidatas = [];

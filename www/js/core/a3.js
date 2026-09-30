@@ -24,7 +24,7 @@ function detectarA3(brillo, ancho, alto) {
          1 * brillo[y+1][x-1] + 2 * brillo[y+1][x] + 1 * brillo[y+1][x+1];
 
       const mag = Math.sqrt(gx*gx + gy*gy);
-      if (mag < CONFIG.A3_UMBRAL_MAGNITUD) continue;
+      if (mag < window.CONFIG_ESC.A3_UMBRAL_MAGNITUD) continue;
 
       const suma = Math.abs(gx) + Math.abs(gy) + 0.001;
       const ortV = Math.abs(gx) / suma; // ortogonal a gradiente horizontal

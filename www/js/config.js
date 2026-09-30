@@ -85,29 +85,93 @@ window.CONFIG_ESC = Object.assign({}, CONFIG);
 // Escalado proporcional segun tamano de imagen
 // ==============================================
 function escalarConfig(ancho, alto) {
-  // Base de calibracion: 990x1600
-  const refAncho = 990;
-  const refAlto = 1600;
-  const kAncho = ancho / refAncho;
-  const kAlto = alto / refAlto;
+  window.CONFIG_ESC = Object.assign({}, CONFIG);
 
-  CONFIG_ESC = Object.assign({}, CONFIG);
-window.CONFIG_ESC = CONFIG_ESC;
+  // Formulas proporcionales al tamaño de imagen
+  // (Referencia original: 990 x 1600)
 
-  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(3, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_V * kAncho));
-  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.OPTICA_DISTANCIA_MIN_H * kAlto));
+  // === OPTICA ===
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(3, Math.round(alto * 0.008));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(3, Math.round(ancho * 0.007));
+  window.CONFIG_ESC.OPTICA_SUAVIZADO = Math.max(3, Math.round(alto * 0.0125));
 
-  window.CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_V * kAncho));
-  window.CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(4, Math.round(CONFIG.ECO_DISTANCIA_MIN_H * kAlto));
+  // === ECO ===
+  window.CONFIG_ESC.ECO_VENTANA = Math.max(1, Math.round(ancho * 0.003));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.011));
+  window.CONFIG_ESC.ECO_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.020));
 
-  window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.A3_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
-  window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.LVC_DISTANCIA_MIN * kAncho));
-  window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(CONFIG.IO_DISTANCIA_MIN * Math.min(kAncho, kAlto)));
+  // === A3 ===
+  window.CONFIG_ESC.A3_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
 
-  window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(30, Math.round(Math.max(ancho, alto) * 0.06));
+  // === LVC ===
+  window.CONFIG_ESC.LVC_VENTANA = Math.max(1, Math.round(ancho * 0.002));
+  window.CONFIG_ESC.LVC_DISTANCIA_MIN = Math.max(4, Math.round(ancho * 0.010));
+
+  // === IO ===
+  window.CONFIG_ESC.IO_VENTANA_CRUCE = Math.max(2, Math.round(Math.min(ancho, alto) * 0.004));
+  window.CONFIG_ESC.IO_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
+
+  // === CONTINUIDAD ===
+  window.CONFIG_ESC.CONT_GAP_MAX = Math.max(8, Math.round(Math.max(ancho, alto) * 0.022));
+  window.CONFIG_ESC.CONT_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.009));
+  window.CONFIG_ESC.CONT_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.008));
+
+  // === REALCE ===
+  window.CONFIG_ESC.REALCE_GAP_MAX = Math.max(8, Math.round(Math.max(ancho, alto) * 0.019));
+  window.CONFIG_ESC.REALCE_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.0075));
+  window.CONFIG_ESC.REALCE_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.010));
+
+  // === LIDAR ===
+  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_H = Math.max(4, Math.round(alto * 0.0075));
+  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_V = Math.max(4, Math.round(ancho * 0.012));
+  window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(20, Math.round(Math.max(ancho, alto) * 0.0375));
   window.CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
 
   return window.CONFIG_ESC;
 }
+
+// ==============================================
+// calcularUmbralesBrillo: percentiles del histograma
+// ==============================================
+function calcularUmbralesBrillo(brillo, ancho, alto) {
+  const hist = new Array(256).fill(0);
+  for (let y = 0; y < alto; y++) {
+    const fila = brillo[y];
+    for (let x = 0; x < ancho; x++) {
+      hist[fila[x]]++;
+    }
+  }
+  const total = ancho * alto;
+
+  function percentil(p) {
+    let acum = 0;
+    const objetivo = total * p;
+    for (let i = 0; i < 256; i++) {
+      acum += hist[i];
+      if (acum >= objetivo) return i;
+    }
+    return 255;
+  }
+
+  const p10 = percentil(0.10);
+  const p85 = percentil(0.85);
+  const p90 = percentil(0.90);
+  const rango = Math.max(1, p90 - p10);
+
+  // Umbrales absolutos (percentil)
+  window.CONFIG_ESC.CONT_UMBRAL_OSCURO_H = p85;
+  window.CONFIG_ESC.CONT_UMBRAL_OSCURO_V = p85;
+  window.CONFIG_ESC.IO_UMBRAL_CRUCE = p85;
+
+  // Umbrales de contraste (relativos al rango dinamico)
+  window.CONFIG_ESC.ECO_UMBRAL_H = Math.max(8, Math.round(rango * 0.22));
+  window.CONFIG_ESC.ECO_UMBRAL_V = Math.max(8, Math.round(rango * 0.18));
+  window.CONFIG_ESC.REALCE_CONTRASTE_MIN = Math.max(10, Math.round(rango * 0.20));
+  window.CONFIG_ESC.LVC_UMBRAL_DIF = Math.max(3, Math.round(rango * 0.035));
+  window.CONFIG_ESC.A3_UMBRAL_MAGNITUD = Math.max(30, Math.round(rango * 0.75));
+
+  return { p10, p85, p90, rango };
+}
+
 
 console.log('CONFIG v14 cargado');

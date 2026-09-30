@@ -6,8 +6,8 @@
 
 function detectarLVC(brillo, ancho, alto) {
   const t0 = performance.now();
-  const V = CONFIG.LVC_VENTANA;
-  const umbralDif = CONFIG.LVC_UMBRAL_DIF;
+  const V = window.CONFIG_ESC.LVC_VENTANA;
+  const umbralDif = window.CONFIG_ESC.LVC_UMBRAL_DIF;
 
   // Perfil: por cada columna, fraccion de pixels donde hay contraste con vecinos
   const perfilV = new Array(ancho).fill(0);

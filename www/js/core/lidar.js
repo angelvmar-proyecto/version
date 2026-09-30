@@ -6,8 +6,8 @@
 function votarLidarYRefinar(st) {
   const t0 = performance.now();
 
-  const distH = CONFIG.LIDAR_DIST_AGRUPAR_H;
-  const distV = CONFIG.LIDAR_DIST_AGRUPAR_V;
+  const distH = window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_H;
+  const distV = window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_V;
   const minVotos = CONFIG.LIDAR_MIN_VOTOS;
   const pesos = CONFIG.LIDAR_PESOS;
 
@@ -33,8 +33,8 @@ function votarLidarYRefinar(st) {
   const lineasH = agruparYVotar(candidatasH, distH, pesos, minVotos);
   const lineasV = agruparYVotar(candidatasV, distV, pesos, minVotos);
 
-  const lineasHRellenas = rellenarHuecos(lineasH, candidatasH, CONFIG.LIDAR_HUECO_MIN, CONFIG.LIDAR_HUECO_BORDE);
-  const lineasVRellenas = rellenarHuecos(lineasV, candidatasV, CONFIG.LIDAR_HUECO_MIN, CONFIG.LIDAR_HUECO_BORDE);
+  const lineasHRellenas = rellenarHuecos(lineasH, candidatasH, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
+  const lineasVRellenas = rellenarHuecos(lineasV, candidatasV, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
 
   const t1 = performance.now();
   console.log('[LIDAR] H=' + lineasHRellenas.length + ' V=' + lineasVRellenas.length + ' (' + (t1-t0).toFixed(0) + 'ms)');

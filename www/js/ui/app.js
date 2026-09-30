@@ -88,7 +88,8 @@ function analizar() {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
-  log('Brillo OK');
+  calcularUmbralesBrillo(st.brillo, st.ancho, st.alto);
+  log('Brillo + umbrales calculados');
 
   try {
     st.optica = detectarOptica(st.brillo, st.ancho, st.alto);

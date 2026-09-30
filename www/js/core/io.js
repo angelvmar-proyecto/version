@@ -7,8 +7,8 @@
 function detectarIO(brillo, ancho, alto, opticaH, opticaV) {
   const t0 = performance.now();
 
-  const ventana = CONFIG.IO_VENTANA_CRUCE;
-  const umbral = CONFIG.IO_UMBRAL_CRUCE;
+  const ventana = window.CONFIG_ESC.IO_VENTANA_CRUCE;
+  const umbral = window.CONFIG_ESC.IO_UMBRAL_CRUCE;
   const crucesMin = CONFIG.IO_CRUCES_MIN;
 
   const scoreV = new Array(opticaV.length).fill(0);

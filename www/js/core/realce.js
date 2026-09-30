@@ -9,11 +9,11 @@
 function detectarRealce(brillo, ancho, alto) {
   const t0 = performance.now();
 
-  const contrasteMin = CONFIG.REALCE_CONTRASTE_MIN;
+  const contrasteMin = window.CONFIG_ESC.REALCE_CONTRASTE_MIN;
   const factor = CONFIG.REALCE_UMBRAL_FACTOR;
-  const gapMax = CONFIG.REALCE_GAP_MAX;
-  const distMinH = CONFIG.REALCE_DISTANCIA_MIN_H;
-  const distMinV = CONFIG.REALCE_DISTANCIA_MIN_V;
+  const gapMax = window.CONFIG_ESC.REALCE_GAP_MAX;
+  const distMinH = window.CONFIG_ESC.REALCE_DISTANCIA_MIN_H;
+  const distMinV = window.CONFIG_ESC.REALCE_DISTANCIA_MIN_V;
   const minRunH = ancho * CONFIG.REALCE_MIN_RUN_H;
   const minRunV = alto * CONFIG.REALCE_MIN_RUN_V;
 

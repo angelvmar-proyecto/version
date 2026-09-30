@@ -7,7 +7,7 @@
 
 function detectarEco(brillo, ancho, alto) {
   const t0 = performance.now();
-  const V = CONFIG.ECO_VENTANA;
+  const V = window.CONFIG_ESC.ECO_VENTANA;
 
   // Perfil eco H: para cada y, cambio maximo vertical promedio
   const ecoH = new Array(alto).fill(0);
@@ -49,8 +49,8 @@ function detectarEco(brillo, ancho, alto) {
 
   // Buscar picos (lineas = cambio de brillo alto)
   const rangoPico = Math.max(2, V);
-  const lineasH = buscarPicos(ecoH_suav, CONFIG.ECO_UMBRAL_H, window.CONFIG_ESC.ECO_DISTANCIA_MIN_H, rangoPico);
-  const lineasV = buscarPicos(ecoV_suav, CONFIG.ECO_UMBRAL_V, window.CONFIG_ESC.ECO_DISTANCIA_MIN_V, rangoPico);
+  const lineasH = buscarPicos(ecoH_suav, window.CONFIG_ESC.ECO_UMBRAL_H, window.CONFIG_ESC.ECO_DISTANCIA_MIN_H, rangoPico);
+  const lineasV = buscarPicos(ecoV_suav, window.CONFIG_ESC.ECO_UMBRAL_V, window.CONFIG_ESC.ECO_DISTANCIA_MIN_V, rangoPico);
 
   const t1 = performance.now();
   console.log('[Eco] H=' + lineasH.length + ' V=' + lineasV.length + ' en ' + (t1-t0).toFixed(0) + 'ms');
