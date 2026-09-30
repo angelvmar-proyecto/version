@@ -208,7 +208,7 @@ function calCopiarJSON() {
     fecha: new Date().toISOString()
   };
 
-  const json = JSON.stringify(bm, null, 2);
+  bm.H = bm.H.filter(function(v){return v>=0 && v<slot.alto;}); bm.V = bm.V.filter(function(v){return v>=0 && v<slot.ancho;}); const json = JSON.stringify(bm, null, 2);
   navigator.clipboard.writeText(json).then(function() {
     calLog('📋 JSON copiado (' + json.length + ' chars)');
     alert('JSON copiado al portapapeles. Pégalo en el chat.');
@@ -216,6 +216,70 @@ function calCopiarJSON() {
     calLog('No se pudo copiar automáticamente');
     alert(json);
   });
+}
+
+
+// --- Importar JSON ---
+function calMostrarImportar() {
+  calEl('importArea').style.display = 'block';
+  calEl('importJson').value = '';
+  calEl('importJson').focus();
+  calLog('📂 Pega el JSON y toca ✅ Importar');
+}
+
+function calCancelarImportar() {
+  calEl('importArea').style.display = 'none';
+  calEl('importJson').value = '';
+  calLog('Importación cancelada');
+}
+
+function calConfirmarImportar() {
+  const texto = calEl('importJson').value.trim();
+  if (!texto) { calLog('❌ No hay JSON pegado'); return; }
+
+  let bm;
+  try {
+    bm = JSON.parse(texto);
+  } catch(e) {
+    calLog('❌ JSON inválido: ' + e.message);
+    alert('JSON inválido. Revisa comillas y llaves.');
+    return;
+  }
+
+  if (!bm.H || !bm.V || !bm.ancho || !bm.alto) {
+    calLog('❌ JSON incompleto (falta H, V, ancho o alto)');
+    return;
+  }
+
+  const idx = window.calibState.slotActivo;
+  const slot = window.calibState.slots[idx];
+
+  // Aplicar
+  slot.nombre = bm.nombre || ('slot' + (idx+1));
+  slot.ancho = bm.ancho;
+  slot.alto = bm.alto;
+  slot.H = bm.H.filter(function(v) { return v >= 0 && v < bm.alto; });
+  slot.V = bm.V.filter(function(v) { return v >= 0 && v < bm.ancho; });
+  slot.bmGuardado = true;
+
+  // Guardar en localStorage
+  try {
+    localStorage.setItem('calib_slot_' + idx, JSON.stringify({
+      nombre: slot.nombre,
+      ancho: slot.ancho,
+      alto: slot.alto,
+      H: slot.H,
+      V: slot.V,
+      fecha: bm.fecha || new Date().toISOString()
+    }));
+    calLog('✅ Benchmark importado al slot ' + (idx+1) + ': ' + slot.nombre);
+    calLog('   H=' + slot.H.length + ', V=' + slot.V.length + ' (filtrados)');
+  } catch(e) {
+    calLog('⚠️ Importado pero no guardado en localStorage: ' + e.message);
+  }
+
+  calEl('importArea').style.display = 'none';
+  calRedibujar();
 }
 
 // --- Setup touches ---
@@ -414,6 +478,9 @@ function calSetup() {
   calEl('btnCalibLimpiar').onclick = calLimpiarMarcas;
   calEl('btnCalibGuardar').onclick = calGuardarBenchmark;
   calEl('btnCalibCopiar').onclick = calCopiarJSON;
+  calEl('btnCalibImportar').onclick = calMostrarImportar;
+  calEl('btnImportConfirm').onclick = calConfirmarImportar;
+  calEl('btnImportCancel').onclick = calCancelarImportar;
   calEl('btnCalibZoomRst').onclick = function() {
     window.calibState.zoom = 1;
     window.calibState.panX = 0;

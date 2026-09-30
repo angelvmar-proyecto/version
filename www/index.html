@@ -123,6 +123,16 @@
     <div style="display:flex; gap:6px; margin-bottom:10px;">
       <button id="btnCalibGuardar" style="flex:1; padding:12px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold;">💾 Guardar bm</button>
       <button id="btnCalibCopiar" style="flex:1; padding:12px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Copiar JSON</button>
+      <button id="btnCalibImportar" style="flex:1; padding:12px; background:#a855f7; color:#fff; border:none; border-radius:6px;">📂 Importar</button>
+    </div>
+
+    <div id="importArea" style="display:none; background:#1a1a2e; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid #a855f7;">
+      <h4 style="margin:0 0 6px; font-size:13px; color:#a855f7;">📂 Importar benchmark al Slot actual</h4>
+      <textarea id="importJson" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;" placeholder="Pega aquí el JSON del benchmark..."></textarea>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <button id="btnImportConfirm" style="flex:1; padding:10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold;">✅ Importar</button>
+        <button id="btnImportCancel" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px;">❌ Cancelar</button>
+      </div>
     </div>
 
     <div id="calibLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:150px; overflow-y:auto; border:1px solid #333;">Listo. Carga una imagen y marca las líneas.</div>
