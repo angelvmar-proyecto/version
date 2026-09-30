@@ -30,6 +30,7 @@ window.calibState = {
   touchStartY: 0,
   touchStartTime: 0,
   isPan: false,
+  dragging: null,  // {tipo: 'H'|'V', idx: N}
   distPinchInicial: 0,
   zoomPinchInicial: 1
 };
@@ -224,6 +225,31 @@ function calSetupTouch() {
       st.touchStartY = e.touches[0].clientY;
       st.touchStartTime = Date.now();
       st.isPan = false;
+
+      // Detectar si el toque está cerca de una línea (para agarrar)
+      if (st.modo === 'H' || st.modo === 'V') {
+        const coords = calTapACoords(e.touches[0]);
+        const slot = st.slots[st.slotActivo];
+        const umbral = 25 / st.zoom; // 25px reales, ajustados al zoom
+
+        if (st.modo === 'H') {
+          for (let i = 0; i < slot.H.length; i++) {
+            if (Math.abs(slot.H[i] - coords.y) < umbral) {
+              st.dragging = { tipo: 'H', idx: i };
+              calLog('🔧 Agarró H y=' + slot.H[i]);
+              return;
+            }
+          }
+        } else {
+          for (let i = 0; i < slot.V.length; i++) {
+            if (Math.abs(slot.V[i] - coords.x) < umbral) {
+              st.dragging = { tipo: 'V', idx: i };
+              calLog('🔧 Agarró V x=' + slot.V[i]);
+              return;
+            }
+          }
+        }
+      }
     } else if (e.touches.length === 2) {
       const t1 = e.touches[0], t2 = e.touches[1];
       st.distPinchInicial = Math.sqrt(Math.pow(t1.clientX-t2.clientX,2) + Math.pow(t1.clientY-t2.clientY,2));
@@ -239,6 +265,20 @@ function calSetupTouch() {
       st.zoom = Math.max(0.5, Math.min(6, st.zoomPinchInicial * (distActual / st.distPinchInicial)));
       canvas.style.transform = 'translate(' + st.panX + 'px,' + st.panY + 'px) scale(' + st.zoom + ')';
     } else if (e.touches.length === 1) {
+      // Arrastrar línea
+      if (st.dragging) {
+        const coords = calTapACoords(e.touches[0]);
+        const slot = st.slots[st.slotActivo];
+        if (st.dragging.tipo === 'H') {
+          slot.H[st.dragging.idx] = coords.y;
+        } else {
+          slot.V[st.dragging.idx] = coords.x;
+        }
+        calRedibujar();
+        return;
+      }
+
+      // Pan normal (solo en modo Ver o si no agarro linea)
       const dx = e.touches[0].clientX - st.touchStartX;
       const dy = e.touches[0].clientY - st.touchStartY;
       const dist = Math.sqrt(dx*dx + dy*dy);
@@ -256,6 +296,23 @@ function calSetupTouch() {
   wrap.addEventListener('touchend', function(e) {
     const st = window.calibState;
     if (e.touches.length < 2) st.distPinchInicial = 0;
+
+    // Si estaba arrastrando, terminar
+    if (st.dragging) {
+      const slot = st.slots[st.slotActivo];
+      if (st.dragging.tipo === 'H') {
+        slot.H.sort(function(a, b) { return a - b; });
+      } else {
+        slot.V.sort(function(a, b) { return a - b; });
+      }
+      calLog('✅ Soltó ' + st.dragging.tipo + ' en nueva posición');
+      st.dragging = null;
+      calRedibujar();
+      st.isPan = false;
+      return;
+    }
+
+    // Si fue un tap limpio (sin pan), añadir marca
     if (e.touches.length === 0 && !st.isPan && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0];
       if (st.modo !== 'Ver') {
@@ -348,7 +405,8 @@ function calSetup() {
 
   calSetupTouch();
   calSetModo('H');
-  calLog('Calibrador listo. Slot 1 activo.');
+  calLog('Calibrador listo.');
+  calLog('💡 Tap: añade línea. Tap cerca de línea: la agarra para mover.');
 }
 
 if (document.readyState === 'loading') {
