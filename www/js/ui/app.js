@@ -73,6 +73,12 @@ function redibujar() {
   if (st.capasVisibles.cont && st.cont) {
     dibujarLineas(canvas, st.cont.lineasH, st.cont.lineasV, CONFIG.COLOR_CONTINUIDAD, 1);
   }
+  if (st.capasVisibles.realce && st.realce) {
+    dibujarLineas(canvas, st.realce.lineasH, st.realce.lineasV, CONFIG.COLOR_REALCE, 1);
+  }
+  if (st.capasVisibles.lidar && st.lidar) {
+    dibujarLineas(canvas, st.lidar.lineasH, st.lidar.lineasV, CONFIG.COLOR_LIDAR, 4);
+  }
 }
 
 // --- Análisis ---
