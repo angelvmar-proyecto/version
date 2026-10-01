@@ -75,13 +75,18 @@ function buscarValles(perfil, distanciaMin, factorUmbral) {
   // Filtrar por umbral
   const aceptados = valles.filter(function(v) { return v.valor <= umbral; });
 
-  // Aplicar distancia minima
+  // Aplicar distancia minima + fusion de duplicados
   const resultado = [];
   let ultPos = -99999;
   for (const v of aceptados) {
     if (v.pos - ultPos >= distanciaMin) {
       resultado.push(v.pos);
       ultPos = v.pos;
+    } else if (resultado.length > 0) {
+      // Duplicado cercano: fusionar con el ultimo (promedio)
+      const ult = resultado[resultado.length - 1];
+      resultado[resultado.length - 1] = Math.round((ult + v.pos) / 2);
+      ultPos = resultado[resultado.length - 1];
     }
   }
   return resultado;
