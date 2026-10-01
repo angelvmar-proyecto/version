@@ -9,7 +9,7 @@ function detectarWS(brillo, ancho, alto) {
     for (let x = 0; x < ancho; x++) { suma += brillo[y][x]; count++; }
   }
   const media = suma / count;
-  const umbralBlanco = Math.max(media + 25, 200);
+  const umbralBlanco = Math.max(media + 15, 180);
 
   const perfilV = new Array(ancho).fill(0);
   for (let x = 0; x < ancho; x++) {

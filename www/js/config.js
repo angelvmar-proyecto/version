@@ -7,7 +7,7 @@ const CONFIG = {
   VERSION: '14.0',
 
   // --- Optica (proyeccion de brillo) ---
-  OPTICA_UMBRAL_ADAPTATIVO: 0.30,
+  OPTICA_UMBRAL_ADAPTATIVO: 0.45,
   OPTICA_DISTANCIA_MIN_H: 13,
   OPTICA_DISTANCIA_MIN_V: 7,
   OPTICA_SUAVIZADO: 20,
@@ -23,24 +23,24 @@ const CONFIG = {
   // --- A3 (Sobel ortogonal) ---
   A3_UMBRAL_MAGNITUD: 130,
   A3_UMBRAL_ORTOGONALIDAD: 0.75,
-  A3_COBERTURA_MINIMA: 0.35,
+  A3_COBERTURA_MINIMA: 0.25,
   A3_DISTANCIA_MIN: 10,
 
   // --- LVC (coherencia vertical) ---
   LVC_VENTANA: 2,
   LVC_UMBRAL_DIF: 6,
-  LVC_COHERENCIA_MIN: 0.35,
+  LVC_COHERENCIA_MIN: 0.28,
   LVC_DISTANCIA_MIN: 10,
 
   // --- IO (interseccion ortogonal) ---
   IO_VENTANA_CRUCE: 4,
   IO_UMBRAL_CRUCE: 220,
-  IO_CRUCES_MIN: 2,
+  IO_CRUCES_MIN: 3,
   IO_DISTANCIA_MIN: 10,
 
   // --- Continuidad (lineas por píxeles oscuros consecutivos) ---
   CONT_UMBRAL_OSCURO_H: 210,
-  CONT_RATIO_MIN_H: 0.55,
+  CONT_RATIO_MIN_H: 0.40,
   CONT_RUN_MIN_H: 0.40,
   CONT_UMBRAL_OSCURO_V: 225,
   CONT_RATIO_MIN_V: 0.35,
@@ -60,7 +60,7 @@ const CONFIG = {
   WS_DISTANCIA_MIN: 8,
 
   // --- Frangi (vesselness) ---
-  FRANGI_SIGMA: 2.5,
+  FRANGI_SIGMA: 1.5,
   FRANGI_BETA: 0.5,
   FRANGI_C_FACTOR: 0.5,
   FRANGI_DISTANCIA_MIN: 10,
@@ -140,7 +140,7 @@ function escalarConfig(ancho, alto) {
   window.CONFIG_ESC.OPENV_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
 
   // === ML ===
-  window.CONFIG_ESC.ML_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.008));
+  window.CONFIG_ESC.ML_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.025));
 
   // === WS ===
   window.CONFIG_ESC.WS_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.008));
@@ -196,12 +196,12 @@ function calcularUmbralesBrillo(brillo, ancho, alto) {
   window.CONFIG_ESC.IO_UMBRAL_CRUCE = p85;
 
   // Umbrales de contraste (relativos al rango dinamico)
-  window.CONFIG_ESC.ECO_UMBRAL_H = Math.max(8, Math.round(rango * 0.22));
+  window.CONFIG_ESC.ECO_UMBRAL_H = Math.max(8, Math.round(rango * 0.35));
   window.CONFIG_ESC.ECO_UMBRAL_V = Math.max(8, Math.round(rango * 0.18));
-  window.CONFIG_ESC.REALCE_CONTRASTE_MIN = Math.max(10, Math.round(rango * 0.20));
+  window.CONFIG_ESC.REALCE_CONTRASTE_MIN = Math.max(10, Math.round(rango * 0.12));
   window.CONFIG_ESC.LVC_UMBRAL_DIF = Math.max(3, Math.round(rango * 0.035));
   window.CONFIG_ESC.A3_UMBRAL_MAGNITUD = Math.max(30, Math.round(rango * 0.75));
-  window.CONFIG_ESC.OPENV_UMBRAL_VALLE = Math.max(8, Math.round(rango * 0.12));
+  window.CONFIG_ESC.OPENV_UMBRAL_VALLE = Math.max(8, Math.round(rango * 0.25));
 
   return { p10, p85, p90, rango };
 }
