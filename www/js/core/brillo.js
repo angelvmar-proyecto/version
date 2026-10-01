@@ -28,3 +28,22 @@ function calcularBrillo(imageData) {
 }
 
 console.log('core/brillo.js cargado');
+
+
+function calcularBrilloColorAgnostico(imageData) {
+  const ancho = imageData.width;
+  const alto = imageData.height;
+  const data = imageData.data;
+  const brillo = new Array(alto);
+  for (let y = 0; y < alto; y++) {
+    const fila = new Array(ancho);
+    const offset = y * ancho * 4;
+    for (let x = 0; x < ancho; x++) {
+      const i = offset + x * 4;
+      fila[x] = Math.max(data[i], data[i+1], data[i+2]);
+    }
+    brillo[y] = fila;
+  }
+  return brillo;
+}
+console.log("core/brillo.js: calcularBrilloColorAgnostico disponible");
