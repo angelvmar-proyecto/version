@@ -6,6 +6,13 @@
 const CONFIG = {
   VERSION: '14.0',
 
+  // --- Preprocesamiento avanzado (aplicado a la imagen completa antes de algoritmos) ---
+  GAMMA_ACTIVO: false,
+  GAMMA_VALOR: 1.8,
+  CLAHE_ACTIVO: false,
+  CLAHE_TILES: 8,
+  CLAHE_CLIP: 2.5,
+
   // --- Optica (proyeccion de brillo) ---
   OPTICA_UMBRAL_ADAPTATIVO: 0.75,
   OPTICA_DISTANCIA_MIN_H: 13,

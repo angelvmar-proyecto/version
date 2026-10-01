@@ -101,6 +101,17 @@ function analizar() {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
+
+  // Preprocesamiento avanzado (opcional)
+  if (CONFIG.GAMMA_ACTIVO) {
+    st.brillo = aplicarGamma(st.brillo, st.ancho, st.alto, CONFIG.GAMMA_VALOR);
+    log('🔆 Gamma aplicado (valor=' + CONFIG.GAMMA_VALOR + ')');
+  }
+  if (CONFIG.CLAHE_ACTIVO) {
+    st.brillo = aplicarCLAHE(st.brillo, st.ancho, st.alto, CONFIG.CLAHE_TILES, CONFIG.CLAHE_CLIP);
+    log('🎛️ CLAHE aplicado (tiles=' + CONFIG.CLAHE_TILES + ', clip=' + CONFIG.CLAHE_CLIP + ')');
+  }
+
   calcularUmbralesBrillo(st.brillo, st.ancho, st.alto);
   log('Brillo + umbrales calculados');
 
@@ -258,7 +269,8 @@ function sandboxParamsActuales(fn) {
     openv: ['OPENV_UMBRAL_VALLE','OPENV_DISTANCIA_MIN'],
     ml: ['ML_DISTANCIA_MIN'],
     ws: ['WS_DISTANCIA_MIN'],
-    frangi: ['FRANGI_SIGMA','FRANGI_BETA','FRANGI_C_FACTOR','FRANGI_DISTANCIA_MIN']
+    frangi: ['FRANGI_SIGMA','FRANGI_BETA','FRANGI_C_FACTOR','FRANGI_DISTANCIA_MIN'],
+    preprocesamiento: ['GAMMA_VALOR','CLAHE_TILES','CLAHE_CLIP']
   };
   const lista = teclas[fn] || [];
   const obj = {};
@@ -366,7 +378,19 @@ function setup() {
     el('log').textContent = 'Limpiado';
   };
 
-  // Checkboxes
+  // Checkboxes de preprocesamiento
+  const chkGamma = el('chkGamma');
+  if (chkGamma) chkGamma.addEventListener('change', function() {
+    CONFIG.GAMMA_ACTIVO = this.checked;
+    log('Gamma ' + (this.checked ? 'ON' : 'OFF'));
+  });
+  const chkCLAHE = el('chkCLAHE');
+  if (chkCLAHE) chkCLAHE.addEventListener('change', function() {
+    CONFIG.CLAHE_ACTIVO = this.checked;
+    log('CLAHE ' + (this.checked ? 'ON' : 'OFF'));
+  });
+
+  // Checkboxes de capas
   const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont', chkRealce: 'realce', chkLidar: 'lidar', chkOPENV: 'openv', chkML: 'ml', chkWS: 'ws', chkFrangi: 'frangi' };;
   Object.keys(map).forEach(function(id) {
     const c = el(id);
