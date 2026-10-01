@@ -76,8 +76,15 @@ function redibujar() {
   if (st.capasVisibles.realce && st.realce) {
     dibujarLineas(canvas, st.realce.lineasH, st.realce.lineasV, CONFIG.COLOR_REALCE, 1);
   }
-  if (st.capasVisibles.lidar && st.lidar) {
-    dibujarLineas(canvas, st.lidar.lineasH, st.lidar.lineasV, CONFIG.COLOR_LIDAR, 4);
+  if (st.capasVisibles.lidar) {
+    if (st.lidar) {
+      log('🔍 DIBUJANDO LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' color=' + CONFIG.COLOR_LIDAR);
+      dibujarLineas(canvas, st.lidar.lineasH, st.lidar.lineasV, CONFIG.COLOR_LIDAR, 4);
+    } else {
+      log('⚠️ LIDAR visible=true pero st.lidar=null');
+    }
+  } else {
+    log('⚠️ LIDAR checkbox desmarcado');
   }
 }
 
