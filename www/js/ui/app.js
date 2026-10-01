@@ -22,7 +22,7 @@ window.estado = {
   lvc: null,
   io: null,
   cont: null,
-  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true }
+  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true }
 };
 
 // --- Carga de imagen ---
@@ -308,6 +308,8 @@ function sandboxEjecutar() {
 }
 
 function setup() {
+  if (!window.estado.capasVisibles.lidar) window.estado.capasVisibles.lidar = true;
+  if (!window.estado.capasVisibles.realce) window.estado.capasVisibles.realce = true;
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
     if (e.target.files && e.target.files[0]) cargarImagen(e.target.files[0]);
@@ -325,12 +327,12 @@ function setup() {
     canvas.width = 0; canvas.height = 0;
     window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0,
                      optica: null, eco: null, a3: null, lvc: null, io: null, cont: null,
-                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true } };
+                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true } };
     el('log').textContent = 'Limpiado';
   };
 
   // Checkboxes
-  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont' };
+  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont', chkRealce: 'realce', chkLidar: 'lidar' };;
   Object.keys(map).forEach(function(id) {
     const c = el(id);
     if (c) c.addEventListener('change', function() {
