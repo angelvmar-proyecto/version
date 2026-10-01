@@ -14,6 +14,7 @@ function log(msg) {
 window.estado = {
   imagenActual: null,
   brillo: null,
+  brilloOptica: null,
   ancho: 0,
   alto: 0,
   optica: null,
@@ -101,6 +102,7 @@ function analizar() {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
+  st.brilloOptica = calcularBrilloColorAgnostico(imageData);
 
   // Preprocesamiento avanzado (opcional)
   if (CONFIG.GAMMA_ACTIVO) {
@@ -116,7 +118,7 @@ function analizar() {
   log('Brillo + umbrales calculados');
 
   try {
-    st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
+    st.optica = detectarOptica(st.brilloOptica || st.brillo, st.ancho, st.alto);
     log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length + ' (' + st.optica.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Optica: ' + e.message); st.optica = { lineasH: [], lineasV: [] }; }
 
@@ -310,7 +312,7 @@ function sandboxEjecutar() {
       st.lidar = votarLidarYRefinar(st);
       log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
     } else if (fn === 'optica') {
-      st.optica = detectarOptica(st.brillo, st.ancho, st.alto);
+      st.optica = detectarOptica(st.brilloOptica || st.brillo, st.ancho, st.alto);
       log('Optica: H=' + st.optica.lineasH.length + ' V=' + st.optica.lineasV.length);
     } else if (fn === 'eco') {
       st.eco = detectarEco(st.brillo, st.ancho, st.alto);
