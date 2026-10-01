@@ -121,6 +121,11 @@ function analizar() {
     log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length + ' (' + st.cont.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Continuidad: ' + e.message); st.cont = { lineasH: [], lineasV: [] }; }
 
+  try {
+    st.realce = detectarRealce(st.brillo, st.ancho, st.alto);
+    log('Realce: H=' + st.realce.lineasH.length + ' V=' + st.realce.lineasV.length + ' (' + st.realce.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR Realce: ' + e.message); st.realce = { lineasH: [], lineasV: [] }; }
+
   log('DEBUG pre-LIDAR: st=' + typeof st + ', st.optica=' + (st ? typeof st.optica : 'N/A') + ', optica.V=' + (st && st.optica ? st.optica.lineasV.length : 'N/A'));
   try {
     st.lidar = votarLidarYRefinar(st);
@@ -183,7 +188,7 @@ async function exportarTodo() {
   guardadas.push('combinado');
 
   // 2. Uno por uno
-  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'cont'];
+  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'cont', 'realce', 'lidar'];
   for (let i = 0; i < algoritmos.length; i++) {
     const alg = algoritmos[i];
     Object.keys(st.capasVisibles).forEach(function(k){ st.capasVisibles[k] = false; });
