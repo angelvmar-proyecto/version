@@ -22,7 +22,7 @@ window.estado = {
   lvc: null,
   io: null,
   cont: null,
-  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true }
+  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true }
 };
 
 // --- Carga de imagen ---
@@ -139,6 +139,26 @@ function analizar() {
     log('Realce: H=' + st.realce.lineasH.length + ' V=' + st.realce.lineasV.length + ' (' + st.realce.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Realce: ' + e.message); st.realce = { lineasH: [], lineasV: [] }; }
 
+  try {
+    st.openv = detectarOPENV(st.brillo, st.ancho, st.alto);
+    log('OPENV: H=' + st.openv.lineasH.length + ' V=' + st.openv.lineasV.length + ' (' + st.openv.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR OPENV: ' + e.message); st.openv = { lineasH: [], lineasV: [] }; }
+
+  try {
+    st.ml = detectarML(st.brillo, st.ancho, st.alto);
+    log('ML: H=' + st.ml.lineasH.length + ' V=' + st.ml.lineasV.length + ' (' + st.ml.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR ML: ' + e.message); st.ml = { lineasH: [], lineasV: [] }; }
+
+  try {
+    st.ws = detectarWS(st.brillo, st.ancho, st.alto);
+    log('WS: H=' + st.ws.lineasH.length + ' V=' + st.ws.lineasV.length + ' (' + st.ws.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR WS: ' + e.message); st.ws = { lineasH: [], lineasV: [] }; }
+
+  try {
+    st.frangi = detectarFrangi(st.brillo, st.ancho, st.alto);
+    log('Frangi: H=' + st.frangi.lineasH.length + ' V=' + st.frangi.lineasV.length + ' (' + st.frangi.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR Frangi: ' + e.message); st.frangi = { lineasH: [], lineasV: [] }; }
+
   log('DEBUG pre-LIDAR: st=' + typeof st + ', st.optica=' + (st ? typeof st.optica : 'N/A') + ', optica.V=' + (st && st.optica ? st.optica.lineasV.length : 'N/A'));
   try {
     st.lidar = votarLidarYRefinar(st);
@@ -201,7 +221,7 @@ async function exportarTodo() {
   guardadas.push('combinado');
 
   // 2. Uno por uno
-  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'cont', 'realce', 'lidar'];
+  const algoritmos = ['optica', 'eco', 'a3', 'lvc', 'io', 'cont', 'realce', 'lidar', 'openv', 'ml', 'ws', 'frangi'];
   for (let i = 0; i < algoritmos.length; i++) {
     const alg = algoritmos[i];
     Object.keys(st.capasVisibles).forEach(function(k){ st.capasVisibles[k] = false; });
@@ -234,7 +254,11 @@ function sandboxParamsActuales(fn) {
     lvc: ['LVC_VENTANA','LVC_UMBRAL_DIF','LVC_COHERENCIA_MIN','LVC_DISTANCIA_MIN'],
     io: ['IO_VENTANA_CRUCE','IO_UMBRAL_CRUCE','IO_CRUCES_MIN','IO_DISTANCIA_MIN'],
     cont: ['CONT_UMBRAL_OSCURO_H','CONT_RATIO_MIN_H','CONT_RUN_MIN_H','CONT_UMBRAL_OSCURO_V','CONT_RATIO_MIN_V','CONT_RUN_MIN_V','CONT_GAP_MAX','CONT_DISTANCIA_MIN_H','CONT_DISTANCIA_MIN_V'],
-    realce: ['REALCE_CONTRASTE_MIN','REALCE_UMBRAL_FACTOR','REALCE_MIN_RUN_H','REALCE_MIN_RUN_V','REALCE_GAP_MAX','REALCE_DISTANCIA_MIN_H','REALCE_DISTANCIA_MIN_V']
+    realce: ['REALCE_CONTRASTE_MIN','REALCE_UMBRAL_FACTOR','REALCE_MIN_RUN_H','REALCE_MIN_RUN_V','REALCE_GAP_MAX','REALCE_DISTANCIA_MIN_H','REALCE_DISTANCIA_MIN_V'],
+    openv: ['OPENV_UMBRAL_VALLE','OPENV_DISTANCIA_MIN'],
+    ml: ['ML_DISTANCIA_MIN'],
+    ws: ['WS_DISTANCIA_MIN'],
+    frangi: ['FRANGI_SIGMA','FRANGI_BETA','FRANGI_C_FACTOR','FRANGI_DISTANCIA_MIN']
   };
   const lista = teclas[fn] || [];
   const obj = {};
@@ -294,6 +318,18 @@ function sandboxEjecutar() {
     } else if (fn === 'realce') {
       st.realce = detectarRealce(st.brillo, st.ancho, st.alto);
       log('Realce: H=' + st.realce.lineasH.length + ' V=' + st.realce.lineasV.length);
+    } else if (fn === 'openv') {
+      st.openv = detectarOPENV(st.brillo, st.ancho, st.alto);
+      log('OPENV: H=' + st.openv.lineasH.length + ' V=' + st.openv.lineasV.length);
+    } else if (fn === 'ml') {
+      st.ml = detectarML(st.brillo, st.ancho, st.alto);
+      log('ML: H=' + st.ml.lineasH.length + ' V=' + st.ml.lineasV.length);
+    } else if (fn === 'ws') {
+      st.ws = detectarWS(st.brillo, st.ancho, st.alto);
+      log('WS: H=' + st.ws.lineasH.length + ' V=' + st.ws.lineasV.length);
+    } else if (fn === 'frangi') {
+      st.frangi = detectarFrangi(st.brillo, st.ancho, st.alto);
+      log('Frangi: H=' + st.frangi.lineasH.length + ' V=' + st.frangi.lineasV.length);
     }
 
     // Si cambio un algoritmo, re-votar LIDAR
@@ -308,8 +344,7 @@ function sandboxEjecutar() {
 }
 
 function setup() {
-  if (!window.estado.capasVisibles.lidar) window.estado.capasVisibles.lidar = true;
-  if (!window.estado.capasVisibles.realce) window.estado.capasVisibles.realce = true;
+  ['optica','eco','a3','lvc','io','cont','realce','lidar','openv','ml','ws','frangi'].forEach(function(k){ if (!window.estado.capasVisibles[k]) window.estado.capasVisibles[k] = true; });
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
     if (e.target.files && e.target.files[0]) cargarImagen(e.target.files[0]);
@@ -327,12 +362,12 @@ function setup() {
     canvas.width = 0; canvas.height = 0;
     window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0,
                      optica: null, eco: null, a3: null, lvc: null, io: null, cont: null,
-                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true } };
+                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true } };
     el('log').textContent = 'Limpiado';
   };
 
   // Checkboxes
-  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont', chkRealce: 'realce', chkLidar: 'lidar' };;
+  const map = { chkOptica: 'optica', chkEco: 'eco', chkA3: 'a3', chkLVC: 'lvc', chkIO: 'io', chkCont: 'cont', chkRealce: 'realce', chkLidar: 'lidar', chkOPENV: 'openv', chkML: 'ml', chkWS: 'ws', chkFrangi: 'frangi' };;
   Object.keys(map).forEach(function(id) {
     const c = el(id);
     if (c) c.addEventListener('change', function() {

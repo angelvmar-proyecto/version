@@ -49,6 +49,22 @@ const CONFIG = {
   CONT_DISTANCIA_MIN_H: 15,
   CONT_DISTANCIA_MIN_V: 8,
 
+  // --- OPENV (opening vertical morfologico) ---
+  OPENV_UMBRAL_VALLE: 15,
+  OPENV_DISTANCIA_MIN: 10,
+
+  // --- ML (minimo local) ---
+  ML_DISTANCIA_MIN: 8,
+
+  // --- WS (whitespace) ---
+  WS_DISTANCIA_MIN: 8,
+
+  // --- Frangi (vesselness) ---
+  FRANGI_SIGMA: 2.5,
+  FRANGI_BETA: 0.5,
+  FRANGI_C_FACTOR: 0.5,
+  FRANGI_DISTANCIA_MIN: 10,
+
   // --- Realce (umbral adaptativo por fila/columna) ---
   REALCE_CONTRASTE_MIN: 35,
   REALCE_UMBRAL_FACTOR: 0.5,
@@ -75,7 +91,11 @@ const CONFIG = {
   COLOR_IO: '#FF6600',
   COLOR_LIDAR: '#000000',
   COLOR_CONTINUIDAD: '#FFFF00',
-  COLOR_REALCE: '#8800FF'
+  COLOR_REALCE: '#8800FF',
+  COLOR_OPENV: '#22d3ee',
+  COLOR_ML: '#84cc16',
+  COLOR_WS: '#f97316',
+  COLOR_FRANGI: '#14b8a6'
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
@@ -115,6 +135,18 @@ function escalarConfig(ancho, alto) {
   window.CONFIG_ESC.CONT_GAP_MAX = Math.max(8, Math.round(Math.max(ancho, alto) * 0.022));
   window.CONFIG_ESC.CONT_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.009));
   window.CONFIG_ESC.CONT_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.008));
+
+  // === OPENV ===
+  window.CONFIG_ESC.OPENV_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
+
+  // === ML ===
+  window.CONFIG_ESC.ML_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.008));
+
+  // === WS ===
+  window.CONFIG_ESC.WS_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.008));
+
+  // === FRANGI ===
+  window.CONFIG_ESC.FRANGI_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
 
   // === REALCE ===
   window.CONFIG_ESC.REALCE_GAP_MAX = Math.max(8, Math.round(Math.max(ancho, alto) * 0.019));
@@ -169,6 +201,7 @@ function calcularUmbralesBrillo(brillo, ancho, alto) {
   window.CONFIG_ESC.REALCE_CONTRASTE_MIN = Math.max(10, Math.round(rango * 0.20));
   window.CONFIG_ESC.LVC_UMBRAL_DIF = Math.max(3, Math.round(rango * 0.035));
   window.CONFIG_ESC.A3_UMBRAL_MAGNITUD = Math.max(30, Math.round(rango * 0.75));
+  window.CONFIG_ESC.OPENV_UMBRAL_VALLE = Math.max(8, Math.round(rango * 0.12));
 
   return { p10, p85, p90, rango };
 }
