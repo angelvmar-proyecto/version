@@ -67,15 +67,15 @@ const CONFIG = {
   LIDAR_HUECO_BORDE: 15,
 
   // --- Colores ---
-  COLOR_OPTICA: '#FFD700',
-  COLOR_ECO_H: '#FF0000',
-  COLOR_ECO_V: '#0088FF',
-  COLOR_A3: '#8B5CF6',
-  COLOR_LVC: '#ec4899',
-  COLOR_IO: '#eab308',
+  COLOR_OPTICA: '#FF00FF',
+  COLOR_ECO_H: '#00FFFF',
+  COLOR_ECO_V: '#0000FF',
+  COLOR_A3: '#FF00AA',
+  COLOR_LVC: '#00FF00',
+  COLOR_IO: '#FF6600',
   COLOR_LIDAR: '#000000',
-  COLOR_CONTINUIDAD: '#00FFFF',
-  COLOR_REALCE: '#fb923c'
+  COLOR_CONTINUIDAD: '#FFFF00',
+  COLOR_REALCE: '#8800FF'
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
