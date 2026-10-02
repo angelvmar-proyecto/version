@@ -11,7 +11,7 @@ function deduplicarLineasFinales(lineas, distMin) {
   let i = 0;
   while (i < ordenadas.length) {
     const grupo = [ordenadas[i]];
-    while (i + 1 < ordenadas.length && ordenadas[i+1] - grupo[grupo.length-1] < distMin) {
+    while (i + 1 < ordenadas.length && ordenadas[i+1] - grupo[0] < distMin) {
       i++;
       grupo.push(ordenadas[i]);
     }
@@ -75,7 +75,7 @@ function agruparYVotar(lineas, distAgrup, pesos, minVotos) {
   const grupos = [];
   let grupo = [lineas[0]];
   for (let i = 1; i < lineas.length; i++) {
-    if (lineas[i].pos - grupo[grupo.length-1].pos <= distAgrup) {
+    if (lineas[i].pos - grupo[0].pos <= distAgrup) {
       grupo.push(lineas[i]);
     } else {
       grupos.push(grupo);
