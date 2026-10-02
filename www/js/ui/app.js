@@ -26,7 +26,7 @@ window.estado = {
   lvc: null,
   io: null,
   cont: null,
-  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true }
+  capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true, blackhat: true, hough: true }
 };
 
 // --- Carga de imagen ---
@@ -126,6 +126,10 @@ function analizar() {
     st.brillo = aplicarCLAHE(st.brillo, st.ancho, st.alto, CONFIG.CLAHE_TILES, CONFIG.CLAHE_CLIP);
     log('🎛️ CLAHE aplicado (tiles=' + CONFIG.CLAHE_TILES + ', clip=' + CONFIG.CLAHE_CLIP + ')');
   }
+  if (CONFIG.SAUVOLA_ACTIVO) {
+    st.brillo = aplicarSauvola(st.brillo, st.ancho, st.alto);
+    log('🌫️ Sauvola aplicado (ventana=' + CONFIG.SAUVOLA_VENTANA + ', k=' + CONFIG.SAUVOLA_K + ')');
+  }
 
   calcularUmbralesBrillo(st.brillo, st.ancho, st.alto);
   log('Brillo + umbrales calculados');
@@ -184,6 +188,16 @@ function analizar() {
     st.frangi = detectarFrangi(st.brillo, st.ancho, st.alto);
     log('Frangi: H=' + st.frangi.lineasH.length + ' V=' + st.frangi.lineasV.length + ' (' + st.frangi.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR Frangi: ' + e.message); st.frangi = { lineasH: [], lineasV: [] }; }
+
+  try {
+    st.blackhat = detectarBlackHat(st.brillo, st.ancho, st.alto);
+    log('BlackHat: H=' + st.blackhat.lineasH.length + ' V=' + st.blackhat.lineasV.length + ' (' + st.blackhat.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR BlackHat: ' + e.message); st.blackhat = { lineasH: [], lineasV: [] }; }
+
+  try {
+    st.hough = detectarHough(st.brillo, st.ancho, st.alto);
+    log('Hough: H=' + st.hough.lineasH.length + ' V=' + st.hough.lineasV.length + ' (' + st.hough.tiempo.toFixed(0) + 'ms)');
+  } catch(e) { log('ERROR Hough: ' + e.message); st.hough = { lineasH: [], lineasV: [] }; }
 
   log('DEBUG pre-LIDAR: st=' + typeof st + ', st.optica=' + (st ? typeof st.optica : 'N/A') + ', optica.V=' + (st && st.optica ? st.optica.lineasV.length : 'N/A'));
   try {
@@ -326,6 +340,9 @@ function sandboxParamsActuales(fn) {
     ml: ['ML_DISTANCIA_MIN'],
     ws: ['WS_DISTANCIA_MIN'],
     frangi: ['FRANGI_SIGMA','FRANGI_BETA','FRANGI_C_FACTOR','FRANGI_DISTANCIA_MIN'],
+    blackhat: ['BLACKHAT_KERNEL_H','BLACKHAT_KERNEL_V','BLACKHAT_UMBRAL_RATIO','BLACKHAT_DISTANCIA_H','BLACKHAT_DISTANCIA_V'],
+    hough: ['HOUGH_UMBRAL_BORDE','HOUGH_UMBRAL_H','HOUGH_UMBRAL_V','HOUGH_DISTANCIA_H','HOUGH_DISTANCIA_V'],
+    sauvola: ['SAUVOLA_VENTANA','SAUVOLA_K'],
     preprocesamiento: ['GAMMA_VALOR','CLAHE_TILES','CLAHE_CLIP']
   };
   const lista = teclas[fn] || [];
@@ -383,6 +400,15 @@ function sandboxEjecutar() {
     } else if (fn === 'cont') {
       st.cont = detectarContinuidad(st.brillo, st.ancho, st.alto);
       log('Continuidad: H=' + st.cont.lineasH.length + ' V=' + st.cont.lineasV.length);
+    } else if (fn === 'blackhat') {
+      st.blackhat = detectarBlackHat(st.brillo, st.ancho, st.alto);
+      log('BlackHat: H=' + st.blackhat.lineasH.length + ' V=' + st.blackhat.lineasV.length);
+    } else if (fn === 'hough') {
+      st.hough = detectarHough(st.brillo, st.ancho, st.alto);
+      log('Hough: H=' + st.hough.lineasH.length + ' V=' + st.hough.lineasV.length);
+    } else if (fn === 'sauvola') {
+      st.brillo = aplicarSauvola(st.brillo, st.ancho, st.alto);
+      log('Sauvola aplicado');
     } else if (fn === 'realce') {
       st.realce = detectarRealce(st.brillo, st.ancho, st.alto);
       log('Realce: H=' + st.realce.lineasH.length + ' V=' + st.realce.lineasV.length);
@@ -430,7 +456,7 @@ function setup() {
     canvas.width = 0; canvas.height = 0;
     window.estado = { imagenActual: null, brillo: null, ancho: 0, alto: 0,
                      optica: null, eco: null, a3: null, lvc: null, io: null, cont: null,
-                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true } };
+                     capasVisibles: { optica: true, eco: true, a3: true, lvc: true, io: true, cont: true, realce: true, lidar: true, openv: true, ml: true, ws: true, frangi: true, blackhat: true, hough: true } };
     el('log').textContent = 'Limpiado';
   };
 
@@ -445,6 +471,21 @@ function setup() {
     window.estado.zonasActivo = this.checked;
     log('>>> CHECKBOX Zonas: ' + (this.checked ? 'ON' : 'OFF') + ' | zonasActivo=' + window.estado.zonasActivo);
     log('🎯 Zonas ' + (this.checked ? 'ON' : 'OFF'));
+  });
+  const chkBlackHat = el('chkBlackHat');
+  if (chkBlackHat) chkBlackHat.addEventListener('change', function() {
+    window.estado.capasVisibles.blackhat = this.checked;
+    redibujar();
+  });
+  const chkHough = el('chkHough');
+  if (chkHough) chkHough.addEventListener('change', function() {
+    window.estado.capasVisibles.hough = this.checked;
+    redibujar();
+  });
+  const chkSauvola = el('chkSauvola');
+  if (chkSauvola) chkSauvola.addEventListener('change', function() {
+    CONFIG.SAUVOLA_ACTIVO = this.checked;
+    log('Sauvola ' + (this.checked ? 'ON (recuerda re-analizar)' : 'OFF'));
   });
   const chkCLAHE = el('chkCLAHE');
   if (chkCLAHE) chkCLAHE.addEventListener('change', function() {

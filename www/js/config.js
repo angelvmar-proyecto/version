@@ -74,6 +74,25 @@ const CONFIG = {
   FRANGI_C_FACTOR: 0.5,
   FRANGI_DISTANCIA_MIN: 10,
 
+  // --- BlackHat (morfologia) ---
+  BLACKHAT_KERNEL_H: 25,
+  BLACKHAT_KERNEL_V: 25,
+  BLACKHAT_UMBRAL_RATIO: 0.15,
+  BLACKHAT_DISTANCIA_H: 15,
+  BLACKHAT_DISTANCIA_V: 15,
+
+  // --- Hough (transformada) ---
+  HOUGH_UMBRAL_BORDE: 60,
+  HOUGH_UMBRAL_H: 0.15,
+  HOUGH_UMBRAL_V: 0.15,
+  HOUGH_DISTANCIA_H: 15,
+  HOUGH_DISTANCIA_V: 15,
+
+  // --- Sauvola (preprocesamiento) ---
+  SAUVOLA_ACTIVO: false,
+  SAUVOLA_VENTANA: 15,
+  SAUVOLA_K: 0.3,
+
   // --- Realce (umbral adaptativo por fila/columna) ---
   REALCE_CONTRASTE_MIN: 35,
   REALCE_UMBRAL_FACTOR: 0.65,
@@ -104,7 +123,9 @@ const CONFIG = {
   COLOR_OPENV: '#22d3ee',
   COLOR_ML: '#84cc16',
   COLOR_WS: '#f97316',
-  COLOR_FRANGI: '#14b8a6'
+  COLOR_FRANGI: '#14b8a6',
+  COLOR_BLACKHAT: '#dc2626',
+  COLOR_HOUGH: '#7c3aed'
 };
 
 // CONFIG_ESC: valores escalados por imagen. Se recalcula con escalarConfig().
@@ -156,6 +177,16 @@ function escalarConfig(ancho, alto) {
 
   // === FRANGI ===
   window.CONFIG_ESC.FRANGI_DISTANCIA_MIN = Math.max(4, Math.round(Math.min(ancho, alto) * 0.010));
+
+  // === BLACKHAT ===
+  window.CONFIG_ESC.BLACKHAT_KERNEL_H = Math.max(8, Math.round(ancho * 0.025));
+  window.CONFIG_ESC.BLACKHAT_KERNEL_V = Math.max(8, Math.round(alto * 0.015));
+  window.CONFIG_ESC.BLACKHAT_DISTANCIA_H = Math.max(8, Math.round(alto * 0.01));
+  window.CONFIG_ESC.BLACKHAT_DISTANCIA_V = Math.max(8, Math.round(ancho * 0.015));
+
+  // === HOUGH ===
+  window.CONFIG_ESC.HOUGH_DISTANCIA_H = Math.max(8, Math.round(alto * 0.01));
+  window.CONFIG_ESC.HOUGH_DISTANCIA_V = Math.max(8, Math.round(ancho * 0.015));
 
   // === REALCE ===
   window.CONFIG_ESC.REALCE_GAP_MAX = Math.max(8, Math.round(Math.max(ancho, alto) * 0.019));

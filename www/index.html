@@ -63,6 +63,9 @@
       <label style="color:#fbbf24;"><input type="checkbox" id="chkGamma"> 🔆 Gamma</label>
       <label style="color:#a78bfa;"><input type="checkbox" id="chkCLAHE"> 🎛️ CLAHE</label>
       <label style="color:#22d3ee; font-weight:bold;"><input type="checkbox" id="chkZonas"> 🎯 Zonas</label>
+      <label style="color:#dc2626;"><input type="checkbox" id="chkBlackHat" checked> ⬛ BlackHat</label>
+      <label style="color:#7c3aed;"><input type="checkbox" id="chkHough" checked> 📐 Hough</label>
+      <label style="color:#f59e0b;"><input type="checkbox" id="chkSauvola"> 🌫️ Sauvola</label>
     </div>
 
     <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #444;">
@@ -80,6 +83,9 @@
       <option value="ml">🟢 ML</option>
       <option value="ws">🟠 WS</option>
       <option value="frangi">🩸 Frangi</option>
+      <option value="blackhat">⬛ BlackHat</option>
+      <option value="hough">📐 Hough</option>
+      <option value="sauvola">🌫️ Sauvola</option>
       </select>
       <textarea id="sbParams" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;">{}</textarea>
       <div style="display:flex; gap:6px; margin-top:8px;">
@@ -211,6 +217,9 @@
   <script src="js/core/ws.js"></script>
   <script src="js/core/frangi.js"></script>
   <script src="js/core/rescate_zonas.js"></script>
+  <script src="js/core/blackhat.js"></script>
+  <script src="js/core/hough.js"></script>
+  <script src="js/core/sauvola.js"></script>
   <script src="js/ui/dibujo.js"></script>
   <script src="js/ui/zoom.js"></script>
   <script src="js/ui/app.js"></script>
