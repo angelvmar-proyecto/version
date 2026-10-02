@@ -29,7 +29,8 @@ function votarLidarYRefinar(st) {
   const distH = window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_H;
   const distV = window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_V;
   const minVotos = CONFIG.LIDAR_MIN_VOTOS;
-  const pesos = CONFIG.LIDAR_PESOS;
+  const pesosH = CONFIG.LIDAR_PESOS_H || CONFIG.LIDAR_PESOS;
+  const pesosV = CONFIG.LIDAR_PESOS_V || CONFIG.LIDAR_PESOS;
 
   const candidatasH = [];
   const candidatasV = [];
@@ -52,8 +53,8 @@ function votarLidarYRefinar(st) {
     if (f.datos.lineasV) f.datos.lineasV.forEach(function(p) { candidatasV.push({ pos: p, alg: f.alg }); });
   });
 
-  const lineasH = agruparYVotar(candidatasH, distH, pesos, minVotos);
-  const lineasV = agruparYVotar(candidatasV, distV, pesos, minVotos);
+  const lineasH = agruparYVotar(candidatasH, distH, pesosH, minVotos);
+  const lineasV = agruparYVotar(candidatasV, distV, pesosV, minVotos);
 
   const lineasHRellenas = rellenarHuecos(lineasH, candidatasH, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
   const lineasVRellenas = rellenarHuecos(lineasV, candidatasV, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
