@@ -1,6 +1,6 @@
 // ==============================================
 // ui/runner.js
-// Runner automático de 30 combinaciones sobre 4 imágenes.
+// Runner automático de 100 combinaciones sobre 4 imágenes.
 // ==============================================
 
 const runEl = function(id) { return document.getElementById(id); };
@@ -113,41 +113,117 @@ async function runnerVerificar() {
   return imgs.length > 0 && bms.length > 0;
 }
 
-// ============ Definir las 30 combinaciones ============
+// ============ Definir las 100 combinaciones ============
 function runnerGenerarCombinaciones() {
   const combos = [];
 
-  // === A3 (12 combos) ===
-  const a3Cob = [0.15, 0.25, 0.35, 0.45];
-  const a3Orto = [0.55, 0.65, 0.75];
-  // Single-change: 4 coberturas + 3 ortogonalidades = 7
-  a3Cob.forEach(function(c) { combos.push({ nombre: 'A3_cob_' + c, params: { A3_COBERTURA_MINIMA: c } }); });
-  a3Orto.forEach(function(o) { combos.push({ nombre: 'A3_orto_' + o, params: { A3_UMBRAL_ORTOGONALIDAD: o } }); });
-  // Multi-change: 5 combos clave
-  combos.push({ nombre: 'A3_cob025_orto065', params: { A3_COBERTURA_MINIMA: 0.25, A3_UMBRAL_ORTOGONALIDAD: 0.65 } });
-  combos.push({ nombre: 'A3_cob035_orto075', params: { A3_COBERTURA_MINIMA: 0.35, A3_UMBRAL_ORTOGONALIDAD: 0.75 } });
-  combos.push({ nombre: 'A3_cob025_orto075', params: { A3_COBERTURA_MINIMA: 0.25, A3_UMBRAL_ORTOGONALIDAD: 0.75 } });
-  combos.push({ nombre: 'A3_cob015_orto065', params: { A3_COBERTURA_MINIMA: 0.15, A3_UMBRAL_ORTOGONALIDAD: 0.65 } });
-  combos.push({ nombre: 'A3_cob045_orto075', params: { A3_COBERTURA_MINIMA: 0.45, A3_UMBRAL_ORTOGONALIDAD: 0.75 } });
+  // ==================== A3 (50 combos) ====================
+  // Cobertura sola: 8 valores
+  [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50].forEach(function(c) {
+    combos.push({ nombre: 'A3_cob_' + c, params: { A3_COBERTURA_MINIMA: c } });
+  });
 
-  // === REALCE (10 combos) ===
-  const realceContraste = [0.12, 0.20, 0.30];
-  const realceRunH = [0.35, 0.45, 0.55];
-  const realceRunV = [0.30, 0.40, 0.50];
-  realceContraste.forEach(function(c) { combos.push({ nombre: 'REALCE_cont_' + c, params: { REALCE_CONTRASTE_FACTOR: c } }); });
-  realceRunH.forEach(function(r) { combos.push({ nombre: 'REALCE_runH_' + r, params: { REALCE_MIN_RUN_H: r } }); });
-  realceRunV.forEach(function(r) { combos.push({ nombre: 'REALCE_runV_' + r, params: { REALCE_MIN_RUN_V: r } }); });
-  // 1 extra
-  combos.push({ nombre: 'REALCE_cont020_runH040_runV040', params: { REALCE_CONTRASTE_FACTOR: 0.20, REALCE_MIN_RUN_H: 0.40, REALCE_MIN_RUN_V: 0.40 } });
+  // Ortogonalidad sola: 7 valores
+  [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80].forEach(function(o) {
+    combos.push({ nombre: 'A3_orto_' + o, params: { A3_UMBRAL_ORTOGONALIDAD: o } });
+  });
 
-  // === LVC (8 combos) ===
-  const lvcCoh = [0.25, 0.35, 0.45];
-  const lvcDif = [4, 8, 12];
-  lvcCoh.forEach(function(c) { combos.push({ nombre: 'LVC_coh_' + c, params: { LVC_COHERENCIA_MIN: c } }); });
-  lvcDif.forEach(function(d) { combos.push({ nombre: 'LVC_dif_' + d, params: { LVC_UMBRAL_DIF: d } }); });
-  // 2 extra
-  combos.push({ nombre: 'LVC_coh025_dif8', params: { LVC_COHERENCIA_MIN: 0.25, LVC_UMBRAL_DIF: 8 } });
-  combos.push({ nombre: 'LVC_coh045_dif4', params: { LVC_COHERENCIA_MIN: 0.45, LVC_UMBRAL_DIF: 4 } });
+  // Magnitud sola: 6 valores
+  [80, 100, 110, 130, 160, 200].forEach(function(m) {
+    combos.push({ nombre: 'A3_mag_' + m, params: { A3_UMBRAL_MAGNITUD: m } });
+  });
+
+  // Distancia sola: 4 valores
+  [5, 8, 12, 20].forEach(function(d) {
+    combos.push({ nombre: 'A3_dist_' + d, params: { A3_DISTANCIA_MIN: d } });
+  });
+
+  // Multi-change: 25 combos clave
+  const multiA3 = [
+    { cob: 0.15, orto: 0.60 },
+    { cob: 0.15, orto: 0.70 },
+    { cob: 0.20, orto: 0.60 },
+    { cob: 0.20, orto: 0.65 },
+    { cob: 0.20, orto: 0.70 },
+    { cob: 0.25, orto: 0.60 },
+    { cob: 0.25, orto: 0.65 },
+    { cob: 0.25, orto: 0.70 },
+    { cob: 0.25, orto: 0.80 },
+    { cob: 0.30, orto: 0.60 },
+    { cob: 0.30, orto: 0.65 },
+    { cob: 0.30, orto: 0.70 },
+    { cob: 0.30, orto: 0.75 },
+    { cob: 0.35, orto: 0.60 },
+    { cob: 0.35, orto: 0.65 },
+    { cob: 0.35, orto: 0.70 },
+    { cob: 0.40, orto: 0.65 },
+    { cob: 0.40, orto: 0.75 },
+    { cob: 0.20, orto: 0.55 },
+    { cob: 0.15, orto: 0.55 },
+    { cob: 0.25, orto: 0.55 },
+    { cob: 0.10, orto: 0.65 },
+    { cob: 0.10, orto: 0.70 },
+    { cob: 0.15, orto: 0.75 },
+    { cob: 0.20, orto: 0.75 }
+  ];
+  multiA3.forEach(function(mc, i) {
+    combos.push({ nombre: 'A3_multi_' + i, params: { A3_COBERTURA_MINIMA: mc.cob, A3_UMBRAL_ORTOGONALIDAD: mc.orto } });
+  });
+
+  // ==================== REALCE (50 combos) ====================
+  // Contraste solo (valor absoluto): 8 valores
+  [15, 20, 25, 30, 35, 45, 55, 70].forEach(function(c) {
+    combos.push({ nombre: 'REALCE_cont_' + c, params: { REALCE_CONTRASTE_MIN: c } });
+  });
+
+  // Umbral factor solo: 6 valores
+  [0.30, 0.40, 0.45, 0.50, 0.55, 0.65].forEach(function(f) {
+    combos.push({ nombre: 'REALCE_uf_' + f, params: { REALCE_UMBRAL_FACTOR: f } });
+  });
+
+  // Run H solo: 6 valores
+  [0.15, 0.20, 0.25, 0.30, 0.40, 0.50].forEach(function(r) {
+    combos.push({ nombre: 'REALCE_runH_' + r, params: { REALCE_MIN_RUN_H: r } });
+  });
+
+  // Run V solo: 6 valores
+  [0.15, 0.20, 0.25, 0.30, 0.40, 0.50].forEach(function(r) {
+    combos.push({ nombre: 'REALCE_runV_' + r, params: { REALCE_MIN_RUN_V: r } });
+  });
+
+  // Gap solo: 4 valores
+  [10, 20, 30, 50].forEach(function(g) {
+    combos.push({ nombre: 'REALCE_gap_' + g, params: { REALCE_GAP_MAX: g } });
+  });
+
+  // Multi-change: 20 combos
+  const multiR = [
+    { c: 20, rh: 0.20 },
+    { c: 20, rh: 0.25 },
+    { c: 25, rh: 0.20 },
+    { c: 25, rh: 0.25 },
+    { c: 25, rh: 0.30 },
+    { c: 30, rh: 0.20 },
+    { c: 30, rh: 0.25 },
+    { c: 30, rh: 0.30 },
+    { c: 35, rh: 0.25 },
+    { c: 35, rh: 0.30 },
+    { c: 15, rh: 0.15 },
+    { c: 15, rh: 0.20 },
+    { c: 15, rh: 0.25 },
+    { c: 20, rh: 0.25, rv: 0.20 },
+    { c: 20, rh: 0.25, rv: 0.25 },
+    { c: 25, rh: 0.25, rv: 0.25 },
+    { c: 25, rh: 0.30, rv: 0.30 },
+    { c: 15, rh: 0.20, rv: 0.20 },
+    { c: 30, rh: 0.35 },
+    { c: 35, rh: 0.35 }
+  ];
+  multiR.forEach(function(mr, i) {
+    const p = { REALCE_CONTRASTE_MIN: mr.c, REALCE_MIN_RUN_H: mr.rh };
+    if (mr.rv) p.REALCE_MIN_RUN_V = mr.rv;
+    combos.push({ nombre: 'REALCE_multi_' + i, params: p });
+  });
 
   return combos;
 }
@@ -339,7 +415,7 @@ function runnerReset() {
   if (confirm('¿Borrar todos los resultados del runner?')) {
     window.runnerRecursos.resultados = [];
     window.runnerRecursos.mejor = 0;
-    runEl('runnerCombo').textContent = '0/30';
+    runEl('runnerCombo').textContent = '0/100';
     runEl('runnerMejor').textContent = '0';
     runEl('runnerProgressBar').style.width = '0%';
     runEl('runnerLog').textContent = 'Reset. Listo para iniciar.';
