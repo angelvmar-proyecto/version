@@ -3,6 +3,26 @@
 // Votacion de lineas entre los 7 algoritmos.
 // ==============================================
 
+
+function deduplicarLineasFinales(lineas, distMin) {
+  if (!lineas || lineas.length < 2) return lineas;
+  const ordenadas = lineas.slice().sort(function(a, b) { return a - b; });
+  const resultado = [];
+  let i = 0;
+  while (i < ordenadas.length) {
+    const grupo = [ordenadas[i]];
+    while (i + 1 < ordenadas.length && ordenadas[i+1] - grupo[grupo.length-1] < distMin) {
+      i++;
+      grupo.push(ordenadas[i]);
+    }
+    // Promedio del grupo
+    const promedio = Math.round(grupo.reduce(function(s, x) { return s + x; }, 0) / grupo.length);
+    resultado.push(promedio);
+    i++;
+  }
+  return resultado;
+}
+
 function votarLidarYRefinar(st) {
   const t0 = performance.now();
 
@@ -38,10 +58,14 @@ function votarLidarYRefinar(st) {
   const lineasHRellenas = rellenarHuecos(lineasH, candidatasH, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
   const lineasVRellenas = rellenarHuecos(lineasV, candidatasV, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
 
-  const t1 = performance.now();
-  console.log('[LIDAR] H=' + lineasHRellenas.length + ' V=' + lineasVRellenas.length + ' (' + (t1-t0).toFixed(0) + 'ms)');
+  // Deduplicacion final: fusionar lineas a <10px
+  const dedupH = deduplicarLineasFinales(lineasHRellenas, 10);
+  const dedupV = deduplicarLineasFinales(lineasVRellenas, 10);
 
-  return { lineasH: lineasHRellenas, lineasV: lineasVRellenas, tiempo: t1-t0 };
+  const t1 = performance.now();
+  console.log('[LIDAR] H=' + dedupH.length + ' V=' + dedupV.length + ' (relleno: ' + lineasHRellenas.length + 'H ' + lineasVRellenas.length + 'V -> dedup: ' + dedupH.length + 'H ' + dedupV.length + 'V) (' + (t1-t0).toFixed(0) + 'ms)');
+
+  return { lineasH: dedupH, lineasV: dedupV, tiempo: t1-t0 };
 }
 
 function agruparYVotar(lineas, distAgrup, pesos, minVotos) {
