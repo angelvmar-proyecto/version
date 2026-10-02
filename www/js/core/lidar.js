@@ -21,7 +21,9 @@ function votarLidarYRefinar(st) {
     { alg: 'lvc',    datos: st.lvc },
     { alg: 'io',     datos: st.io },
     { alg: 'cont',   datos: st.cont },
-    { alg: 'realce', datos: st.realce }
+    { alg: 'realce', datos: st.realce },
+    { alg: 'blackhat', datos: st.blackhat },
+    { alg: 'hough',    datos: st.hough }
   ];
 
   fuentes.forEach(function(f) {
