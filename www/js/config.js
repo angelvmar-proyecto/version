@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.171-chain-merge-fix';
+const BUILD_TAG = 'v14.172-benchmark-auto';
 
 const CONFIG = {
   VERSION: '14.0',

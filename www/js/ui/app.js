@@ -248,6 +248,26 @@ function analizar() {
 
   redibujar();
 
+  // Comparacion automatica contra benchmark si coincide el tamaño
+  if (typeof BENCHMARKS !== 'undefined' && st.lidar && st.lidar.lineasH.length > 0) {
+    const bm = buscarBenchmarkPorTamano(st.ancho, st.alto);
+    if (bm) {
+      const tol = 8;
+      const hH = runContarAciertos(st.lidar.lineasH, bm.H, tol);
+      const hV = runContarAciertos(st.lidar.lineasV, bm.V, tol);
+      const puntH = (hH.aciertos * 2) - hH.falsas - hH.faltantes;
+      const puntV = (hV.aciertos * 2) - hV.falsas - hV.faltantes;
+
+      log('═══════════════════════════════');
+      log('>>> vs BENCHMARK: ' + bm.nombre + ' (' + bm.ancho + '×' + bm.alto + ')');
+      log('H: ' + hH.aciertos + '/' + bm.H.length + ' aciertos, ' + hH.falsas + ' falsas, ' + hH.faltantes + ' faltantes (pts=' + puntH + ')');
+      log('V: ' + hV.aciertos + '/' + bm.V.length + ' aciertos, ' + hV.falsas + ' faltantes=' + hV.faltantes + ' (pts=' + puntV + ')');
+      log('[LIDAR-POS] H: [' + st.lidar.lineasH.join(', ') + ']');
+      log('[LIDAR-POS] V: [' + st.lidar.lineasV.join(', ') + ']');
+      log('═══════════════════════════════');
+    }
+  }
+
   const t1 = performance.now();
   log('--- Total: ' + (t1-t0).toFixed(0) + 'ms ---');
 }
