@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.160-opt-formulas';
+const BUILD_TAG = 'v14.161-opt-revert';
 
 const CONFIG = {
   VERSION: '14.0',
@@ -120,8 +120,8 @@ function escalarConfig(ancho, alto) {
   // (Referencia original: 990 x 1600)
 
   // === OPTICA ===
-  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.029));
-  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.039));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_H = Math.max(4, Math.round(alto * 0.008));
+  window.CONFIG_ESC.OPTICA_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.007));
   window.CONFIG_ESC.OPTICA_SUAVIZADO = Math.max(3, Math.round(alto * 0.0125));
 
   // === ECO ===
