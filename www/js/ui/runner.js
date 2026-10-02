@@ -93,11 +93,8 @@ async function runnerCargarBenchmarks() {
 // ============ Verificar recursos ============
 async function runnerVerificar() {
   runLog('🔍 Verificando recursos...');
-  const imgs = await runnerCargarImagenes();
-  const bms = await runnerCargarBenchmarks();
-
-  window.runnerRecursos.imagenes = imgs;
-  window.runnerRecursos.benchmarks = bms;
+  const imgs = window.runnerRecursos.imagenes || [];
+  const bms = window.runnerRecursos.benchmarks || [];
 
   if (imgs.length > 0) {
     runEl('runnerStatusImgs').innerHTML = 'Imágenes: <b style="color:#22c55e;">✅ ' + imgs.length + ' cargadas</b>';
@@ -350,6 +347,87 @@ function runnerReset() {
 }
 
 // ============ Setup ============
+
+
+// ============ Cargar imágenes via file picker ============
+function runCargarImgsClick() {
+  const inp = runEl('runInputImgs');
+  if (inp) { inp.value = ''; inp.click(); }
+}
+
+async function runProcesarImgs(files) {
+  const arr = Array.from(files);
+  if (arr.length < 4) {
+    runLog('⚠️ Selecciona 4 imágenes (recibidas ' + arr.length + ')');
+    return;
+  }
+
+  // Ordenar por nombre (contiene horarios/olas/sep1/sep23)
+  arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  const imgs = [];
+  for (let i = 0; i < arr.length; i++) {
+    try {
+      const img = await new Promise(function(resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const im = new Image();
+          im.onload = function() { resolve(im); };
+          im.onerror = reject;
+          im.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(arr[i]);
+      });
+      imgs.push({
+        nombre: arr[i].name.replace('.jpg', '').replace('.png', ''),
+        img: img,
+        ancho: img.width,
+        alto: img.height
+      });
+    } catch(e) {
+      runLog('❌ Error cargando ' + arr[i].name + ': ' + e.message);
+    }
+  }
+
+  window.runnerRecursos.imagenes = imgs;
+  runEl('runnerStatusImgs').innerHTML = 'Imágenes: <b style="color:#22c55e;">✅ ' + imgs.length + ' cargadas</b>';
+  runLog('📷 ' + imgs.length + ' imágenes cargadas:');
+  imgs.forEach(function(im) { runLog('  • ' + im.nombre + ' (' + im.ancho + '×' + im.alto + ')'); });
+}
+
+// ============ Cargar benchmarks via file picker ============
+function runCargarBmsClick() {
+  const inp = runEl('runInputBms');
+  if (inp) { inp.value = ''; inp.click(); }
+}
+
+async function runProcesarBms(files) {
+  const arr = Array.from(files);
+  if (arr.length < 4) {
+    runLog('⚠️ Selecciona 4 benchmarks (recibidos ' + arr.length + ')');
+    return;
+  }
+
+  arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  const bms = [];
+  for (let i = 0; i < arr.length; i++) {
+    try {
+      const texto = await arr[i].text();
+      const bm = JSON.parse(texto);
+      bms.push(bm);
+    } catch(e) {
+      runLog('❌ Error con ' + arr[i].name + ': ' + e.message);
+    }
+  }
+
+  window.runnerRecursos.benchmarks = bms;
+  runEl('runnerStatusBms').innerHTML = 'Benchmarks: <b style="color:#22c55e;">✅ ' + bms.length + ' cargados</b>';
+  runLog('📂 ' + bms.length + ' benchmarks cargados:');
+  bms.forEach(function(bm) { runLog('  • ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
+}
+
 function runSetup() {
   const logEl = document.getElementById('runnerLog');
   function diag(msg) {
@@ -368,7 +446,18 @@ function runSetup() {
   diag('Botones encontrados: V=' + !!btnV + ' I=' + !!btnI + ' P=' + !!btnP + ' C=' + !!btnC + ' R=' + !!btnR);
 
   try {
-    if (btnV) btnV.onclick = runnerVerificar;
+    // File pickers
+  const btnCI = runEl('btnRunnerCargarImgs');
+  const btnCB = runEl('btnRunnerCargarBms');
+  const inpI = runEl('runInputImgs');
+  const inpB = runEl('runInputBms');
+  if (btnCI) btnCI.onclick = runCargarImgsClick;
+  if (btnCB) btnCB.onclick = runCargarBmsClick;
+  if (inpI) inpI.onchange = function(e) { if (e.target.files.length > 0) runProcesarImgs(e.target.files); };
+  if (inpB) inpB.onchange = function(e) { if (e.target.files.length > 0) runProcesarBms(e.target.files); };
+  diag('File pickers conectados');
+
+  if (btnV) btnV.onclick = runnerVerificar;
     if (btnI) btnI.onclick = runnerIniciar;
     if (btnP) btnP.onclick = function() { window.runnerRecursos.cancelar = true; };
     if (btnC) btnC.onclick = runnerCopiarResultados;

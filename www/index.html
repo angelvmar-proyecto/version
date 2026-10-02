@@ -161,6 +161,14 @@
       <div id="runnerStatusBms" style="font-size:12px;">Benchmarks: <b>❌ no cargados</b></div>
     </div>
 
+    <input type="file" id="runInputImgs" multiple accept="image/*" style="display:none;">
+    <input type="file" id="runInputBms" multiple accept=".json,application/json" style="display:none;">
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button id="btnRunnerCargarImgs" style="flex:1; padding:10px; background:#a855f7; color:#fff; border:none; border-radius:6px; font-size:13px;">📷 Cargar 4 imágenes</button>
+      <button id="btnRunnerCargarBms" style="flex:1; padding:10px; background:#a855f7; color:#fff; border:none; border-radius:6px; font-size:13px;">📂 Cargar 4 benchmarks</button>
+    </div>
+
     <div style="display:flex; gap:6px; margin-bottom:10px;">
       <button id="btnRunnerVerificar" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; font-size:13px;">🔍 Verificar</button>
       <button id="btnRunnerIniciar" style="flex:1; padding:10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px;">▶️ Iniciar</button>
