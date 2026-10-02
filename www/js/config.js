@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.161-opt-revert';
+const BUILD_TAG = 'v14.162-opt-adaptativo';
 
 const CONFIG = {
   VERSION: '14.0',
