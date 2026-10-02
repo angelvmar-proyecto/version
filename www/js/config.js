@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.172-benchmark-auto';
+const BUILD_TAG = 'v14.173-dist12';
 
 const CONFIG = {
   VERSION: '14.0',
@@ -103,8 +103,8 @@ const CONFIG = {
   REALCE_DISTANCIA_MIN_V: 10,
 
   // --- LIDAR (votacion) ---
-  LIDAR_DIST_AGRUPAR_H: 25,
-  LIDAR_DIST_AGRUPAR_V: 25,
+  LIDAR_DIST_AGRUPAR_H: 12,
+  LIDAR_DIST_AGRUPAR_V: 12,
   LIDAR_MIN_VOTOS: 2,
   LIDAR_PESOS: { optica: 1, eco: 1, io: 1, cont: 1, realce: 1, a3: 3, lvc: 1, blackhat: 2, hough: 2 },
   LIDAR_HUECO_MIN: 60,
@@ -194,8 +194,8 @@ function escalarConfig(ancho, alto) {
   window.CONFIG_ESC.REALCE_DISTANCIA_MIN_V = Math.max(4, Math.round(ancho * 0.010));
 
   // === LIDAR ===
-  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_H = Math.max(15, Math.round(alto * 0.015));
-  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_V = Math.max(15, Math.round(ancho * 0.025));
+  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_H = Math.max(8, Math.round(alto * 0.008));
+  window.CONFIG_ESC.LIDAR_DIST_AGRUPAR_V = Math.max(8, Math.round(ancho * 0.012));
   window.CONFIG_ESC.LIDAR_HUECO_MIN = Math.max(20, Math.round(Math.max(ancho, alto) * 0.0375));
   window.CONFIG_ESC.LIDAR_HUECO_BORDE = Math.max(8, Math.round(Math.min(ancho, alto) * 0.015));
 
