@@ -124,22 +124,14 @@ function buscarPicos(perfil, umbral, distanciaMin, rangoPico) {
  * 5. Devuelve mediana * 0.6 (permite variaciones).
  */
 function calcularDistanciaAdaptativa(perfil, factorUmbral) {
-  // 1. Calcular mediana de brillo para saber que es "profundo"
-  const copia = perfil.slice().sort(function(a, b) { return a - b; });
-  const medianaBrillo = copia[Math.floor(copia.length / 2)];
-  const umbralProfundo = medianaBrillo * 0.75; // valle debe estar 25% mas oscuro que mediana
-
-  // 2. Detectar valles crudos PROFUNDOS (excluye textura de texto)
+  // Detectar valles crudos
   const vallesCrudos = [];
   for (let i = 2; i < perfil.length - 2; i++) {
     if (perfil[i] < perfil[i-1] && perfil[i] < perfil[i+1] &&
-        perfil[i] < perfil[i-2] && perfil[i] < perfil[i+2] &&
-        perfil[i] < umbralProfundo) {
+        perfil[i] < perfil[i-2] && perfil[i] < perfil[i+2]) {
       vallesCrudos.push(i);
     }
   }
-
-  console.log('[Adaptativo] valles profundos=' + vallesCrudos.length + ' (umbral=' + Math.round(umbralProfundo) + ', mediana brillo=' + Math.round(medianaBrillo) + ')');
 
   if (vallesCrudos.length < 3) return 5; // fallback
 
