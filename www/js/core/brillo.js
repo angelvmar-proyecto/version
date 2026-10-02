@@ -47,3 +47,26 @@ function calcularBrilloColorAgnostico(imageData) {
   return brillo;
 }
 console.log("core/brillo.js: calcularBrilloColorAgnostico disponible");
+
+
+/**
+ * Calcula la saturacion media de la imagen (0-1).
+ * 0 = blanco y negro puro.
+ * 1 = totalmente saturado.
+ * Util para decidir si Optica es fiable o no.
+ */
+function calcularSaturacionMedia(imageData) {
+  const data = imageData.data;
+  const total = imageData.width * imageData.height;
+  let suma = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const sat = max === 0 ? 0 : (max - min) / max;
+    suma += sat;
+  }
+  return suma / total;
+}
+
+console.log('core/brillo.js: calcularSaturacionMedia disponible');

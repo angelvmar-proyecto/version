@@ -15,6 +15,8 @@ window.estado = {
   imagenActual: null,
   brillo: null,
   brilloOptica: null,
+  saturacion: 0,
+  opticaEsFiable: true,
   ancho: 0,
   alto: 0,
   optica: null,
@@ -104,6 +106,15 @@ function analizar() {
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
   st.brilloOptica = calcularBrilloColorAgnostico(imageData);
+  const saturacion = calcularSaturacionMedia(imageData);
+  st.saturacion = saturacion;
+  if (saturacion > 0.10) {
+    log('📷 Imagen CON COLOR (saturacion=' + (saturacion * 100).toFixed(1) + '%) — Optica con peso reducido');
+    st.opticaEsFiable = false;
+  } else {
+    log('📷 Imagen SIN COLOR (saturacion=' + (saturacion * 100).toFixed(1) + '%) — Optica normal');
+    st.opticaEsFiable = true;
+  }
 
   // Preprocesamiento avanzado (opcional)
   if (CONFIG.GAMMA_ACTIVO) {
