@@ -17,6 +17,7 @@ window.estado = {
   brilloOptica: null,
   saturacion: 0,
   opticaEsFiable: true,
+  zonasActivo: false,
   ancho: 0,
   alto: 0,
   optica: null,
@@ -188,6 +189,47 @@ function analizar() {
   try {
     st.lidar = votarLidarYRefinar(st);
     log('LIDAR: H=' + st.lidar.lineasH.length + ' V=' + st.lidar.lineasV.length + ' (' + st.lidar.tiempo.toFixed(0) + 'ms)');
+
+    // Capa adicional: rescate por zonas (si esta activo)
+    if (st.zonasActivo && st.a3 && typeof detectarRescateZonas === 'function') {
+      log('🎯 Aplicando rescate por zonas...');
+      const rescate = detectarRescateZonas(
+        st.brillo, st.ancho, st.alto,
+        st.lidar.lineasH, st.lidar.lineasV,
+        { distHueco: 60, votosMin: 2, algos: ['realce', 'continuidad', 'openv', 'ws'] }
+      );
+
+      // Fusionar lineas originales + rescatadas (sin duplicar)
+      const todasH = st.lidar.lineasH.slice();
+      const todasV = st.lidar.lineasV.slice();
+      const distMin = 15;
+
+      rescate.nuevasH.forEach(function(y) {
+        let dup = false;
+        for (let i = 0; i < todasH.length; i++) {
+          if (Math.abs(todasH[i] - y) < distMin) { dup = true; break; }
+        }
+        if (!dup) todasH.push(y);
+      });
+
+      rescate.nuevasV.forEach(function(x) {
+        let dup = false;
+        for (let i = 0; i < todasV.length; i++) {
+          if (Math.abs(todasV[i] - x) < distMin) { dup = true; break; }
+        }
+        if (!dup) todasV.push(x);
+      });
+
+      todasH.sort(function(a, b) { return a - b; });
+      todasV.sort(function(a, b) { return a - b; });
+
+      st.lidar = {
+        lineasH: todasH,
+        lineasV: todasV,
+        tiempo: st.lidar.tiempo + rescate.tiempo
+      };
+      log('LIDAR con zonas: H=' + todasH.length + ' V=' + todasV.length + ' (+' + rescate.nuevasH.length + 'H, +' + rescate.nuevasV.length + 'V)');
+    }
   } catch(e) { log('ERROR LIDAR: ' + e.message); st.lidar = { lineasH: [], lineasV: [] }; }
 
   redibujar();
@@ -397,6 +439,11 @@ function setup() {
   if (chkGamma) chkGamma.addEventListener('change', function() {
     CONFIG.GAMMA_ACTIVO = this.checked;
     log('Gamma ' + (this.checked ? 'ON' : 'OFF'));
+  });
+  const chkZonas = el('chkZonas');
+  if (chkZonas) chkZonas.addEventListener('change', function() {
+    window.estado.zonasActivo = this.checked;
+    log('🎯 Zonas ' + (this.checked ? 'ON' : 'OFF'));
   });
   const chkCLAHE = el('chkCLAHE');
   if (chkCLAHE) chkCLAHE.addEventListener('change', function() {

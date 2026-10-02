@@ -76,7 +76,7 @@ const CONFIG = {
 
   // --- Realce (umbral adaptativo por fila/columna) ---
   REALCE_CONTRASTE_MIN: 35,
-  REALCE_UMBRAL_FACTOR: 0.5,
+  REALCE_UMBRAL_FACTOR: 0.65,
   REALCE_MIN_RUN_H: 0.50,
   REALCE_MIN_RUN_V: 0.45,
   REALCE_GAP_MAX: 30,
