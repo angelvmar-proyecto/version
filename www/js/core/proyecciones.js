@@ -113,3 +113,47 @@ function buscarPicos(perfil, umbral, distanciaMin, rangoPico) {
   }
   return resultado;
 }
+
+
+/**
+ * Calcula DIST_MIN adaptativo para un perfil.
+ * 1. Detecta TODOS los valles crudos con distancia minima de 3px.
+ * 2. Calcula las distancias entre valles consecutivos.
+ * 3. Filtra distancias < 3px (duplicados del trazo).
+ * 4. Calcula la mediana de las distancias validas.
+ * 5. Devuelve mediana * 0.6 (permite variaciones).
+ */
+function calcularDistanciaAdaptativa(perfil, factorUmbral) {
+  // Detectar valles crudos
+  const vallesCrudos = [];
+  for (let i = 2; i < perfil.length - 2; i++) {
+    if (perfil[i] < perfil[i-1] && perfil[i] < perfil[i+1] &&
+        perfil[i] < perfil[i-2] && perfil[i] < perfil[i+2]) {
+      vallesCrudos.push(i);
+    }
+  }
+
+  if (vallesCrudos.length < 3) return 5; // fallback
+
+  // Calcular distancias entre valles consecutivos
+  const distancias = [];
+  for (let i = 1; i < vallesCrudos.length; i++) {
+    const d = vallesCrudos[i] - vallesCrudos[i-1];
+    if (d >= 3) distancias.push(d); // ignorar duplicados del trazo
+  }
+
+  if (distancias.length < 3) return 5;
+
+  // Mediana
+  distancias.sort(function(a, b) { return a - b; });
+  const mediana = distancias[Math.floor(distancias.length / 2)];
+
+  // DIST_MIN = 60% de la mediana (permite variabilidad)
+  const distAdapt = Math.max(4, Math.round(mediana * 0.6));
+
+  console.log('[Adaptativo] valles=' + vallesCrudos.length + ', distancias validas=' + distancias.length + ', mediana=' + mediana + 'px, DIST_MIN=' + distAdapt + 'px');
+
+  return distAdapt;
+}
+
+console.log('core/proyecciones.js: calcularDistanciaAdaptativa disponible');
