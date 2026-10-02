@@ -32,6 +32,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="analisis">🔬 Análisis</div>
     <div class="tab" data-tab="calibrar">🎯 Calibrar</div>
+    <div class="tab" data-tab="runner">🧪 Runner</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -148,6 +149,41 @@
     <div id="calibLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:150px; overflow-y:auto; border:1px solid #333;">Listo. Carga una imagen y marca las líneas.</div>
   </div>
 
+  <!-- ============ TAB RUNNER ============ -->
+  <div class="tab-content" id="tab-runner" style="padding:15px; color:#ddd;">
+
+    <h3 style="margin-top:0; color:#4ea3f5;">🧪 Runner automático</h3>
+    <p style="font-size:12px; opacity:0.7;">Ejecuta 30 combinaciones sobre las 4 imágenes y compara contra benchmarks.</p>
+
+    <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px;">
+      <h4 style="margin:0 0 8px; font-size:13px;">Estado:</h4>
+      <div id="runnerStatusImgs" style="font-size:12px;">Imágenes: <b>❌ no cargadas</b></div>
+      <div id="runnerStatusBms" style="font-size:12px;">Benchmarks: <b>❌ no cargados</b></div>
+    </div>
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button id="btnRunnerVerificar" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; font-size:13px;">🔍 Verificar</button>
+      <button id="btnRunnerIniciar" style="flex:1; padding:10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px;">▶️ Iniciar</button>
+      <button id="btnRunnerParar" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px; font-size:13px;">⏸️ Parar</button>
+    </div>
+
+    <div style="background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid #333;">
+      <div>Combo: <b id="runnerCombo">0/30</b></div>
+      <div>Mejor: <b id="runnerMejor">0</b></div>
+      <div style="background:#222; border-radius:4px; overflow:hidden; margin-top:6px;">
+        <div id="runnerProgressBar" style="background:#22c55e; height:8px; width:0%; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button id="btnRunnerCopiar" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; font-size:13px;">📋 Copiar resultados</button>
+      <button id="btnRunnerReset" style="flex:1; padding:10px; background:#4b5563; color:#fff; border:none; border-radius:6px; font-size:13px;">🗑️ Reset</button>
+    </div>
+
+    <pre id="runnerLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:10px; max-height:300px; overflow-y:auto; border:1px solid #333;">Listo. Verifica recursos e inicia.</pre>
+
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -169,6 +205,7 @@
   <script src="js/ui/zoom.js"></script>
   <script src="js/ui/app.js"></script>
   <script src="js/ui/calibrar.js"></script>
+  <script src="js/ui/runner.js"></script>
 
 </body>
 </html>
