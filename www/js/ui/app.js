@@ -192,7 +192,7 @@ function analizar() {
 
     // Capa adicional: rescate por zonas (si esta activo)
     if (st.zonasActivo && st.a3 && typeof detectarRescateZonas === 'function') {
-      log('🎯 Aplicando rescate por zonas...');
+      log('>>> Aplicando rescate por zonas...');
       const rescate = detectarRescateZonas(
         st.brillo, st.ancho, st.alto,
         st.lidar.lineasH, st.lidar.lineasV,
@@ -443,6 +443,7 @@ function setup() {
   const chkZonas = el('chkZonas');
   if (chkZonas) chkZonas.addEventListener('change', function() {
     window.estado.zonasActivo = this.checked;
+    log('>>> CHECKBOX Zonas: ' + (this.checked ? 'ON' : 'OFF') + ' | zonasActivo=' + window.estado.zonasActivo);
     log('🎯 Zonas ' + (this.checked ? 'ON' : 'OFF'));
   });
   const chkCLAHE = el('chkCLAHE');
