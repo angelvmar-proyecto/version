@@ -106,7 +106,7 @@ const CONFIG = {
   LIDAR_DIST_AGRUPAR_H: 12,
   LIDAR_DIST_AGRUPAR_V: 12,
   LIDAR_MIN_VOTOS: 2,
-  LIDAR_PESOS: { optica: 2, eco: 1, io: 1, cont: 1, realce: 1, a3: 0, lvc: 0 },
+  LIDAR_PESOS: { optica: 1, eco: 1, io: 1, cont: 1, realce: 1, a3: 3, lvc: 1, blackhat: 2, hough: 2 },
   LIDAR_HUECO_MIN: 60,
   LIDAR_HUECO_BORDE: 15,
 
