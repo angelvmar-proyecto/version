@@ -3,6 +3,8 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
+const BUILD_TAG = 'v14.159-opt-fix';
+
 const CONFIG = {
   VERSION: '14.0',
 

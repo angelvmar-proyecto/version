@@ -95,6 +95,7 @@ function analizar() {
   if (!st.imagenActual) { log('Carga una imagen primero'); return; }
   const t0 = performance.now();
 
+  log('=== BUILD: ' + (typeof BUILD_TAG !== 'undefined' ? BUILD_TAG : 'sin-tag') + ' ===');
   escalarConfig(st.ancho, st.alto);
   log('Config escalada');
 
