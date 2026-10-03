@@ -126,8 +126,8 @@ function analizar() {
     st.brillo = aplicarCLAHE(st.brillo, st.ancho, st.alto, CONFIG.CLAHE_TILES, CONFIG.CLAHE_CLIP);
     log('🎛️ CLAHE aplicado (tiles=' + CONFIG.CLAHE_TILES + ', clip=' + CONFIG.CLAHE_CLIP + ')');
   }
+  st.brilloOriginal = st.brillo;
   if (CONFIG.SAUVOLA_ACTIVO) {
-  const brilloOriginal = st.brillo;
     st.brillo = aplicarSauvola(st.brillo, st.ancho, st.alto);
     log('🌫️ Sauvola aplicado (ventana=' + CONFIG.SAUVOLA_VENTANA + ', k=' + CONFIG.SAUVOLA_K + ')');
   }
@@ -411,7 +411,7 @@ function sandboxEjecutar() {
       st.eco = detectarEco(st.brillo, st.ancho, st.alto);
       log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length);
     } else if (fn === 'a3') {
-      try { st.morfo = detectarMorfologico(st.brillo, st.ancho, st.alto); } catch(e) { log("ERROR MORFO: " + e.message + " | " + e.stack); st.morfo = { lineasH: [], lineasV: [], metaH: [], metaV: [], tiempo: 0 }; }
+      try { st.morfo = detectarMorfologico(st.brilloOriginal, st.ancho, st.alto); } catch(e) { log("ERROR MORFO: " + e.message + " | " + e.stack); st.morfo = { lineasH: [], lineasV: [], metaH: [], metaV: [], tiempo: 0 }; }
       st.a3 = detectarA3(st.brillo, st.ancho, st.alto);
       log('A3: H=' + st.a3.lineasH.length + ' V=' + st.a3.lineasV.length);
     } else if (fn === 'lvc') {
