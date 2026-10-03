@@ -129,16 +129,22 @@ function calcularDistanciaAdaptativa(perfil, factorUmbral) {
   for (let i = 2; i < perfil.length - 2; i++) {
     if (perfil[i] < perfil[i-1] && perfil[i] < perfil[i+1] &&
         perfil[i] < perfil[i-2] && perfil[i] < perfil[i+2]) {
-      vallesCrudos.push(i);
+      vallesCrudos.push({ pos: i, valor: perfil[i] });
     }
   }
 
   if (vallesCrudos.length < 3) return 5; // fallback
 
+  // Filtrar por profundidad: descartar valles debiles (texto/ruido)
+  const valores = vallesCrudos.map(function(v) { return v.valor; }).sort(function(a,b) { return a-b; });
+  const medianaValor = valores[Math.floor(valores.length / 2)];
+  const umbralProfundidad = medianaValor * 0.85;
+  const vallesFuertes = vallesCrudos.filter(function(v) { return v.valor <= umbralProfundidad; });
+
   // Calcular distancias entre valles consecutivos
   const distancias = [];
-  for (let i = 1; i < vallesCrudos.length; i++) {
-    const d = vallesCrudos[i] - vallesCrudos[i-1];
+  for (let i = 1; i < vallesFuertes.length; i++) {
+    const d = vallesFuertes[i].pos - vallesFuertes[i-1].pos;
     if (d >= 3) distancias.push(d); // ignorar duplicados del trazo
   }
 

@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.174-pesos-hv';
+const BUILD_TAG = 'v14.177-opticaV-prof';
 
 const CONFIG = {
   VERSION: '14.0',
@@ -107,7 +107,7 @@ const CONFIG = {
   LIDAR_DIST_AGRUPAR_V: 12,
   LIDAR_MIN_VOTOS: 2,
   LIDAR_PESOS_H: { optica: 2, eco: 1, a3: 3, lvc: 0, io: 1, cont: 1, realce: 1, blackhat: 2, hough: 2 },
-  LIDAR_PESOS_V: { optica: 0, eco: 1, a3: 3, lvc: 3, io: 0, cont: 1, realce: 0, blackhat: 0, hough: 0 },
+  LIDAR_PESOS_V: { optica: 1, eco: 1, a3: 3, lvc: 3, io: 0, cont: 1, realce: 0, blackhat: 0, hough: 0 },
   LIDAR_HUECO_MIN: 60,
   LIDAR_HUECO_BORDE: 15,
 
