@@ -165,7 +165,7 @@ function extraerLineasDeMascara(mask, esH, ancho, alto, umbralFila) {
         runActual = 0;
       }
     }
-    if (activos >= minActivos) {
+    if (activos >= minActivos && (activos / dimLargo) >= 0.50) {
       resultado.push({
         pos: i,
         longitud: runMax,
