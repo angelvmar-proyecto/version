@@ -53,13 +53,16 @@ function votarLidarYRefinar(st) {
     if (f.datos.lineasH) { const lh = f.datos.longitudesH || []; f.datos.lineasH.forEach(function(p, i) { candidatasH.push({ pos: p, alg: f.alg, longitud: lh[i] !== undefined ? lh[i] : Infinity }); }); }
     if (f.datos.lineasV) { const lv = f.datos.longitudesV || []; f.datos.lineasV.forEach(function(p, i) { candidatasV.push({ pos: p, alg: f.alg, longitud: lv[i] !== undefined ? lv[i] : Infinity }); }); }
   });
+  log("[LIDAR-DIAG] Antes filtro: H=" + candidatasH.length + " V=" + candidatasV.length + " V.opt=" + candidatasV.filter(function(c){return c.alg==="optica";}).length);
   // Filtrar candidatas por longitud minima (descarta ticks, ruido, texto corto)
     const LIDAR_LONG_MIN = Math.max(20, Math.round(Math.max(st.ancho || 1000, st.alto || 1000) * 0.03));
   const candH = candidatasH.filter(function(c) { return c.longitud >= LIDAR_LONG_MIN; });
   const candV = candidatasV.filter(function(c) { return c.longitud >= LIDAR_LONG_MIN; });
+  log("[LIDAR-DIAG] Tras filtro (MIN=" + LIDAR_LONG_MIN + "): H=" + candH.length + " V=" + candV.length + " V.opt=" + candV.filter(function(c){return c.alg==="optica";}).length);
 
   const lineasH = agruparYVotar(candH, distH, pesosH, minVotos);
   const lineasV = agruparYVotar(candV, distV, pesosV, minVotos);
+  log("[LIDAR-DIAG] Aceptadas: H=" + lineasH.length + " V=" + lineasV.length);
 
   const lineasHRellenas = rellenarHuecos(lineasH, candidatasH, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
   const lineasVRellenas = rellenarHuecos(lineasV, candidatasV, window.CONFIG_ESC.LIDAR_HUECO_MIN, window.CONFIG_ESC.LIDAR_HUECO_BORDE);
