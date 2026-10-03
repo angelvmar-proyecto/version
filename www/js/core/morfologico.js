@@ -186,7 +186,7 @@ function detectarMorfologico(brillo, ancho, alto) {
   const { bin, umbral } = binarizarOtsu(brillo, ancho, alto);
 
   const L_H = Math.max(15, Math.round(ancho * 0.10));
-  const L_V = Math.max(15, Math.round(alto * 0.10));
+  const L_V = Math.max(15, Math.round(alto * 0.03));
 
   const maskH = aperturaHorizontal(bin, ancho, alto, L_H);
   const maskV = aperturaVertical(bin, ancho, alto, L_V);
