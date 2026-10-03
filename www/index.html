@@ -12,6 +12,8 @@
     .btn { padding: 12px 16px; border-radius: 8px; border: none; background: #2563eb; color: #fff; font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer; }
     .btn.green { background: #16a34a; }
     .btn.gray { background: #4b5563; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .btn-grid .btn { margin-bottom: 0; }
     canvas { width: 100%; display: block; border-radius: 6px; border: 1px solid #333; margin-bottom: 10px; }
     #log { background: #0a0a0a; color: #9eff9e; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; border: 1px solid #333; }
     input[type=file] { display: none; }
@@ -38,6 +40,7 @@
   <!-- ============ TAB ANALISIS ============ -->
   <div class="tab-content active" id="tab-analisis">
 
+  <div class="btn-grid">
     <input type="file" id="inputImagen" accept="image/*">
 
     <button class="btn" id="btnCargar">📷 Cargar imagen</button>
@@ -46,6 +49,7 @@
     <button class="btn" id="btnZoomReset" style="background:#7c3aed;">🔍 Resetear zoom</button>
     <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar capas visibles</button>
     <button class="btn" id="btnExportarTodo" style="background:#c2410c;">📦 Exportar todo</button>
+  </div>
 
     <div style="display:flex; flex-wrap:wrap; gap:10px; background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px;">
       <label><input type="checkbox" id="chkOptica" checked> 🟡 Óptica</label>

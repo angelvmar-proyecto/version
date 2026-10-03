@@ -44,7 +44,7 @@ function votarLidarYRefinar(st) {
     { alg: 'io',     datos: st.io },
     { alg: 'cont',   datos: st.cont },
     { alg: 'realce', datos: st.realce },
-    , { alg: "morfo", datos: st.morfo }
+    { alg: "morfo", datos: st.morfo },
     { alg: 'blackhat', datos: st.blackhat },
     { alg: 'hough',    datos: st.hough }
   ];
