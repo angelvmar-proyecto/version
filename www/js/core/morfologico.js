@@ -185,8 +185,8 @@ function detectarMorfologico(brillo, ancho, alto) {
 
   const { bin, umbral } = binarizarOtsu(brillo, ancho, alto);
 
-  const L_H = Math.max(20, Math.round(ancho * 0.40));
-  const L_V = Math.max(20, Math.round(alto * 0.40));
+  const L_H = Math.max(20, Math.round(ancho * 0.25));
+  const L_V = Math.max(20, Math.round(alto * 0.25));
 
   const maskH = aperturaHorizontal(bin, ancho, alto, L_H);
   const maskV = aperturaVertical(bin, ancho, alto, L_V);
@@ -196,7 +196,7 @@ function detectarMorfologico(brillo, ancho, alto) {
   const lineasV = extraerLineasDeMascara(maskV, false, ancho, alto, UMBRAL_FILA);
 
   const t1 = performance.now();
-  console.log('[Morfo] H=' + lineasH.length + ' V=' + lineasV.length + ' (L_H=' + L_H + ' L_V=' + L_V + ' otsu=' + umbral + ') en ' + (t1 - t0).toFixed(0) + 'ms');
+  if (typeof log === 'function') log('[Morfo] H=' + lineasH.length + ' V=' + lineasV.length + ' (L_H=' + L_H + ' L_V=' + L_V + ' otsu=' + umbral + ') en ' + (t1 - t0).toFixed(0) + 'ms');
 
   // Compatibilidad: extraer solo posiciones para quien las use como numeros
   const posH = lineasH.map(function(l) { return l.pos; });
