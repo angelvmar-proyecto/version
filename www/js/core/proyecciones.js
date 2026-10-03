@@ -163,3 +163,39 @@ function calcularDistanciaAdaptativa(perfil, factorUmbral) {
 }
 
 console.log('core/proyecciones.js: calcularDistanciaAdaptativa disponible');
+
+/**
+ * Mide la longitud de cada linea detectada (cobertura de pixeles oscuros).
+ * Usado por LIDAR para filtrar lineas cortas (ticks, subrayados, ruido).
+ *
+ * @param lineas  array de posiciones (numeros)
+ * @param esH     true si son lineas horizontales (recorrer filas), false para V
+ * @param brillo  matriz brillo[y][x]
+ * @param ancho   ancho de imagen
+ * @param alto    alto de imagen
+ * @param umbral  brillo maximo para considerar pixel "oscuro"
+ * @returns array de longitudes (mismo indice que lineas)
+ */
+function medirLongitudes(lineas, esH, brillo, ancho, alto, umbral) {
+  const longitudes = new Array(lineas.length);
+  for (let i = 0; i < lineas.length; i++) {
+    const pos = lineas[i];
+    let cuenta = 0;
+    if (esH) {
+      // Fila pos: contar pixeles oscuros en el ancho
+      if (pos < 0 || pos >= alto) { longitudes[i] = 0; continue; }
+      const fila = brillo[pos];
+      for (let x = 0; x < ancho; x++) {
+        if (fila[x] < umbral) cuenta++;
+      }
+    } else {
+      // Columna pos: contar pixeles oscuros en el alto
+      if (pos < 0 || pos >= ancho) { longitudes[i] = 0; continue; }
+      for (let y = 0; y < alto; y++) {
+        if (brillo[y][pos] < umbral) cuenta++;
+      }
+    }
+    longitudes[i] = cuenta;
+  }
+  return longitudes;
+}

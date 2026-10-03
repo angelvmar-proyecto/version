@@ -26,7 +26,9 @@ function detectarOptica(brillo, ancho, alto) {
   const t1 = performance.now();
   console.log('[Optica] H=' + lineasH.length + ' V=' + lineasV.length + ' en ' + (t1-t0).toFixed(0) + 'ms');
 
-  return { lineasH, lineasV, pH: pH_suav, pV: pV_suav, tiempo: t1-t0 };
+  const longitudesH = medirLongitudes(lineasH, true, brillo, ancho, alto, window.CONFIG_ESC.CONT_UMBRAL_OSCURO_H);
+  const longitudesV = medirLongitudes(lineasV, false, brillo, ancho, alto, window.CONFIG_ESC.CONT_UMBRAL_OSCURO_V);
+  return { lineasH, lineasV, longitudesH, longitudesV, pH: pH_suav, pV: pV_suav, tiempo: t1-t0 };
 }
 
 console.log('core/optica.js cargado');
