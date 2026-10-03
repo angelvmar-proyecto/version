@@ -146,7 +146,7 @@ function analizar() {
 
   try {
     st.a3 = detectarA3(st.brillo, st.ancho, st.alto);
-    st.morfo = detectarMorfologico(st.brillo, st.ancho, st.alto);
+    try { st.morfo = detectarMorfologico(st.brillo, st.ancho, st.alto); } catch(e) { log("ERROR MORFO: " + e.message + " | " + e.stack); st.morfo = { lineasH: [], lineasV: [], metaH: [], metaV: [], tiempo: 0 }; }
     log('A3: H=' + st.a3.lineasH.length + ' V=' + st.a3.lineasV.length + ' (' + st.a3.tiempo.toFixed(0) + 'ms)');
   } catch(e) { log('ERROR A3: ' + e.message); st.a3 = { lineasH: [], lineasV: [] }; }
 
@@ -410,7 +410,7 @@ function sandboxEjecutar() {
       st.eco = detectarEco(st.brillo, st.ancho, st.alto);
       log('Eco: H=' + st.eco.lineasH.length + ' V=' + st.eco.lineasV.length);
     } else if (fn === 'a3') {
-      st.morfo = detectarMorfologico(st.brillo, st.ancho, st.alto);
+      try { st.morfo = detectarMorfologico(st.brillo, st.ancho, st.alto); } catch(e) { log("ERROR MORFO: " + e.message + " | " + e.stack); st.morfo = { lineasH: [], lineasV: [], metaH: [], metaV: [], tiempo: 0 }; }
       st.a3 = detectarA3(st.brillo, st.ancho, st.alto);
       log('A3: H=' + st.a3.lineasH.length + ' V=' + st.a3.lineasV.length);
     } else if (fn === 'lvc') {
