@@ -185,13 +185,13 @@ function detectarMorfologico(brillo, ancho, alto) {
 
   const { bin, umbral } = binarizarOtsu(brillo, ancho, alto);
 
-  const L_H = Math.max(20, Math.round(ancho * 0.25));
-  const L_V = Math.max(20, Math.round(alto * 0.25));
+  const L_H = Math.max(15, Math.round(ancho * 0.10));
+  const L_V = Math.max(15, Math.round(alto * 0.10));
 
   const maskH = aperturaHorizontal(bin, ancho, alto, L_H);
   const maskV = aperturaVertical(bin, ancho, alto, L_V);
 
-  const UMBRAL_FILA = 0.50;
+  const UMBRAL_FILA = 0.30;
   const lineasH = extraerLineasDeMascara(maskH, true, ancho, alto, UMBRAL_FILA);
   const lineasV = extraerLineasDeMascara(maskV, false, ancho, alto, UMBRAL_FILA);
 
