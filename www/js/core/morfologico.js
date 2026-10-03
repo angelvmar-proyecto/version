@@ -68,7 +68,7 @@ function aperturaHorizontal(bin, ancho, alto, L) {
     const filaE = new Array(ancho).fill(0);
     for (let x = mitad; x < ancho - mitad; x++) {
       const suma = acum[x + mitad + 1] - acum[x - mitad];
-      if (suma === L) filaE[x] = 1;
+      if (suma >= L * 0.80) filaE[x] = 1;
     }
     ero[y] = filaE;
   }
@@ -113,7 +113,7 @@ function aperturaVertical(bin, ancho, alto, L) {
     const acum = integ[x];
     for (let y = mitad; y < alto - mitad; y++) {
       const suma = acum[y + mitad + 1] - acum[y - mitad];
-      if (suma === L) ero[y][x] = 1;
+      if (suma >= L * 0.80) ero[y][x] = 1;
     }
   }
 
@@ -186,7 +186,7 @@ function detectarMorfologico(brillo, ancho, alto) {
   const { bin, umbral } = binarizarOtsu(brillo, ancho, alto);
 
   const L_H = Math.max(15, Math.round(ancho * 0.10));
-  const L_V = Math.max(15, Math.round(alto * 0.03));
+  const L_V = Math.max(15, Math.round(alto * 0.10));
 
   const maskH = aperturaHorizontal(bin, ancho, alto, L_H);
   const maskV = aperturaVertical(bin, ancho, alto, L_V);
