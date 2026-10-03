@@ -35,6 +35,7 @@
     <div class="tab active" data-tab="analisis">🔬 Análisis</div>
     <div class="tab" data-tab="calibrar">🎯 Calibrar</div>
     <div class="tab" data-tab="runner">🧪 Runner</div>
+  <div class="tab" data-tab="restauracion">🧪 Restauración</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -202,8 +203,27 @@
     <pre id="runnerLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:10px; max-height:300px; overflow-y:auto; border:1px solid #333;">Listo. Verifica recursos e inicia.</pre>
 
   </div>
+  <div class="tab-content" id="tab-restauracion" style="padding:15px; color:#ddd;">
+    <h2>🧪 Runner de Restauración</h2>
+    <p style="font-size:12px; color:#888;">Prueba algoritmos de restauración y evalúa cada detector por separado (sin LIDAR).</p>
+    <div class="btn-grid">
+      <button class="btn" id="btnRrCargarImgs">📷 Cargar 4 imágenes</button>
+      <button class="btn" id="btnRrCargarBms">📂 Cargar 4 benchmarks</button>
+      <button class="btn green" id="btnRrIniciar">▶️ Iniciar tanda 1</button>
+      <button class="btn" id="btnRrParar" style="background:#dc2626;">⏸️ Parar</button>
+      <button class="btn" id="btnRrCopiar" style="background:#2563eb;">📋 Copiar resultados</button>
+    </div>
+    <div><b>Progreso:</b> <span id="rrCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="rrBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="rrLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Restauración listo ===</pre>
+    <input type="file" id="rrInputImgs" accept="image/*" multiple style="display:none;">
+    <input type="file" id="rrInputBms" accept=".json" multiple style="display:none;">
+  </div>
 
   <!-- SCRIPTS -->
+  <script src="js/core/restauracion.js"></script>
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
   <script src="js/core/proyecciones.js"></script>
@@ -231,6 +251,7 @@
   <script src="js/ui/app.js"></script>
   <script src="js/ui/calibrar.js"></script>
   <script src="js/ui/runner.js"></script>
+  <script src="js/ui/runner_restauracion.js"></script>
 
 </body>
 </html>
