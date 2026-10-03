@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.177-opticaV-prof';
+const BUILD_TAG = 'v14.178-MAGENTA-LONGITUD';
 
 const CONFIG = {
   VERSION: '14.0',

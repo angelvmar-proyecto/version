@@ -34,6 +34,7 @@ function votarLidarYRefinar(st) {
 
   const candidatasH = [];
   const candidatasV = [];
+  console.log("[LIDAR-MAGENTA] Filtro de longitud activo. LIDAR_LONG_MIN se calculara con st.ancho=" + st.ancho + " st.alto=" + st.alto);
 
   const fuentes = [
     { alg: 'optica', datos: st.optica },
