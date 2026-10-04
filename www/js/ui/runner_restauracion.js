@@ -1,7 +1,6 @@
 // ==============================================
 // ui/runner_restauracion.js
 // Runner de restauracion de imagen.
-// Prueba algoritmos y evalua detectores crudos (sin LIDAR).
 // ==============================================
 
 window.runnerRestauracion = {
@@ -13,7 +12,6 @@ window.runnerRestauracion = {
   tandaActual: 0
 };
 
-// ============ Log ============
 function rrLog(msg) {
   const el = document.getElementById('rrLog');
   if (!el) { console.log('[RR] ' + msg); return; }
@@ -21,7 +19,6 @@ function rrLog(msg) {
   console.log('[RR] ' + msg);
 }
 
-// ============ Cargar imagenes ============
 function rrCargarImgsClick() {
   const inp = document.getElementById('rrInputImgs');
   if (inp) { inp.value = ''; inp.click(); }
@@ -64,7 +61,6 @@ async function rrProcesarImgs(files) {
   imgs.forEach(function(im) { rrLog('  ' + im.nombre + ' (' + im.ancho + 'x' + im.alto + ')'); });
 }
 
-// ============ Cargar benchmarks ============
 function rrCargarBmsClick() {
   const inp = document.getElementById('rrInputBms');
   if (inp) { inp.value = ''; inp.click(); }
@@ -92,11 +88,10 @@ async function rrProcesarBms(files) {
   bms.forEach(function(bm) { rrLog('  ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
 }
 
-// ============ Generar tanda 1 ============
 function rrGenerarTanda1() {
   const combos = [];
 
-  combos.push({ nombre: 'baseline', tipo: 'none', params: {}, binarizar: false });
+  combos.push({ nombre: 'baseline', tipo: 'none', params: {} });
 
   [25, 50, 75, 100].forEach(function(sc) {
     [25, 50, 75, 100].forEach(function(ss) {
@@ -154,7 +149,6 @@ function rrGenerarTanda1() {
   return combos;
 }
 
-// ============ Aplicar restauracion ============
 function rrAplicarRestauracion(brillo, ancho, alto, combo) {
   try {
     switch (combo.tipo) {
@@ -188,7 +182,6 @@ function rrAplicarRestauracion(brillo, ancho, alto, combo) {
   }
 }
 
-// ============ Evaluar una imagen con todos los detectores ============
 function rrEvaluarImagen(recurso, brilloRestaurado) {
   const ancho = recurso.ancho, alto = recurso.alto;
   const detectores = [
@@ -215,7 +208,6 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
-// ============ Ejecutar un combo ============
 async function rrEjecutarCombo(combo, recursos) {
   const resultadosPorImagen = {};
   let puntuacionTotal = 0;
@@ -264,7 +256,6 @@ async function rrEjecutarCombo(combo, recursos) {
   };
 }
 
-// ============ Iniciar ============
 async function rrIniciar() {
   if (window.runnerRestauracion.ejecutando) {
     rrLog('Ya hay una tanda en curso');
@@ -312,8 +303,7 @@ async function rrIniciar() {
   rrLog('Tanda 1 terminada en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
 }
 
-// ============ Copiar resultados ============
-function rrCopiarResultados() {
+async function rrCopiarResultados() {
   if (window.runnerRestauracion.resultados.length === 0) {
     alert('No hay resultados todavia');
     return;
@@ -324,15 +314,39 @@ function rrCopiarResultados() {
     resultados: window.runnerRestauracion.resultados
   };
   const json = JSON.stringify(out, null, 2);
-  navigator.clipboard.writeText(json).then(function() {
-    rrLog('Resultados copiados (' + json.length + ' chars)');
-    alert('Resultados copiados al portapapeles');
+
+  // Guardar directo a Documents via Capacitor Filesystem
+  try {
+    const fs = Capacitor.Plugins.Filesystem;
+    if (fs) {
+      await fs.writeFile({
+        path: 'tanda1_resultados.json',
+        directory: 'DOCUMENTS',
+        encoding: 'utf8',
+        data: json
+      });
+      rrLog('Guardado en Documents/tanda1_resultados.json (' + json.length + ' chars)');
+      alert('Guardado en Documents/tanda1_resultados.json');
+      return;
+    }
+  } catch(e) {
+    console.warn('Filesystem fallo: ' + e.message);
+  }
+
+  // Fallback: solo resumen al portapapeles
+  const resumen = out.resultados.map(function(r) {
+    return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
+  }).sort(function(a, b) { return b.puntuacion_total - a.puntuacion_total; });
+
+  const jsonCorto = JSON.stringify({ fecha: out.fecha, ranking: resumen }, null, 2);
+  navigator.clipboard.writeText(jsonCorto).then(function() {
+    rrLog('Copiado resumen al portapapeles (' + jsonCorto.length + ' chars)');
+    alert('Copiado resumen al portapapeles');
   }).catch(function() {
-    alert(json.substring(0, 5000));
+    alert('No se pudo guardar ni copiar');
   });
 }
 
-// ============ Setup ============
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
   if (logEl) logEl.textContent = 'Runner Restauracion listo\n';
