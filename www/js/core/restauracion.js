@@ -10,8 +10,7 @@
  * sigmaSpace: radio espacial del filtro.
  */
 function restaurarBilateral(brillo, ancho, alto, sigmaColor, sigmaSpace) {
-  const radio = Math.max(1, Math.ceil(sigmaSpace * 1.5));
-  const out = new Array(alto);
+  const radio = Math.min(15, Math.max(1, Math.ceil(sigmaSpace / 3)));
   const colorK = -0.5 / (sigmaColor * sigmaColor);
   const spaceK = -0.5 / (sigmaSpace * sigmaSpace);
 
@@ -273,6 +272,97 @@ function restaurarBinarizar(brillo, ancho, alto) {
     const fila = new Array(ancho);
     for (let x = 0; x < ancho; x++) fila[x] = brillo[y][x] < umbral ? 0 : 255;
     out[y] = fila;
+  }
+  return out;
+}
+
+
+/**
+ * Guided Filter (Filtro Guiado). Preserva bordes.
+ * Mucho mas rapido que bilateral: O(1) por pixel usando integrales.
+ * radio: tamano de la ventana (recomendado: 2-16).
+ * eps: regularizacion (0.001 suave, 0.1 fuerte).
+ */
+function restaurarGuided(brillo, ancho, alto, radio, eps) {
+  const n = ancho * alto;
+
+  // Paso 1: convertir brillo a dos matrices Float32 (evitar overflow)
+  const I = new Float32Array(n);
+  const p = new Float32Array(n);
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const v = brillo[y][x];
+      I[y * ancho + x] = v;
+      p[y * ancho + x] = v;
+    }
+  }
+
+  // Paso 2: box blur de I, p, I*I, I*p
+  const meanI  = guidedBoxBlur(I, ancho, alto, radio);
+  const meanP  = guidedBoxBlur(p, ancho, alto, radio);
+  const corrI  = guidedBoxBlur(multiplicarArr(I, I), ancho, alto, radio);
+  const corrIp = guidedBoxBlur(multiplicarArr(I, p), ancho, alto, radio);
+
+  // Paso 3: calcular a y b
+  const a = new Float32Array(n);
+  const b = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const varI = corrI[i] - meanI[i] * meanI[i];
+    const covIp = corrIp[i] - meanI[i] * meanP[i];
+    a[i] = covIp / (varI + eps);
+    b[i] = meanP[i] - a[i] * meanI[i];
+  }
+
+  // Paso 4: box blur de a y b
+  const meanA = guidedBoxBlur(a, ancho, alto, radio);
+  const meanB = guidedBoxBlur(b, ancho, alto, radio);
+
+  // Paso 5: q = meanA * I + meanB
+  const out = new Array(alto);
+  for (let y = 0; y < alto; y++) {
+    const fila = new Array(ancho);
+    for (let x = 0; x < ancho; x++) {
+      const idx = y * ancho + x;
+      let v = meanA[idx] * I[idx] + meanB[idx];
+      if (v < 0) v = 0;
+      else if (v > 255) v = 255;
+      fila[x] = Math.round(v);
+    }
+    out[y] = fila;
+  }
+  return out;
+}
+
+function multiplicarArr(a, b) {
+  const out = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i] * b[i];
+  return out;
+}
+
+function guidedBoxBlur(arr, ancho, alto, radio) {
+  if (radio < 1) return arr.slice();
+  // Integral horizontal
+  const tmp = new Float32Array(arr.length);
+  for (let y = 0; y < alto; y++) {
+    const base = y * ancho;
+    const acum = new Float32Array(ancho + 1);
+    for (let x = 0; x < ancho; x++) acum[x + 1] = acum[x] + arr[base + x];
+    for (let x = 0; x < ancho; x++) {
+      const ini = Math.max(0, x - radio);
+      const fin = Math.min(ancho - 1, x + radio);
+      tmp[base + x] = (acum[fin + 1] - acum[ini]) / (fin - ini + 1);
+    }
+  }
+  // Integral vertical
+  const out = new Float32Array(arr.length);
+  for (let x = 0; x < ancho; x++) {
+    const acum = new Float32Array(alto + 1);
+    for (let y = 0; y < alto; y++) acum[y + 1] = acum[y] + tmp[y * ancho + x];
+    for (let y = 0; y < alto; y++) {
+      const ini = Math.max(0, y - radio);
+      const fin = Math.min(alto - 1, y + radio);
+      out[y * ancho + x] = (acum[fin + 1] - acum[ini]) / (fin - ini + 1);
+    }
   }
   return out;
 }

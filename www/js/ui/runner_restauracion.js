@@ -95,6 +95,21 @@ function rrLog(msg) {
 
 // ============ Tanda 1: algoritmos puros ============
 function rrGenerarTanda1() {
+
+// 11. Guided Filter: 4 radios × 3 eps = 12 combos
+[2, 4, 8, 16].forEach(function(r) {
+  [0.001, 0.01, 0.1].forEach(function(e) {
+    combos.push({ nombre: 'guided_r' + r + '_e' + e, tipo: 'guided', params: { radio: r, eps: e }, binarizar: false });
+  });
+});
+
+// 12. Guided + Binarizar: 4 combos
+[4, 8].forEach(function(r) {
+  [0.01, 0.1].forEach(function(e) {
+    combos.push({ nombre: 'guided_bin_r' + r + '_e' + e, tipo: 'guided+binarizar', params: { radio: r, eps: e }, binarizar: false });
+  });
+});
+
   const combos = [];
 
   // 1. Baseline (sin restauracion)
@@ -149,9 +164,11 @@ function rrGenerarTanda1() {
   [25, 50, 75, 100].forEach(function(sc) {
     combos.push({ nombre: 'bilat_bin_c' + sc, tipo: 'bilateral+binarizar', params: { sigmaColor: sc, sigmaSpace: 50 }, binarizar: false });
   });
+  [2, 4, 8, 16].forEach(function(r) { [0.001, 0.01, 0.1].forEach(function(e) { combos.push({ nombre: "guided_r" + r + "_e" + e, tipo: "guided", params: { radio: r, eps: e }, binarizar: false }); }); });
+  [4, 8].forEach(function(r) { [0.01, 0.1].forEach(function(e) { combos.push({ nombre: "guided_bin_r" + r + "_e" + e, tipo: "guided+binarizar", params: { radio: r, eps: e }, binarizar: false }); }); });
 
-  return combos; // ~55 combos
 }
+  return combos;
 
 // ============ Aplicar restauracion segun tipo ============
 function rrAplicarRestauracion(brillo, ancho, alto, combo) {
@@ -172,13 +189,14 @@ function rrAplicarRestauracion(brillo, ancho, alto, combo) {
       case 'bilateral+binarizar':
         const b = restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
         return restaurarBinarizar(b, ancho, alto);
+      case 'guided': return restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
+      case 'guided+binarizar': return restaurarBinarizar(restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps), ancho, alto);
       default: return brillo;
     }
   } catch(e) {
-    console.warn('[RR] Error en restauracion ' + combo.nombre + ': ' + e.message);
     return brillo;
-  }
 }
+  }
 
 // ============ Evaluar una imagen con todos los detectores ============
 function rrEvaluarImagen(recurso, brilloRestaurado) {
