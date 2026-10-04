@@ -183,17 +183,31 @@ async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
     const fs = Capacitor.Plugins.Filesystem;
     if (!fs) { rrLog("  Filesystem no disponible"); return false; }
 
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const chunkSize = 48000;
+
+    try {
+      await fs.deleteFile({ path: nombreArchivo, directory: "DOCUMENTS" });
+    } catch(e) {}
 
     await fs.writeFile({
       path: nombreArchivo,
       directory: "DOCUMENTS",
-      data: bytes.buffer,
+      encoding: "base64",
+      data: base64.substring(0, chunkSize),
       recursive: true
     });
-    rrLog("  Guardada: " + nombreArchivo);
+
+    for (let i = chunkSize; i < base64.length; i += chunkSize) {
+      const chunk = base64.substring(i, i + chunkSize);
+      await fs.appendFile({
+        path: nombreArchivo,
+        directory: "DOCUMENTS",
+        encoding: "base64",
+        data: chunk
+      });
+    }
+
+    rrLog("  Guardada: " + nombreArchivo + " (" + Math.ceil(base64.length / chunkSize) + " chunks)");
     return true;
   } catch(e) {
     rrLog("  Error PNG " + nombreArchivo + ": " + e.message);
