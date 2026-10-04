@@ -1,7 +1,7 @@
 // ==============================================
 // ui/runner_restauracion.js
 // Runner de restauracion con persistencia.
-// Tanda 2: solo los combos prometedores (~18).
+// Guarda PNG en Documents/ via Filesystem.
 // ==============================================
 
 window.runnerRestauracion = {
@@ -84,31 +84,25 @@ async function rrProcesarBms(files) {
   bms.forEach(function(bm) { rrLog('  ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
 }
 
-// ============ Tanda 2 CORTA ============
 function rrGenerarTanda1() {
   const combos = [];
 
-  // 1. Baseline
   combos.push({ nombre: 'baseline', tipo: 'none', params: {} });
 
-  // 2. Unsharp: 3 radios × 3 amounts = 9
   [1, 2, 3].forEach(function(r) {
     [0.5, 1.0, 1.5].forEach(function(a) {
       combos.push({ nombre: 'unsharp_r' + r + '_a' + a, tipo: 'unsharp', params: { radio: r, amount: a } });
     });
   });
 
-  // 3. Contrast: 3
   [[5,95],[5,98],[5,99]].forEach(function(p) {
     combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] } });
   });
 
-  // 4. CLAHE: 3
   [[16,8],[4,4],[8,8]].forEach(function(tc) {
     combos.push({ nombre: 'clahe_t' + tc[0] + '_c' + tc[1], tipo: 'clahe', params: { tiles: tc[0], clip: tc[1] } });
   });
 
-  // 5. Guided+binarizar: 2
   [4, 8].forEach(function(r) {
     combos.push({ nombre: 'guided_bin_r' + r, tipo: 'guided+binarizar', params: { radio: r, eps: 0.1 } });
   });
@@ -160,44 +154,50 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
-// ============ Guardar imagen como PNG con <a download> ============
-function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
-  return new Promise(function(resolve) {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = ancho;
-      canvas.height = alto;
-      const ctx = canvas.getContext('2d');
-      const imageData = ctx.createImageData(ancho, alto);
-      for (let y = 0; y < alto; y++) {
-        for (let x = 0; x < ancho; x++) {
-          const v = Math.max(0, Math.min(255, brillo[y][x]));
-          const idx = (y * ancho + x) * 4;
-          imageData.data[idx] = v;
-          imageData.data[idx + 1] = v;
-          imageData.data[idx + 2] = v;
-          imageData.data[idx + 3] = 255;
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
-      const dataURL = canvas.toDataURL('image/png');
-
-      const a = document.createElement('a');
-      a.href = dataURL;
-      a.download = nombreArchivo;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      rrLog('  Descargada: ' + nombreArchivo);
-      resolve(true);
-    } catch(e) {
-      rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
-      resolve(false);
+// Convierte brillo a base64 PNG
+function rrBrilloAPNG(brillo, ancho, alto) {
+  const canvas = document.createElement('canvas');
+  canvas.width = ancho;
+  canvas.height = alto;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(ancho, alto);
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const v = Math.max(0, Math.min(255, brillo[y][x]));
+      const idx = (y * ancho + x) * 4;
+      imageData.data[idx] = v;
+      imageData.data[idx + 1] = v;
+      imageData.data[idx + 2] = v;
+      imageData.data[idx + 3] = 255;
     }
-  });
+  }
+  ctx.putImageData(imageData, 0, 0);
+  const dataURL = canvas.toDataURL('image/png');
+  return dataURL.replace('data:image/png;base64,', '');
 }
 
-// ============ Persistencia ============
+// Guarda PNG en Documents/
+async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
+  try {
+    const base64 = rrBrilloAPNG(brillo, ancho, alto);
+    const fs = Capacitor.Plugins.Filesystem;
+    if (!fs) { rrLog('  Filesystem no disponible'); return false; }
+
+    await fs.writeFile({
+      path: nombreArchivo,
+      directory: 'DOCUMENTS',
+      data: base64,
+      encoding: 'base64',
+      recursive: true
+    });
+    rrLog('  Guardada: ' + nombreArchivo);
+    return true;
+  } catch(e) {
+    rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
+    return false;
+  }
+}
+
 async function rrGuardarProgreso() {
   try {
     const fs = Capacitor.Plugins.Filesystem;
@@ -213,7 +213,8 @@ async function rrGuardarProgreso() {
       path: 'runner_progress.json',
       directory: 'DOCUMENTS',
       encoding: 'utf8',
-      data: JSON.stringify(data)
+      data: JSON.stringify(data),
+      recursive: true
     });
   } catch(e) {
     console.warn('Progress save fallo: ' + e.message);
@@ -320,14 +321,12 @@ async function rrIniciar() {
         rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts');
       }
 
-      // Limpiar brillos para no llenar memoria
       res.brillos = null;
       delete res.brillos;
 
       window.runnerRestauracion.resultados.push(res);
       window.runnerRestauracion.ultimoCombo = i + 1;
 
-      // Persistir cada 3 combos
       if ((i + 1) % 3 === 0 || i === combos.length - 1) {
         await rrGuardarProgreso();
       }
@@ -364,7 +363,8 @@ async function rrCopiarResultados() {
         path: 'tanda1_resultados.json',
         directory: 'DOCUMENTS',
         encoding: 'utf8',
-        data: json
+        data: json,
+        recursive: true
       });
       rrLog('Guardado en Documents/tanda1_resultados.json (' + json.length + ' chars)');
       alert('Guardado en Documents/tanda1_resultados.json');
@@ -379,7 +379,7 @@ async function rrCopiarResultados() {
 
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = 'Runner Restauracion v2 (corta + persistencia)\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion v3 (PNG a Documents)\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -411,7 +411,7 @@ function rrSetup() {
     }
   });
 
-  console.log('runner_restauracion.js v2 listo');
+  console.log('runner_restauracion.js v3 listo');
 }
 
 setTimeout(rrSetup, 500);
