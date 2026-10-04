@@ -1,8 +1,7 @@
 // ==============================================
 // ui/runner_restauracion.js
-// Runner automatico de restauracion de imagen.
-// Prueba algoritmos de restauracion sobre las 4 imagenes
-// y evalua 14 detectores crudos (sin LIDAR) contra benchmark.
+// Runner de restauracion de imagen.
+// Prueba algoritmos y evalua detectores crudos (sin LIDAR).
 // ==============================================
 
 window.runnerRestauracion = {
@@ -14,7 +13,15 @@ window.runnerRestauracion = {
   tandaActual: 0
 };
 
-// ============ Cargar imagenes via file picker ============
+// ============ Log ============
+function rrLog(msg) {
+  const el = document.getElementById('rrLog');
+  if (!el) { console.log('[RR] ' + msg); return; }
+  el.textContent = msg + '\n' + el.textContent;
+  console.log('[RR] ' + msg);
+}
+
+// ============ Cargar imagenes ============
 function rrCargarImgsClick() {
   const inp = document.getElementById('rrInputImgs');
   if (inp) { inp.value = ''; inp.click(); }
@@ -23,7 +30,7 @@ function rrCargarImgsClick() {
 async function rrProcesarImgs(files) {
   const arr = Array.from(files);
   if (arr.length < 4) {
-    rrLog('⚠️ Selecciona 4 imagenes (recibidas ' + arr.length + ')');
+    rrLog('Selecciona 4 imagenes (recibidas ' + arr.length + ')');
     return;
   }
   arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
@@ -49,15 +56,15 @@ async function rrProcesarImgs(files) {
         alto: img.height
       });
     } catch(e) {
-      rrLog('❌ Error cargando ' + arr[i].name + ': ' + e.message);
+      rrLog('Error cargando ' + arr[i].name + ': ' + e.message);
     }
   }
   window.runnerRestauracion.imagenes = imgs;
-  rrLog('📷 ' + imgs.length + ' imagenes cargadas');
-  imgs.forEach(function(im) { rrLog('  • ' + im.nombre + ' (' + im.ancho + '×' + im.alto + ')'); });
+  rrLog(imgs.length + ' imagenes cargadas');
+  imgs.forEach(function(im) { rrLog('  ' + im.nombre + ' (' + im.ancho + 'x' + im.alto + ')'); });
 }
 
-// ============ Cargar benchmarks via file picker ============
+// ============ Cargar benchmarks ============
 function rrCargarBmsClick() {
   const inp = document.getElementById('rrInputBms');
   if (inp) { inp.value = ''; inp.click(); }
@@ -66,7 +73,7 @@ function rrCargarBmsClick() {
 async function rrProcesarBms(files) {
   const arr = Array.from(files);
   if (arr.length < 4) {
-    rrLog('⚠️ Selecciona 4 benchmarks (recibidos ' + arr.length + ')');
+    rrLog('Selecciona 4 benchmarks (recibidos ' + arr.length + ')');
     return;
   }
   arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
@@ -77,100 +84,77 @@ async function rrProcesarBms(files) {
       const texto = await arr[i].text();
       bms.push(JSON.parse(texto));
     } catch(e) {
-      rrLog('❌ Error con ' + arr[i].name + ': ' + e.message);
+      rrLog('Error con ' + arr[i].name + ': ' + e.message);
     }
   }
   window.runnerRestauracion.benchmarks = bms;
-  rrLog('📂 ' + bms.length + ' benchmarks cargados');
-  bms.forEach(function(bm) { rrLog('  • ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
+  rrLog(bms.length + ' benchmarks cargados');
+  bms.forEach(function(bm) { rrLog('  ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
 }
 
-// ============ Log ============
-function rrLog(msg) {
-  const el = document.getElementById('rrLog');
-  if (!el) { console.log('[RR] ' + msg); return; }
-  el.textContent = msg + '\n' + el.textContent;
-  console.log('[RR] ' + msg);
-}
-
-// ============ Tanda 1: algoritmos puros ============
+// ============ Generar tanda 1 ============
 function rrGenerarTanda1() {
-
-// 11. Guided Filter: 4 radios × 3 eps = 12 combos
-[2, 4, 8, 16].forEach(function(r) {
-  [0.001, 0.01, 0.1].forEach(function(e) {
-    combos.push({ nombre: 'guided_r' + r + '_e' + e, tipo: 'guided', params: { radio: r, eps: e }, binarizar: false });
-  });
-});
-
-// 12. Guided + Binarizar: 4 combos
-[4, 8].forEach(function(r) {
-  [0.01, 0.1].forEach(function(e) {
-    combos.push({ nombre: 'guided_bin_r' + r + '_e' + e, tipo: 'guided+binarizar', params: { radio: r, eps: e }, binarizar: false });
-  });
-});
-
   const combos = [];
 
-  // 1. Baseline (sin restauracion)
   combos.push({ nombre: 'baseline', tipo: 'none', params: {}, binarizar: false });
 
-  // 2. Bilateral: 4×4 = 16
   [25, 50, 75, 100].forEach(function(sc) {
     [25, 50, 75, 100].forEach(function(ss) {
-      combos.push({ nombre: 'bilat_c' + sc + '_s' + ss, tipo: 'bilateral', params: { sigmaColor: sc, sigmaSpace: ss }, binarizar: false });
+      combos.push({ nombre: 'bilat_c' + sc + '_s' + ss, tipo: 'bilateral', params: { sigmaColor: sc, sigmaSpace: ss } });
     });
   });
 
-  // 3. Contrast stretch: 3×3 = 9
   [[1,95],[1,98],[1,99],[2,95],[2,98],[2,99],[5,95],[5,98],[5,99]].forEach(function(p) {
-    combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] }, binarizar: false });
+    combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] } });
   });
 
-  // 4. Unsharp: 3×3 = 9
   [1, 2, 3].forEach(function(r) {
     [0.5, 1.0, 1.5].forEach(function(a) {
-      combos.push({ nombre: 'unsharp_r' + r + '_a' + a, tipo: 'unsharp', params: { radio: r, amount: a }, binarizar: false });
+      combos.push({ nombre: 'unsharp_r' + r + '_a' + a, tipo: 'unsharp', params: { radio: r, amount: a } });
     });
   });
 
-  // 5. Mediana: 3
   [1, 2, 3].forEach(function(r) {
-    combos.push({ nombre: 'mediana_r' + r, tipo: 'mediana', params: { radio: r }, binarizar: false });
+    combos.push({ nombre: 'mediana_r' + r, tipo: 'mediana', params: { radio: r } });
   });
 
-  // 6. Gaussiano: 3
   [0.5, 1.0, 1.5].forEach(function(s) {
-    combos.push({ nombre: 'gauss_s' + s, tipo: 'gaussiano', params: { sigma: s }, binarizar: false });
+    combos.push({ nombre: 'gauss_s' + s, tipo: 'gaussiano', params: { sigma: s } });
   });
 
-  // 7. CLAHE: 3×3 = 9
   [4, 8, 16].forEach(function(t) {
     [2, 4, 8].forEach(function(c) {
-      combos.push({ nombre: 'clahe_t' + t + '_c' + c, tipo: 'clahe', params: { tiles: t, clip: c }, binarizar: false });
+      combos.push({ nombre: 'clahe_t' + t + '_c' + c, tipo: 'clahe', params: { tiles: t, clip: c } });
     });
   });
 
-  // 8. De-block: 4
   [8, 16].forEach(function(bs) {
-    combos.push({ nombre: 'deblock_' + bs, tipo: 'deblock', params: { blockSize: bs }, binarizar: false });
-    combos.push({ nombre: 'deblock_bilat_' + bs, tipo: 'deblock+bilateral', params: { blockSize: bs, sigmaColor: 50, sigmaSpace: 50 }, binarizar: false });
+    combos.push({ nombre: 'deblock_' + bs, tipo: 'deblock', params: { blockSize: bs } });
+    combos.push({ nombre: 'deblock_bilat_' + bs, tipo: 'deblock+bilateral', params: { blockSize: bs, sigmaColor: 50, sigmaSpace: 50 } });
   });
 
-  // 9. Binarizar (Otsu)
-  combos.push({ nombre: 'binarizar', tipo: 'binarizar', params: {}, binarizar: false });
+  combos.push({ nombre: 'binarizar', tipo: 'binarizar', params: {} });
 
-  // 10. Bilateral + Binarizar (4 combos)
   [25, 50, 75, 100].forEach(function(sc) {
-    combos.push({ nombre: 'bilat_bin_c' + sc, tipo: 'bilateral+binarizar', params: { sigmaColor: sc, sigmaSpace: 50 }, binarizar: false });
+    combos.push({ nombre: 'bilat_bin_c' + sc, tipo: 'bilateral+binarizar', params: { sigmaColor: sc, sigmaSpace: 50 } });
   });
-  [2, 4, 8, 16].forEach(function(r) { [0.001, 0.01, 0.1].forEach(function(e) { combos.push({ nombre: "guided_r" + r + "_e" + e, tipo: "guided", params: { radio: r, eps: e }, binarizar: false }); }); });
-  [4, 8].forEach(function(r) { [0.01, 0.1].forEach(function(e) { combos.push({ nombre: "guided_bin_r" + r + "_e" + e, tipo: "guided+binarizar", params: { radio: r, eps: e }, binarizar: false }); }); });
 
-}
+  [2, 4, 8, 16].forEach(function(r) {
+    [0.001, 0.01, 0.1].forEach(function(e) {
+      combos.push({ nombre: 'guided_r' + r + '_e' + e, tipo: 'guided', params: { radio: r, eps: e } });
+    });
+  });
+
+  [4, 8].forEach(function(r) {
+    [0.01, 0.1].forEach(function(e) {
+      combos.push({ nombre: 'guided_bin_r' + r + '_e' + e, tipo: 'guided+binarizar', params: { radio: r, eps: e } });
+    });
+  });
+
   return combos;
+}
 
-// ============ Aplicar restauracion segun tipo ============
+// ============ Aplicar restauracion ============
 function rrAplicarRestauracion(brillo, ancho, alto, combo) {
   try {
     switch (combo.tipo) {
@@ -182,21 +166,27 @@ function rrAplicarRestauracion(brillo, ancho, alto, combo) {
       case 'gaussiano': return restaurarGaussiano(brillo, ancho, alto, combo.params.sigma);
       case 'clahe': return restaurarCLAHE(brillo, ancho, alto, combo.params.tiles, combo.params.clip);
       case 'deblock': return restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
-      case 'deblock+bilateral':
+      case 'deblock+bilateral': {
         const db = restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
         return restaurarBilateral(db, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
+      }
       case 'binarizar': return restaurarBinarizar(brillo, ancho, alto);
-      case 'bilateral+binarizar':
+      case 'bilateral+binarizar': {
         const b = restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
         return restaurarBinarizar(b, ancho, alto);
+      }
       case 'guided': return restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
-      case 'guided+binarizar': return restaurarBinarizar(restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps), ancho, alto);
+      case 'guided+binarizar': {
+        const g = restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
+        return restaurarBinarizar(g, ancho, alto);
+      }
       default: return brillo;
     }
   } catch(e) {
+    console.warn('[RR] Error en ' + combo.nombre + ': ' + e.message);
     return brillo;
-}
   }
+}
 
 // ============ Evaluar una imagen con todos los detectores ============
 function rrEvaluarImagen(recurso, brilloRestaurado) {
@@ -220,16 +210,12 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   const r = {};
   for (let i = 0; i < detectores.length; i++) {
     const d = detectores[i];
-    try {
-      r[d.nombre] = d.fn();
-    } catch(e) {
-      r[d.nombre] = { lineasH: [], lineasV: [] };
-    }
+    try { r[d.nombre] = d.fn(); } catch(e) { r[d.nombre] = { lineasH: [], lineasV: [] }; }
   }
   return r;
 }
 
-// ============ Ejecutar un combo sobre las 4 imagenes ============
+// ============ Ejecutar un combo ============
 async function rrEjecutarCombo(combo, recursos) {
   const resultadosPorImagen = {};
   let puntuacionTotal = 0;
@@ -239,7 +225,6 @@ async function rrEjecutarCombo(combo, recursos) {
     const bm = recursos.benchmarks[i];
     if (!bm) continue;
 
-    // Recalcular brillo desde canvas (no guardamos brillo por imagen)
     const canvas = document.createElement('canvas');
     canvas.width = img.ancho;
     canvas.height = img.alto;
@@ -248,16 +233,12 @@ async function rrEjecutarCombo(combo, recursos) {
     const imageData = ctx.getImageData(0, 0, img.ancho, img.alto);
     let brillo = calcularBrillo(imageData);
 
-    // Aplicar restauracion
     brillo = rrAplicarRestauracion(brillo, img.ancho, img.alto, combo);
 
-    // Calcular umbrales actualizados
     calcularUmbralesBrillo(brillo, img.ancho, img.alto);
 
-    // Evaluar todos los detectores
     const r = rrEvaluarImagen(img, brillo);
 
-    // Comparar vs benchmark
     const tol = 8;
     const metricas = {};
     let puntImagen = 0;
@@ -283,14 +264,14 @@ async function rrEjecutarCombo(combo, recursos) {
   };
 }
 
-// ============ Iniciar tanda 1 ============
+// ============ Iniciar ============
 async function rrIniciar() {
   if (window.runnerRestauracion.ejecutando) {
-    rrLog('⚠️ Ya hay una tanda en curso');
+    rrLog('Ya hay una tanda en curso');
     return;
   }
   if (window.runnerRestauracion.imagenes.length < 4 || window.runnerRestauracion.benchmarks.length < 4) {
-    rrLog('❌ Faltan imagenes o benchmarks');
+    rrLog('Faltan imagenes o benchmarks');
     return;
   }
 
@@ -299,13 +280,13 @@ async function rrIniciar() {
 
   const combos = rrGenerarTanda1();
   const total = combos.length;
-  rrLog('🚀 Iniciando tanda 1: ' + total + ' combos × 4 imagenes × 13 detectores...');
+  rrLog('Iniciando tanda 1: ' + total + ' combos x 4 imagenes x 13 detectores');
 
   const t0 = performance.now();
 
   for (let i = 0; i < combos.length; i++) {
     if (window.runnerRestauracion.cancelar) {
-      rrLog('⏸️ Cancelado en combo ' + (i + 1));
+      rrLog('Cancelado en combo ' + (i + 1));
       break;
     }
 
@@ -318,18 +299,17 @@ async function rrIniciar() {
     try {
       const res = await rrEjecutarCombo(combo, window.runnerRestauracion);
       window.runnerRestauracion.resultados.push(res);
-      rrLog('#' + (i + 1) + ' ' + combo.nombre + ' → ' + res.puntuacion_total + ' pts');
+      rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts');
     } catch(e) {
-      rrLog('❌ Error en ' + combo.nombre + ': ' + e.message);
+      rrLog('Error en ' + combo.nombre + ': ' + e.message);
     }
 
-    // Ceder UI
     await new Promise(function(r) { setTimeout(r, 20); });
   }
 
   const t1 = performance.now();
   window.runnerRestauracion.ejecutando = false;
-  rrLog('✅ Tanda 1 terminada en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
+  rrLog('Tanda 1 terminada en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
 }
 
 // ============ Copiar resultados ============
@@ -345,7 +325,7 @@ function rrCopiarResultados() {
   };
   const json = JSON.stringify(out, null, 2);
   navigator.clipboard.writeText(json).then(function() {
-    rrLog('📋 Resultados copiados (' + json.length + ' chars)');
+    rrLog('Resultados copiados (' + json.length + ' chars)');
     alert('Resultados copiados al portapapeles');
   }).catch(function() {
     alert(json.substring(0, 5000));
@@ -355,7 +335,7 @@ function rrCopiarResultados() {
 // ============ Setup ============
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = '=== Runner Restauracion listo ===\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion listo\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -373,23 +353,21 @@ function rrSetup() {
   if (btnP) btnP.onclick = function() { window.runnerRestauracion.cancelar = true; };
   if (btnC) btnC.onclick = rrCopiarResultados;
 
-  // Click handler para el tab Restauracion
-  const tabBtns = document.querySelectorAll(".tab");
+  const tabBtns = document.querySelectorAll('.tab');
   tabBtns.forEach(function(t) {
-    if (t.dataset.tab === "restauracion" && !t.dataset.bound) {
-      t.dataset.bound = "1";
-      t.addEventListener("click", function() {
-        document.querySelectorAll(".tab").forEach(function(x) { x.classList.remove("active"); });
-        document.querySelectorAll(".tab-content").forEach(function(x) { x.classList.remove("active"); });
-        this.classList.add("active");
-        const c = document.getElementById("tab-restauracion");
-        if (c) c.classList.add("active");
+    if (t.dataset.tab === 'restauracion' && !t.dataset.bound) {
+      t.dataset.bound = '1';
+      t.addEventListener('click', function() {
+        document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(x) { x.classList.remove('active'); });
+        this.classList.add('active');
+        const c = document.getElementById('tab-restauracion');
+        if (c) c.classList.add('active');
       });
     }
   });
-  
+
   console.log('runner_restauracion.js listo');
 }
-
 
 setTimeout(rrSetup, 500);
