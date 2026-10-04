@@ -181,19 +181,22 @@ async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
   try {
     const base64 = rrBrilloAPNG(brillo, ancho, alto);
     const fs = Capacitor.Plugins.Filesystem;
-    if (!fs) { rrLog('  Filesystem no disponible'); return false; }
+    if (!fs) { rrLog("  Filesystem no disponible"); return false; }
+
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
     await fs.writeFile({
       path: nombreArchivo,
-      directory: 'DOCUMENTS',
-      data: base64,
-      encoding: 'base64',
+      directory: "DOCUMENTS",
+      data: bytes.buffer,
       recursive: true
     });
-    rrLog('  Guardada: ' + nombreArchivo);
+    rrLog("  Guardada: " + nombreArchivo);
     return true;
   } catch(e) {
-    rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
+    rrLog("  Error PNG " + nombreArchivo + ": " + e.message);
     return false;
   }
 }
