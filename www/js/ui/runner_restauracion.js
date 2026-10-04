@@ -1,6 +1,7 @@
 // ==============================================
 // ui/runner_restauracion.js
 // Runner de restauracion de imagen.
+// Guarda imagenes cuando supera el record.
 // ==============================================
 
 window.runnerRestauracion = {
@@ -9,6 +10,7 @@ window.runnerRestauracion = {
   ejecutando: false,
   cancelar: false,
   resultados: [],
+  mejor: 0,
   tandaActual: 0
 };
 
@@ -208,6 +210,49 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
+async function rrGuardarImagenesRecord(res, combo, recursos) {
+  const fs = Capacitor.Plugins.Filesystem;
+  if (!fs) { rrLog('  Filesystem no disponible'); return; }
+
+  for (let i = 0; i < recursos.imagenes.length; i++) {
+    const img = recursos.imagenes[i];
+    const r = res.resultados[img.nombre];
+    if (!r || !r.brillo) continue;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.ancho;
+    canvas.height = img.alto;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(img.ancho, img.alto);
+    for (let y = 0; y < img.alto; y++) {
+      for (let x = 0; x < img.ancho; x++) {
+        const v = Math.max(0, Math.min(255, r.brillo[y][x]));
+        const idx = (y * img.ancho + x) * 4;
+        imageData.data[idx] = v;
+        imageData.data[idx + 1] = v;
+        imageData.data[idx + 2] = v;
+        imageData.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    const dataURL = canvas.toDataURL('image/png');
+    const base64 = dataURL.replace('data:image/png;base64,', '');
+
+    const nombre = 'rest_mejor_' + combo.nombre + '_' + img.nombre + '.png';
+    try {
+      await fs.writeFile({
+        path: nombre,
+        directory: 'DOCUMENTS',
+        encoding: 'base64',
+        data: base64
+      });
+      rrLog('  Guardada: ' + nombre);
+    } catch(e) {
+      rrLog('  Error guardando ' + nombre + ': ' + e.message);
+    }
+  }
+}
+
 async function rrEjecutarCombo(combo, recursos) {
   const resultadosPorImagen = {};
   let puntuacionTotal = 0;
@@ -244,7 +289,7 @@ async function rrEjecutarCombo(combo, recursos) {
     });
 
     puntuacionTotal += puntImagen;
-    resultadosPorImagen[img.nombre] = { metricas: metricas, puntuacion: puntImagen };
+    resultadosPorImagen[img.nombre] = { metricas: metricas, puntuacion: puntImagen, brillo: brillo };
   }
 
   return {
@@ -268,6 +313,7 @@ async function rrIniciar() {
 
   window.runnerRestauracion.ejecutando = true;
   window.runnerRestauracion.cancelar = false;
+  window.runnerRestauracion.mejor = 0;
 
   const combos = rrGenerarTanda1();
   const total = combos.length;
@@ -289,8 +335,26 @@ async function rrIniciar() {
 
     try {
       const res = await rrEjecutarCombo(combo, window.runnerRestauracion);
+
+      const esRecord = res.puntuacion_total > window.runnerRestauracion.mejor;
+      if (esRecord) {
+        window.runnerRestauracion.mejor = res.puntuacion_total;
+        rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts [RECORD]');
+        try {
+          await rrGuardarImagenesRecord(res, combo, window.runnerRestauracion);
+        } catch(e) {
+          rrLog('  Error guardando imagenes: ' + e.message);
+        }
+      } else {
+        rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts');
+      }
+
+      // Limpiar brillos de resultados para no llenar memoria
+      Object.keys(res.resultados).forEach(function(nombre) {
+        delete res.resultados[nombre].brillo;
+      });
+
       window.runnerRestauracion.resultados.push(res);
-      rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts');
     } catch(e) {
       rrLog('Error en ' + combo.nombre + ': ' + e.message);
     }
@@ -315,7 +379,6 @@ async function rrCopiarResultados() {
   };
   const json = JSON.stringify(out, null, 2);
 
-  // Guardar directo a Documents via Capacitor Filesystem
   try {
     const fs = Capacitor.Plugins.Filesystem;
     if (fs) {
@@ -333,7 +396,6 @@ async function rrCopiarResultados() {
     console.warn('Filesystem fallo: ' + e.message);
   }
 
-  // Fallback: solo resumen al portapapeles
   const resumen = out.resultados.map(function(r) {
     return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
   }).sort(function(a, b) { return b.puntuacion_total - a.puntuacion_total; });

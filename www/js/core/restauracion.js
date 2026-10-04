@@ -4,13 +4,9 @@
 // compensar degradacion por compresion WhatsApp.
 // ==============================================
 
-/**
- * Filtro bilateral. Preserva bordes mientras suaviza.
- * sigmaColor: que tan diferente puede ser el color para ser considerado vecino.
- * sigmaSpace: radio espacial del filtro.
- */
 function restaurarBilateral(brillo, ancho, alto, sigmaColor, sigmaSpace) {
   const radio = Math.min(15, Math.max(1, Math.ceil(sigmaSpace / 3)));
+  const out = new Array(alto);
   const colorK = -0.5 / (sigmaColor * sigmaColor);
   const spaceK = -0.5 / (sigmaSpace * sigmaSpace);
 
@@ -49,12 +45,7 @@ function restaurarBilateral(brillo, ancho, alto, sigmaColor, sigmaSpace) {
   return out;
 }
 
-/**
- * Contrast stretching por percentiles.
- * Estira el rango [percBajo, percAlto] a [0, 255].
- */
 function restaurarContrast(brillo, ancho, alto, percBajo, percAlto) {
-  // Histograma
   const hist = new Array(256).fill(0);
   for (let y = 0; y < alto; y++) {
     for (let x = 0; x < ancho; x++) hist[brillo[y][x] | 0]++;
@@ -91,15 +82,8 @@ function restaurarContrast(brillo, ancho, alto, percBajo, percAlto) {
   return out;
 }
 
-/**
- * Unsharp mask. Realza bordes.
- * radio: tamaño del blur.
- * amount: intensidad del realce (0.5 suave, 2.0 fuerte).
- */
 function restaurarUnsharp(brillo, ancho, alto, radio, amount) {
-  // Blur gaussiano simple (box blur como aproximacion)
   const blur = boxBlur(brillo, ancho, alto, radio);
-
   const out = new Array(alto);
   for (let y = 0; y < alto; y++) {
     const fila = new Array(ancho);
@@ -115,12 +99,8 @@ function restaurarUnsharp(brillo, ancho, alto, radio, amount) {
   return out;
 }
 
-/**
- * Box blur auxiliar.
- */
 function boxBlur(brillo, ancho, alto, radio) {
   if (radio < 1) return brillo;
-  // Integral horizontal
   const integH = new Array(alto);
   for (let y = 0; y < alto; y++) {
     const acum = new Array(ancho + 1);
@@ -128,7 +108,6 @@ function boxBlur(brillo, ancho, alto, radio) {
     for (let x = 0; x < ancho; x++) acum[x + 1] = acum[x] + brillo[y][x];
     integH[y] = acum;
   }
-  // Blur horizontal
   const tmp = new Array(alto);
   for (let y = 0; y < alto; y++) {
     const acum = integH[y];
@@ -140,7 +119,6 @@ function boxBlur(brillo, ancho, alto, radio) {
     }
     tmp[y] = fila;
   }
-  // Integral vertical
   const integV = new Array(ancho);
   for (let x = 0; x < ancho; x++) {
     const acum = new Array(alto + 1);
@@ -148,7 +126,6 @@ function boxBlur(brillo, ancho, alto, radio) {
     for (let y = 0; y < alto; y++) acum[y + 1] = acum[y] + tmp[y][x];
     integV[x] = acum;
   }
-  // Blur vertical
   const out = new Array(alto);
   for (let y = 0; y < alto; y++) {
     const fila = new Array(ancho);
@@ -163,9 +140,6 @@ function boxBlur(brillo, ancho, alto, radio) {
   return out;
 }
 
-/**
- * Filtro de mediana (radio en px). Elimina ruido impulsivo.
- */
 function restaurarMediana(brillo, ancho, alto, radio) {
   if (radio < 1) return brillo;
   const out = new Array(alto);
@@ -189,19 +163,12 @@ function restaurarMediana(brillo, ancho, alto, radio) {
   return out;
 }
 
-/**
- * Filtro gaussiano (aproximado con box blur x2).
- */
 function restaurarGaussiano(brillo, ancho, alto, sigma) {
   const radio = Math.max(1, Math.round(sigma * 2));
-  let tmp = boxBlur(brillo, ancho, alto, radio);
+  const tmp = boxBlur(brillo, ancho, alto, radio);
   return boxBlur(tmp, ancho, alto, radio);
 }
 
-/**
- * CLAHE simple (basado en el existente del proyecto, si lo hay).
- * Delega a aplicarCLAHE si existe, sino devuelve original.
- */
 function restaurarCLAHE(brillo, ancho, alto, tiles, clip) {
   if (typeof aplicarCLAHE === 'function') {
     return aplicarCLAHE(brillo, ancho, alto, tiles, clip);
@@ -209,10 +176,6 @@ function restaurarCLAHE(brillo, ancho, alto, tiles, clip) {
   return brillo;
 }
 
-/**
- * De-blocking simple: aplica blur selectivo en los bordes de bloques 8x8.
- * Mitiga el efecto "cuadricula" de la compresion JPEG/WhatsApp.
- */
 function restaurarDeBlock(brillo, ancho, alto, blockSize) {
   const out = new Array(alto);
   for (let y = 0; y < alto; y++) out[y] = brillo[y].slice();
@@ -244,9 +207,6 @@ function restaurarDeBlock(brillo, ancho, alto, blockSize) {
   return out;
 }
 
-/**
- * Binarizacion Otsu. Devuelve imagen 0/255.
- */
 function restaurarBinarizar(brillo, ancho, alto) {
   const hist = new Array(256).fill(0);
   for (let y = 0; y < alto; y++)
@@ -276,17 +236,9 @@ function restaurarBinarizar(brillo, ancho, alto) {
   return out;
 }
 
-
-/**
- * Guided Filter (Filtro Guiado). Preserva bordes.
- * Mucho mas rapido que bilateral: O(1) por pixel usando integrales.
- * radio: tamano de la ventana (recomendado: 2-16).
- * eps: regularizacion (0.001 suave, 0.1 fuerte).
- */
 function restaurarGuided(brillo, ancho, alto, radio, eps) {
   const n = ancho * alto;
 
-  // Paso 1: convertir brillo a dos matrices Float32 (evitar overflow)
   const I = new Float32Array(n);
   const p = new Float32Array(n);
   for (let y = 0; y < alto; y++) {
@@ -297,13 +249,11 @@ function restaurarGuided(brillo, ancho, alto, radio, eps) {
     }
   }
 
-  // Paso 2: box blur de I, p, I*I, I*p
   const meanI  = guidedBoxBlur(I, ancho, alto, radio);
   const meanP  = guidedBoxBlur(p, ancho, alto, radio);
   const corrI  = guidedBoxBlur(multiplicarArr(I, I), ancho, alto, radio);
   const corrIp = guidedBoxBlur(multiplicarArr(I, p), ancho, alto, radio);
 
-  // Paso 3: calcular a y b
   const a = new Float32Array(n);
   const b = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -313,11 +263,9 @@ function restaurarGuided(brillo, ancho, alto, radio, eps) {
     b[i] = meanP[i] - a[i] * meanI[i];
   }
 
-  // Paso 4: box blur de a y b
   const meanA = guidedBoxBlur(a, ancho, alto, radio);
   const meanB = guidedBoxBlur(b, ancho, alto, radio);
 
-  // Paso 5: q = meanA * I + meanB
   const out = new Array(alto);
   for (let y = 0; y < alto; y++) {
     const fila = new Array(ancho);
@@ -341,7 +289,6 @@ function multiplicarArr(a, b) {
 
 function guidedBoxBlur(arr, ancho, alto, radio) {
   if (radio < 1) return arr.slice();
-  // Integral horizontal
   const tmp = new Float32Array(arr.length);
   for (let y = 0; y < alto; y++) {
     const base = y * ancho;
@@ -353,7 +300,6 @@ function guidedBoxBlur(arr, ancho, alto, radio) {
       tmp[base + x] = (acum[fin + 1] - acum[ini]) / (fin - ini + 1);
     }
   }
-  // Integral vertical
   const out = new Float32Array(arr.length);
   for (let x = 0; x < ancho; x++) {
     const acum = new Float32Array(alto + 1);
