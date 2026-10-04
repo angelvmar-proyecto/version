@@ -376,8 +376,5 @@ function rrSetup() {
   console.log('runner_restauracion.js listo');
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', rrSetup);
-} else {
-  rrSetup();
-}
+
+setTimeout(rrSetup, 500);
