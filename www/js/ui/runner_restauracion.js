@@ -1,7 +1,7 @@
 // ==============================================
 // ui/runner_restauracion.js
-// Runner de restauracion de imagen.
-// Guarda imagenes cuando supera el record.
+// Runner de restauracion con persistencia.
+// Tanda 2: solo los combos prometedores (~18).
 // ==============================================
 
 window.runnerRestauracion = {
@@ -11,7 +11,7 @@ window.runnerRestauracion = {
   cancelar: false,
   resultados: [],
   mejor: 0,
-  tandaActual: 0
+  ultimoCombo: 0
 };
 
 function rrLog(msg) {
@@ -28,10 +28,7 @@ function rrCargarImgsClick() {
 
 async function rrProcesarImgs(files) {
   const arr = Array.from(files);
-  if (arr.length < 4) {
-    rrLog('Selecciona 4 imagenes (recibidas ' + arr.length + ')');
-    return;
-  }
+  if (arr.length < 4) { rrLog('Selecciona 4 imagenes'); return; }
   arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
   const imgs = [];
@@ -70,10 +67,7 @@ function rrCargarBmsClick() {
 
 async function rrProcesarBms(files) {
   const arr = Array.from(files);
-  if (arr.length < 4) {
-    rrLog('Selecciona 4 benchmarks (recibidos ' + arr.length + ')');
-    return;
-  }
+  if (arr.length < 4) { rrLog('Selecciona 4 benchmarks'); return; }
   arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
   const bms = [];
@@ -90,62 +84,33 @@ async function rrProcesarBms(files) {
   bms.forEach(function(bm) { rrLog('  ' + bm.nombre + ' H=' + bm.H.length + ' V=' + bm.V.length); });
 }
 
+// ============ Tanda 2 CORTA ============
 function rrGenerarTanda1() {
   const combos = [];
 
+  // 1. Baseline
   combos.push({ nombre: 'baseline', tipo: 'none', params: {} });
 
-  [25, 50, 75, 100].forEach(function(sc) {
-    [25, 50, 75, 100].forEach(function(ss) {
-      combos.push({ nombre: 'bilat_c' + sc + '_s' + ss, tipo: 'bilateral', params: { sigmaColor: sc, sigmaSpace: ss } });
-    });
-  });
-
-  [[1,95],[1,98],[1,99],[2,95],[2,98],[2,99],[5,95],[5,98],[5,99]].forEach(function(p) {
-    combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] } });
-  });
-
+  // 2. Unsharp: 3 radios × 3 amounts = 9
   [1, 2, 3].forEach(function(r) {
     [0.5, 1.0, 1.5].forEach(function(a) {
       combos.push({ nombre: 'unsharp_r' + r + '_a' + a, tipo: 'unsharp', params: { radio: r, amount: a } });
     });
   });
 
-  [1, 2, 3].forEach(function(r) {
-    combos.push({ nombre: 'mediana_r' + r, tipo: 'mediana', params: { radio: r } });
+  // 3. Contrast: 3
+  [[5,95],[5,98],[5,99]].forEach(function(p) {
+    combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] } });
   });
 
-  [0.5, 1.0, 1.5].forEach(function(s) {
-    combos.push({ nombre: 'gauss_s' + s, tipo: 'gaussiano', params: { sigma: s } });
+  // 4. CLAHE: 3
+  [[16,8],[4,4],[8,8]].forEach(function(tc) {
+    combos.push({ nombre: 'clahe_t' + tc[0] + '_c' + tc[1], tipo: 'clahe', params: { tiles: tc[0], clip: tc[1] } });
   });
 
-  [4, 8, 16].forEach(function(t) {
-    [2, 4, 8].forEach(function(c) {
-      combos.push({ nombre: 'clahe_t' + t + '_c' + c, tipo: 'clahe', params: { tiles: t, clip: c } });
-    });
-  });
-
-  [8, 16].forEach(function(bs) {
-    combos.push({ nombre: 'deblock_' + bs, tipo: 'deblock', params: { blockSize: bs } });
-    combos.push({ nombre: 'deblock_bilat_' + bs, tipo: 'deblock+bilateral', params: { blockSize: bs, sigmaColor: 50, sigmaSpace: 50 } });
-  });
-
-  combos.push({ nombre: 'binarizar', tipo: 'binarizar', params: {} });
-
-  [25, 50, 75, 100].forEach(function(sc) {
-    combos.push({ nombre: 'bilat_bin_c' + sc, tipo: 'bilateral+binarizar', params: { sigmaColor: sc, sigmaSpace: 50 } });
-  });
-
-  [2, 4, 8, 16].forEach(function(r) {
-    [0.001, 0.01, 0.1].forEach(function(e) {
-      combos.push({ nombre: 'guided_r' + r + '_e' + e, tipo: 'guided', params: { radio: r, eps: e } });
-    });
-  });
-
+  // 5. Guided+binarizar: 2
   [4, 8].forEach(function(r) {
-    [0.01, 0.1].forEach(function(e) {
-      combos.push({ nombre: 'guided_bin_r' + r + '_e' + e, tipo: 'guided+binarizar', params: { radio: r, eps: e } });
-    });
+    combos.push({ nombre: 'guided_bin_r' + r, tipo: 'guided+binarizar', params: { radio: r, eps: 0.1 } });
   });
 
   return combos;
@@ -155,23 +120,9 @@ function rrAplicarRestauracion(brillo, ancho, alto, combo) {
   try {
     switch (combo.tipo) {
       case 'none': return brillo;
-      case 'bilateral': return restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
-      case 'contrast': return restaurarContrast(brillo, ancho, alto, combo.params.percBajo, combo.params.percAlto);
       case 'unsharp': return restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
-      case 'mediana': return restaurarMediana(brillo, ancho, alto, combo.params.radio);
-      case 'gaussiano': return restaurarGaussiano(brillo, ancho, alto, combo.params.sigma);
+      case 'contrast': return restaurarContrast(brillo, ancho, alto, combo.params.percBajo, combo.params.percAlto);
       case 'clahe': return restaurarCLAHE(brillo, ancho, alto, combo.params.tiles, combo.params.clip);
-      case 'deblock': return restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
-      case 'deblock+bilateral': {
-        const db = restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
-        return restaurarBilateral(db, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
-      }
-      case 'binarizar': return restaurarBinarizar(brillo, ancho, alto);
-      case 'bilateral+binarizar': {
-        const b = restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
-        return restaurarBinarizar(b, ancho, alto);
-      }
-      case 'guided': return restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
       case 'guided+binarizar': {
         const g = restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
         return restaurarBinarizar(g, ancho, alto);
@@ -201,7 +152,6 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
     { nombre: 'hough',    fn: function() { return detectarHough(brilloRestaurado, ancho, alto); } },
     { nombre: 'morfo',    fn: function() { return detectarMorfologico(brilloRestaurado, ancho, alto); } }
   ];
-
   const r = {};
   for (let i = 0; i < detectores.length; i++) {
     const d = detectores[i];
@@ -210,52 +160,70 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
-async function rrGuardarImagenesRecord(res, combo, recursos) {
-  const fs = Capacitor.Plugins.Filesystem;
-  if (!fs) { rrLog('  Filesystem no disponible'); return; }
-
-  for (let i = 0; i < recursos.imagenes.length; i++) {
-    const img = recursos.imagenes[i];
-    const r = res.resultados[img.nombre];
-    if (!r || !r.brillo) continue;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = img.ancho;
-    canvas.height = img.alto;
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(img.ancho, img.alto);
-    for (let y = 0; y < img.alto; y++) {
-      for (let x = 0; x < img.ancho; x++) {
-        const v = Math.max(0, Math.min(255, r.brillo[y][x]));
-        const idx = (y * img.ancho + x) * 4;
-        imageData.data[idx] = v;
-        imageData.data[idx + 1] = v;
-        imageData.data[idx + 2] = v;
-        imageData.data[idx + 3] = 255;
-      }
-    }
-    ctx.putImageData(imageData, 0, 0);
-    const dataURL = canvas.toDataURL('image/png');
-    const base64 = dataURL.replace('data:image/png;base64,', '');
-
-    const nombre = 'rest_mejor_' + combo.nombre + '_' + img.nombre + '.png';
+// ============ Guardar imagen como PNG con <a download> ============
+function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
+  return new Promise(function(resolve) {
     try {
-      await fs.writeFile({
-        path: nombre,
-        directory: 'DOCUMENTS',
-        encoding: 'base64',
-        data: base64
-      });
-      rrLog('  Guardada: ' + nombre);
+      const canvas = document.createElement('canvas');
+      canvas.width = ancho;
+      canvas.height = alto;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.createImageData(ancho, alto);
+      for (let y = 0; y < alto; y++) {
+        for (let x = 0; x < ancho; x++) {
+          const v = Math.max(0, Math.min(255, brillo[y][x]));
+          const idx = (y * ancho + x) * 4;
+          imageData.data[idx] = v;
+          imageData.data[idx + 1] = v;
+          imageData.data[idx + 2] = v;
+          imageData.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      const dataURL = canvas.toDataURL('image/png');
+
+      const a = document.createElement('a');
+      a.href = dataURL;
+      a.download = nombreArchivo;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      rrLog('  Descargada: ' + nombreArchivo);
+      resolve(true);
     } catch(e) {
-      rrLog('  Error guardando ' + nombre + ': ' + e.message);
+      rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
+      resolve(false);
     }
+  });
+}
+
+// ============ Persistencia ============
+async function rrGuardarProgreso() {
+  try {
+    const fs = Capacitor.Plugins.Filesystem;
+    if (!fs) return;
+    const data = {
+      ultimoCombo: window.runnerRestauracion.ultimoCombo,
+      mejor: window.runnerRestauracion.mejor,
+      resultados: window.runnerRestauracion.resultados.map(function(r) {
+        return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
+      })
+    };
+    await fs.writeFile({
+      path: 'runner_progress.json',
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+      data: JSON.stringify(data)
+    });
+  } catch(e) {
+    console.warn('Progress save fallo: ' + e.message);
   }
 }
 
 async function rrEjecutarCombo(combo, recursos) {
   const resultadosPorImagen = {};
   let puntuacionTotal = 0;
+  const brillosPorImagen = {};
 
   for (let i = 0; i < recursos.imagenes.length; i++) {
     const img = recursos.imagenes[i];
@@ -289,7 +257,8 @@ async function rrEjecutarCombo(combo, recursos) {
     });
 
     puntuacionTotal += puntImagen;
-    resultadosPorImagen[img.nombre] = { metricas: metricas, puntuacion: puntImagen, brillo: brillo };
+    resultadosPorImagen[img.nombre] = { metricas: metricas, puntuacion: puntImagen };
+    brillosPorImagen[img.nombre] = brillo;
   }
 
   return {
@@ -297,15 +266,13 @@ async function rrEjecutarCombo(combo, recursos) {
     tipo: combo.tipo,
     params: combo.params,
     resultados: resultadosPorImagen,
-    puntuacion_total: puntuacionTotal
+    puntuacion_total: puntuacionTotal,
+    brillos: brillosPorImagen
   };
 }
 
 async function rrIniciar() {
-  if (window.runnerRestauracion.ejecutando) {
-    rrLog('Ya hay una tanda en curso');
-    return;
-  }
+  if (window.runnerRestauracion.ejecutando) { rrLog('Ya hay una tanda en curso'); return; }
   if (window.runnerRestauracion.imagenes.length < 4 || window.runnerRestauracion.benchmarks.length < 4) {
     rrLog('Faltan imagenes o benchmarks');
     return;
@@ -314,10 +281,12 @@ async function rrIniciar() {
   window.runnerRestauracion.ejecutando = true;
   window.runnerRestauracion.cancelar = false;
   window.runnerRestauracion.mejor = 0;
+  window.runnerRestauracion.resultados = [];
+  window.runnerRestauracion.ultimoCombo = 0;
 
   const combos = rrGenerarTanda1();
   const total = combos.length;
-  rrLog('Iniciando tanda 1: ' + total + ' combos x 4 imagenes x 13 detectores');
+  rrLog('Iniciando tanda CORTA: ' + total + ' combos');
 
   const t0 = performance.now();
 
@@ -340,21 +309,28 @@ async function rrIniciar() {
       if (esRecord) {
         window.runnerRestauracion.mejor = res.puntuacion_total;
         rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts [RECORD]');
-        try {
-          await rrGuardarImagenesRecord(res, combo, window.runnerRestauracion);
-        } catch(e) {
-          rrLog('  Error guardando imagenes: ' + e.message);
+        for (let k = 0; k < window.runnerRestauracion.imagenes.length; k++) {
+          const im = window.runnerRestauracion.imagenes[k];
+          const b = res.brillos[im.nombre];
+          if (b) {
+            await rrGuardarPNG(b, im.ancho, im.alto, 'rest_mejor_' + combo.nombre + '_' + im.nombre + '.png');
+          }
         }
       } else {
         rrLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + res.puntuacion_total + ' pts');
       }
 
-      // Limpiar brillos de resultados para no llenar memoria
-      Object.keys(res.resultados).forEach(function(nombre) {
-        delete res.resultados[nombre].brillo;
-      });
+      // Limpiar brillos para no llenar memoria
+      res.brillos = null;
+      delete res.brillos;
 
       window.runnerRestauracion.resultados.push(res);
+      window.runnerRestauracion.ultimoCombo = i + 1;
+
+      // Persistir cada 3 combos
+      if ((i + 1) % 3 === 0 || i === combos.length - 1) {
+        await rrGuardarProgreso();
+      }
     } catch(e) {
       rrLog('Error en ' + combo.nombre + ': ' + e.message);
     }
@@ -364,7 +340,8 @@ async function rrIniciar() {
 
   const t1 = performance.now();
   window.runnerRestauracion.ejecutando = false;
-  rrLog('Tanda 1 terminada en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
+  rrLog('Tanda terminada en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
+  await rrGuardarProgreso();
 }
 
 async function rrCopiarResultados() {
@@ -375,6 +352,7 @@ async function rrCopiarResultados() {
   const out = {
     fecha: new Date().toISOString(),
     total_combos: window.runnerRestauracion.resultados.length,
+    mejor: window.runnerRestauracion.mejor,
     resultados: window.runnerRestauracion.resultados
   };
   const json = JSON.stringify(out, null, 2);
@@ -396,22 +374,12 @@ async function rrCopiarResultados() {
     console.warn('Filesystem fallo: ' + e.message);
   }
 
-  const resumen = out.resultados.map(function(r) {
-    return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
-  }).sort(function(a, b) { return b.puntuacion_total - a.puntuacion_total; });
-
-  const jsonCorto = JSON.stringify({ fecha: out.fecha, ranking: resumen }, null, 2);
-  navigator.clipboard.writeText(jsonCorto).then(function() {
-    rrLog('Copiado resumen al portapapeles (' + jsonCorto.length + ' chars)');
-    alert('Copiado resumen al portapapeles');
-  }).catch(function() {
-    alert('No se pudo guardar ni copiar');
-  });
+  alert('No se pudo guardar');
 }
 
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = 'Runner Restauracion listo\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion v2 (corta + persistencia)\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -443,7 +411,7 @@ function rrSetup() {
     }
   });
 
-  console.log('runner_restauracion.js listo');
+  console.log('runner_restauracion.js v2 listo');
 }
 
 setTimeout(rrSetup, 500);
