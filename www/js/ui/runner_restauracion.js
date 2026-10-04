@@ -373,6 +373,21 @@ function rrSetup() {
   if (btnP) btnP.onclick = function() { window.runnerRestauracion.cancelar = true; };
   if (btnC) btnC.onclick = rrCopiarResultados;
 
+  // Click handler para el tab Restauracion
+  const tabBtns = document.querySelectorAll(".tab");
+  tabBtns.forEach(function(t) {
+    if (t.dataset.tab === "restauracion" && !t.dataset.bound) {
+      t.dataset.bound = "1";
+      t.addEventListener("click", function() {
+        document.querySelectorAll(".tab").forEach(function(x) { x.classList.remove("active"); });
+        document.querySelectorAll(".tab-content").forEach(function(x) { x.classList.remove("active"); });
+        this.classList.add("active");
+        const c = document.getElementById("tab-restauracion");
+        if (c) c.classList.add("active");
+      });
+    }
+  });
+  
   console.log('runner_restauracion.js listo');
 }
 
