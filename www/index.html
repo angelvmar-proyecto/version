@@ -37,6 +37,7 @@
     <div class="tab" data-tab="runner">🧪 Runner</div>
     <div class="tab" data-tab="restauracion">🧪 Restauración</div>
     <div class="tab" data-tab="ocr">📖 OCR</div>
+  <div class="tab" data-tab="clahe">🎛️ CLAHE</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -246,6 +247,24 @@
     <pre id="ocrLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner OCR listo ===</pre>
     <input type="file" id="ocrInputImgs" accept="image/*" multiple style="display:none;">
   </div>
+  <div class="tab-content" id="tab-clahe" style="padding:15px; color:#ddd;">
+    <h2>🎛️ Optimizacion CLAHE</h2>
+    <p style="font-size:12px; color:#888;">30 combos de CLAHE + contrast+clahe para maximizar calidad OCR.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnClCargarImgs">📷 Cargar 4 imagenes</button>
+      <button class="btn green" id="btnClIniciar">▶️ Iniciar</button>
+      <button class="btn" id="btnClParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="clCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="clBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="clLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner CLAHE listo ===</pre>
+    <input type="file" id="clInputImgs" accept="image/*" multiple style="display:none;">
+  </div>
+
 
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
@@ -278,6 +297,7 @@
   <script src="js/ui/calibrar.js"></script>
   <script src="js/ui/runner.js"></script>
   <script src="js/ui/runner_restauracion.js"></script>
+  <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
 
 </body>
