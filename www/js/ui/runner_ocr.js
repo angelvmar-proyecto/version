@@ -328,7 +328,7 @@ function ocrSetup() {
     }
   });
 
-  alert("ocrSetup CORRIO"); console.log("runner_ocr.js listo");
+  console.log("runner_ocr.js listo");
 }
 
 setTimeout(ocrSetup, 500);
