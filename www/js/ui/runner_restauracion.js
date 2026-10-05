@@ -177,15 +177,27 @@ async function rrAsegurarAlbum() {
   try {
     const Media = Capacitor.Plugins.Media;
     if (!Media) return false;
-    const albums = await Media.getAlbums();
-    const existe = (albums.albums || []).find(function(a) { return a.name === 'MAR_Caribe'; });
-    if (!existe) {
-      await Media.createAlbum({ name: 'MAR_Caribe' });
-      rrLog('Album MAR_Caribe creado');
+
+    let albums = await Media.getAlbums();
+    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe"; });
+
+    if (!album) {
+      await Media.createAlbum({ name: "MAR_Caribe" });
+      rrLog("Album MAR_Caribe creado");
+      albums = await Media.getAlbums();
+      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe"; });
     }
-    return true;
+
+    if (album && album.identifier) {
+      window.runnerRestauracion.albumId = album.identifier;
+      rrLog("Album identifier: " + album.identifier);
+      return true;
+    }
+
+    rrLog("No se pudo obtener identifier del album");
+    return false;
   } catch(e) {
-    rrLog('Error album: ' + e.message);
+    rrLog("Error album: " + e.message);
     return false;
   }
 }
@@ -201,7 +213,7 @@ async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
 
     await Media.savePhoto({
       path: dataURL,
-      albumIdentifier: 'MAR_Caribe',
+      albumIdentifier: window.runnerRestauracion.albumId,
       fileName: nombreArchivo.replace('.png', '')
     });
 
