@@ -1,6 +1,6 @@
 // ==============================================
 // ui/runner_restauracion.js
-// Runner de restauracion. PNG directo a galeria.
+// Runner de restauracion. PNG a galeria via Media plugin.
 // ==============================================
 
 window.runnerRestauracion = {
@@ -152,7 +152,6 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
-// Genera canvas con la imagen restaurada
 function rrBrilloACanvas(brillo, ancho, alto) {
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
@@ -173,57 +172,40 @@ function rrBrilloACanvas(brillo, ancho, alto) {
   return canvas;
 }
 
-// Guardar PNG en galeria via MediaStore del plugin Capacitor
+// Asegurar album MAR_Caribe existe
+async function rrAsegurarAlbum() {
+  try {
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return false;
+    const albums = await Media.getAlbums();
+    const existe = (albums.albums || []).find(function(a) { return a.name === 'MAR_Caribe'; });
+    if (!existe) {
+      await Media.createAlbum({ name: 'MAR_Caribe' });
+      rrLog('Album MAR_Caribe creado');
+    }
+    return true;
+  } catch(e) {
+    rrLog('Error album: ' + e.message);
+    return false;
+  }
+}
+
+// Guardar PNG en galeria via Media plugin
 async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
   try {
-    const fs = Capacitor.Plugins.Filesystem;
-    if (!fs) { rrLog('  Filesystem no disponible'); return false; }
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) { rrLog('  Media plugin no disponible'); return false; }
 
-    // 1) Generar canvas y dataURL
     const canvas = rrBrilloACanvas(brillo, ancho, alto);
     const dataURL = canvas.toDataURL('image/png');
-    const base64 = dataURL.replace('data:image/png;base64,', '');
 
-    // 2) Convertir a Uint8Array
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-    // 3) Guardar en Cache temporal
-    const tempPath = 'temp_' + nombreArchivo;
-    await fs.writeFile({
-      path: tempPath,
-      directory: 'CACHE',
-      data: base64,
-      encoding: 'base64',
-      recursive: true
+    await Media.savePhoto({
+      path: dataURL,
+      albumIdentifier: 'MAR_Caribe',
+      fileName: nombreArchivo.replace('.png', '')
     });
 
-    // 4) Copiar a Pictures via copyFile
-    const fromUri = await fs.getUri({ path: tempPath, directory: 'CACHE' });
-    const toUri = await fs.getUri({ path: 'Pictures/' + nombreArchivo, directory: 'EXTERNAL_STORAGE' });
-
-    try {
-      await fs.copy({
-        from: fromUri.uri,
-        to: toUri.uri,
-        directory: 'EXTERNAL_STORAGE'
-      });
-      rrLog('  Guardada en Pictures/: ' + nombreArchivo);
-    } catch(eCopy) {
-      rrLog('  copy fallo: ' + eCopy.message + ' — intentando saveFile');
-      // Fallback: usar saveFile si existe (algunos plugins lo tienen)
-      if (typeof fs.saveFile === 'function') {
-        await fs.saveFile({ path: 'Pictures/' + nombreArchivo, data: base64 });
-        rrLog('  Guardada (saveFile): ' + nombreArchivo);
-      } else {
-        throw eCopy;
-      }
-    }
-
-    // 5) Borrar temp
-    try { await fs.deleteFile({ path: tempPath, directory: 'CACHE' }); } catch(e) {}
-
+    rrLog('  Guardada en galeria: ' + nombreArchivo);
     return true;
   } catch(e) {
     rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
@@ -312,6 +294,8 @@ async function rrIniciar() {
     return;
   }
 
+  await rrAsegurarAlbum();
+
   window.runnerRestauracion.ejecutando = true;
   window.runnerRestauracion.cancelar = false;
   window.runnerRestauracion.mejor = 0;
@@ -378,12 +362,12 @@ async function rrIniciar() {
 
 async function rrCopiarResultados() {
   if (window.runnerRestauracion.resultados.length === 0) {
-    alert("No hay resultados todavia");
+    alert('No hay resultados todavia');
     return;
   }
 
   const fs = Capacitor.Plugins.Filesystem;
-  if (!fs) { alert("Filesystem no disponible"); return; }
+  if (!fs) { alert('Filesystem no disponible'); return; }
 
   const fecha = new Date().toISOString();
   const ranking = window.runnerRestauracion.resultados.map(function(r) {
@@ -407,7 +391,7 @@ async function rrCopiarResultados() {
     rrLog("Error resumen: " + e.message);
   }
 
-  // 2) COMPLETO (grande, base64 con chunks)
+  // 2) COMPLETO (base64 chunks)
   const completo = { fecha: fecha, total_combos: window.runnerRestauracion.resultados.length, mejor: window.runnerRestauracion.mejor, resultados: window.runnerRestauracion.resultados };
   const jsonCompleto = JSON.stringify(completo);
   const base64 = btoa(unescape(encodeURIComponent(jsonCompleto)));
@@ -441,9 +425,10 @@ async function rrCopiarResultados() {
 
   alert("Guardado:\n- Documents/tanda1_resumen.json (leible)\n- Documents/tanda1_completo.json.b64 (decodificar en Termux)");
 }
+
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = 'Runner Restauracion v4 (galeria)\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion v5 (galeria)\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -475,7 +460,7 @@ function rrSetup() {
     }
   });
 
-  console.log('runner_restauracion.js v4 listo');
+  console.log('runner_restauracion.js v5 listo');
 }
 
 setTimeout(rrSetup, 500);
