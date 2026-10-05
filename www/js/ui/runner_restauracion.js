@@ -1,6 +1,7 @@
 // ==============================================
 // ui/runner_restauracion.js
-// Runner de restauracion. PNG a galeria via Media plugin.
+// Runner de restauracion v6. Tanda extendida ~130 combos.
+// Con reanudacion y PNG a galeria.
 // ==============================================
 
 window.runnerRestauracion = {
@@ -10,7 +11,8 @@ window.runnerRestauracion = {
   cancelar: false,
   resultados: [],
   mejor: 0,
-  ultimoCombo: 0
+  ultimoCombo: 0,
+  albumId: null
 };
 
 function rrLog(msg) {
@@ -85,24 +87,99 @@ async function rrProcesarBms(files) {
 
 function rrGenerarTanda1() {
   const combos = [];
+
+  // 1) Baseline
   combos.push({ nombre: 'baseline', tipo: 'none', params: {} });
 
-  [1, 2, 3].forEach(function(r) {
-    [0.5, 1.0, 1.5].forEach(function(a) {
+  // 2) Unsharp extendido: 6 radios x 5 amounts = 30
+  [1, 2, 3, 4, 5, 8].forEach(function(r) {
+    [0.5, 1.0, 1.5, 2.0, 3.0].forEach(function(a) {
       combos.push({ nombre: 'unsharp_r' + r + '_a' + a, tipo: 'unsharp', params: { radio: r, amount: a } });
     });
   });
 
-  [[5,95],[5,98],[5,99]].forEach(function(p) {
-    combos.push({ nombre: 'contrast_' + p[0] + '_' + p[1], tipo: 'contrast', params: { percBajo: p[0], percAlto: p[1] } });
+  // 3) Contrast completo: 9
+  [1, 2, 5].forEach(function(pb) {
+    [95, 98, 99].forEach(function(pa) {
+      combos.push({ nombre: 'contrast_' + pb + '_' + pa, tipo: 'contrast', params: { percBajo: pb, percAlto: pa } });
+    });
   });
 
-  [[16,8],[4,4],[8,8]].forEach(function(tc) {
-    combos.push({ nombre: 'clahe_t' + tc[0] + '_c' + tc[1], tipo: 'clahe', params: { tiles: tc[0], clip: tc[1] } });
+  // 4) CLAHE completo: 9
+  [4, 8, 16].forEach(function(t) {
+    [2, 4, 8].forEach(function(c) {
+      combos.push({ nombre: 'clahe_t' + t + '_c' + c, tipo: 'clahe', params: { tiles: t, clip: c } });
+    });
   });
 
+  // 5) Guided solo: 12
+  [2, 4, 8, 16].forEach(function(r) {
+    [0.001, 0.01, 0.1].forEach(function(e) {
+      combos.push({ nombre: 'guided_r' + r + '_e' + e, tipo: 'guided', params: { radio: r, eps: e } });
+    });
+  });
+
+  // 6) Bilateral: 16
+  [25, 50, 75, 100].forEach(function(sc) {
+    [25, 50, 75, 100].forEach(function(ss) {
+      combos.push({ nombre: 'bilat_c' + sc + '_s' + ss, tipo: 'bilateral', params: { sigmaColor: sc, sigmaSpace: ss } });
+    });
+  });
+
+  // 7) Mediana: 3
+  [1, 2, 3].forEach(function(r) {
+    combos.push({ nombre: 'mediana_r' + r, tipo: 'mediana', params: { radio: r } });
+  });
+
+  // 8) Gaussiano: 3
+  [0.5, 1.0, 1.5].forEach(function(s) {
+    combos.push({ nombre: 'gauss_s' + s, tipo: 'gaussiano', params: { sigma: s } });
+  });
+
+  // 9) Deblock: 4
+  [8, 16].forEach(function(bs) {
+    combos.push({ nombre: 'deblock_' + bs, tipo: 'deblock', params: { blockSize: bs } });
+    combos.push({ nombre: 'deblock_bilat_' + bs, tipo: 'deblock+bilateral', params: { blockSize: bs, sigmaColor: 50, sigmaSpace: 50 } });
+  });
+
+  // 10) Binarizar: 1
+  combos.push({ nombre: 'binarizar', tipo: 'binarizar', params: {} });
+
+  // 11) Bilateral+binarizar: 4
+  [25, 50, 75, 100].forEach(function(sc) {
+    combos.push({ nombre: 'bilat_bin_c' + sc, tipo: 'bilateral+binarizar', params: { sigmaColor: sc, sigmaSpace: 50 } });
+  });
+
+  // 12) Guided+binarizar: 4
   [4, 8].forEach(function(r) {
-    combos.push({ nombre: 'guided_bin_r' + r, tipo: 'guided+binarizar', params: { radio: r, eps: 0.1 } });
+    [0.01, 0.1].forEach(function(e) {
+      combos.push({ nombre: 'guided_bin_r' + r + '_e' + e, tipo: 'guided+binarizar', params: { radio: r, eps: e } });
+    });
+  });
+
+  // 13) Combinaciones: unsharp + contrast (4 unsharp x 3 contrast = 12)
+  [3, 4].forEach(function(r) {
+    [1.5, 2.0].forEach(function(a) {
+      [95, 98, 99].forEach(function(pa) {
+        combos.push({ nombre: 'uc_r' + r + '_a' + a + '_c5_' + pa, tipo: 'combo_unsharp_contrast', params: { radio: r, amount: a, percBajo: 5, percAlto: pa } });
+      });
+    });
+  });
+
+  // 14) Combinaciones: unsharp + clahe (2 unsharp x 3 clahe = 6)
+  [3, 4].forEach(function(r) {
+    [1.5, 2.0].forEach(function(a) {
+      [8, 16].forEach(function(t) {
+        combos.push({ nombre: 'uk_r' + r + '_a' + a + '_t' + t, tipo: 'combo_unsharp_clahe', params: { radio: r, amount: a, tiles: t, clip: 8 } });
+      });
+    });
+  });
+
+  // 15) Combinaciones: contrast + clahe (3 contrast x 3 clahe = 9)
+  [[5,98],[5,99],[2,99]].forEach(function(c) {
+    [4, 8, 16].forEach(function(t) {
+      combos.push({ nombre: 'ck_c' + c[0] + '_' + c[1] + '_t' + t, tipo: 'combo_contrast_clahe', params: { percBajo: c[0], percAlto: c[1], tiles: t, clip: 8 } });
+    });
   });
 
   return combos;
@@ -112,12 +189,38 @@ function rrAplicarRestauracion(brillo, ancho, alto, combo) {
   try {
     switch (combo.tipo) {
       case 'none': return brillo;
-      case 'unsharp': return restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
+      case 'bilateral': return restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
       case 'contrast': return restaurarContrast(brillo, ancho, alto, combo.params.percBajo, combo.params.percAlto);
+      case 'unsharp': return restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
+      case 'mediana': return restaurarMediana(brillo, ancho, alto, combo.params.radio);
+      case 'gaussiano': return restaurarGaussiano(brillo, ancho, alto, combo.params.sigma);
       case 'clahe': return restaurarCLAHE(brillo, ancho, alto, combo.params.tiles, combo.params.clip);
+      case 'deblock': return restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
+      case 'deblock+bilateral': {
+        const db = restaurarDeBlock(brillo, ancho, alto, combo.params.blockSize);
+        return restaurarBilateral(db, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
+      }
+      case 'binarizar': return restaurarBinarizar(brillo, ancho, alto);
+      case 'bilateral+binarizar': {
+        const b = restaurarBilateral(brillo, ancho, alto, combo.params.sigmaColor, combo.params.sigmaSpace);
+        return restaurarBinarizar(b, ancho, alto);
+      }
+      case 'guided': return restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
       case 'guided+binarizar': {
         const g = restaurarGuided(brillo, ancho, alto, combo.params.radio, combo.params.eps);
         return restaurarBinarizar(g, ancho, alto);
+      }
+      case 'combo_unsharp_contrast': {
+        const u = restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
+        return restaurarContrast(u, ancho, alto, combo.params.percBajo, combo.params.percAlto);
+      }
+      case 'combo_unsharp_clahe': {
+        const u2 = restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
+        return restaurarCLAHE(u2, ancho, alto, combo.params.tiles, combo.params.clip);
+      }
+      case 'combo_contrast_clahe': {
+        const c1 = restaurarContrast(brillo, ancho, alto, combo.params.percBajo, combo.params.percAlto);
+        return restaurarCLAHE(c1, ancho, alto, combo.params.tiles, combo.params.clip);
       }
       default: return brillo;
     }
@@ -172,7 +275,6 @@ function rrBrilloACanvas(brillo, ancho, alto) {
   return canvas;
 }
 
-// Asegurar album MAR_Caribe existe
 async function rrAsegurarAlbum() {
   try {
     const Media = Capacitor.Plugins.Media;
@@ -190,7 +292,7 @@ async function rrAsegurarAlbum() {
 
     if (album && album.identifier) {
       window.runnerRestauracion.albumId = album.identifier;
-      rrLog("Album identifier: " + album.identifier);
+      rrLog("Album identifier OK");
       return true;
     }
 
@@ -202,7 +304,6 @@ async function rrAsegurarAlbum() {
   }
 }
 
-// Guardar PNG en galeria via Media plugin
 async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
   try {
     const Media = Capacitor.Plugins.Media;
@@ -310,13 +411,10 @@ async function rrIniciar() {
 
   window.runnerRestauracion.ejecutando = true;
   window.runnerRestauracion.cancelar = false;
-  window.runnerRestauracion.mejor = 0;
-  window.runnerRestauracion.resultados = [];
-  window.runnerRestauracion.ultimoCombo = 0;
 
   const combos = rrGenerarTanda1();
   const total = combos.length;
-  rrLog('Iniciando tanda: ' + total + ' combos');
+  rrLog('Iniciando tanda EXTENDIDA: ' + total + ' combos');
 
   const t0 = performance.now();
 
@@ -386,7 +484,6 @@ async function rrCopiarResultados() {
     return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
   }).sort(function(a, b) { return b.puntuacion_total - a.puntuacion_total; });
 
-  // 1) RESUMEN (chico, guarda bien)
   const resumen = { fecha: fecha, total_combos: ranking.length, mejor: window.runnerRestauracion.mejor, ranking: ranking };
   const jsonResumen = JSON.stringify(resumen, null, 2);
 
@@ -403,7 +500,6 @@ async function rrCopiarResultados() {
     rrLog("Error resumen: " + e.message);
   }
 
-  // 2) COMPLETO (base64 chunks)
   const completo = { fecha: fecha, total_combos: window.runnerRestauracion.resultados.length, mejor: window.runnerRestauracion.mejor, resultados: window.runnerRestauracion.resultados };
   const jsonCompleto = JSON.stringify(completo);
   const base64 = btoa(unescape(encodeURIComponent(jsonCompleto)));
@@ -440,7 +536,7 @@ async function rrCopiarResultados() {
 
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = 'Runner Restauracion v5 (galeria)\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion v6 (extendido ~130)\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -472,7 +568,7 @@ function rrSetup() {
     }
   });
 
-  console.log('runner_restauracion.js v5 listo');
+  console.log('runner_restauracion.js v6 listo');
 }
 
 setTimeout(rrSetup, 500);
