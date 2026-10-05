@@ -378,37 +378,69 @@ async function rrIniciar() {
 
 async function rrCopiarResultados() {
   if (window.runnerRestauracion.resultados.length === 0) {
-    alert('No hay resultados todavia');
+    alert("No hay resultados todavia");
     return;
   }
-  const out = {
-    fecha: new Date().toISOString(),
-    total_combos: window.runnerRestauracion.resultados.length,
-    mejor: window.runnerRestauracion.mejor,
-    resultados: window.runnerRestauracion.resultados
-  };
-  const json = JSON.stringify(out, null, 2);
+
+  const fs = Capacitor.Plugins.Filesystem;
+  if (!fs) { alert("Filesystem no disponible"); return; }
+
+  const fecha = new Date().toISOString();
+  const ranking = window.runnerRestauracion.resultados.map(function(r) {
+    return { nombre: r.nombre, tipo: r.tipo, params: r.params, puntuacion_total: r.puntuacion_total };
+  }).sort(function(a, b) { return b.puntuacion_total - a.puntuacion_total; });
+
+  // 1) RESUMEN (chico, guarda bien)
+  const resumen = { fecha: fecha, total_combos: ranking.length, mejor: window.runnerRestauracion.mejor, ranking: ranking };
+  const jsonResumen = JSON.stringify(resumen, null, 2);
 
   try {
-    const fs = Capacitor.Plugins.Filesystem;
-    if (fs) {
-      await fs.writeFile({
-        path: 'tanda1_resultados.json',
-        directory: 'DOCUMENTS',
-        encoding: 'utf8',
-        data: json,
-        recursive: true
-      });
-      rrLog('Guardado en Documents/tanda1_resultados.json (' + json.length + ' chars)');
-      alert('Guardado en Documents/tanda1_resultados.json');
-      return;
-    }
+    await fs.writeFile({
+      path: "tanda1_resumen.json",
+      directory: "DOCUMENTS",
+      encoding: "utf8",
+      data: jsonResumen,
+      recursive: true
+    });
+    rrLog("Resumen guardado (" + jsonResumen.length + " chars)");
   } catch(e) {
-    console.warn('Filesystem fallo: ' + e.message);
+    rrLog("Error resumen: " + e.message);
   }
-  alert('No se pudo guardar');
-}
 
+  // 2) COMPLETO (grande, base64 con chunks)
+  const completo = { fecha: fecha, total_combos: window.runnerRestauracion.resultados.length, mejor: window.runnerRestauracion.mejor, resultados: window.runnerRestauracion.resultados };
+  const jsonCompleto = JSON.stringify(completo);
+  const base64 = btoa(unescape(encodeURIComponent(jsonCompleto)));
+
+  try {
+    const path = "tanda1_completo.json.b64";
+    const chunkSize = 48000;
+
+    try { await fs.deleteFile({ path: path, directory: "DOCUMENTS" }); } catch(e) {}
+
+    await fs.writeFile({
+      path: path,
+      directory: "DOCUMENTS",
+      encoding: "base64",
+      data: base64.substring(0, chunkSize),
+      recursive: true
+    });
+
+    for (let i = chunkSize; i < base64.length; i += chunkSize) {
+      await fs.appendFile({
+        path: path,
+        directory: "DOCUMENTS",
+        encoding: "base64",
+        data: base64.substring(i, i + chunkSize)
+      });
+    }
+    rrLog("Completo guardado (" + Math.ceil(base64.length / chunkSize) + " chunks)");
+  } catch(e) {
+    rrLog("Error completo: " + e.message);
+  }
+
+  alert("Guardado:\n- Documents/tanda1_resumen.json (leible)\n- Documents/tanda1_completo.json.b64 (decodificar en Termux)");
+}
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
   if (logEl) logEl.textContent = 'Runner Restauracion v4 (galeria)\n';
