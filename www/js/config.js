@@ -90,6 +90,11 @@ const CONFIG = {
 
   // --- Sauvola (preprocesamiento) ---
   SAUVOLA_ACTIVO: false,
+  FILTRO_OCR_ACTIVO: false,
+  FILTRO_OCR_PERC_BAJO: 5,
+  FILTRO_OCR_PERC_ALTO: 95,
+  FILTRO_OCR_TILES: 16,
+  FILTRO_OCR_CLIP: 8,
   SAUVOLA_VENTANA: 15,
   SAUVOLA_K: 0.3,
 

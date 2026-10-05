@@ -106,6 +106,12 @@ function analizar() {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, st.ancho, st.alto);
   st.brillo = calcularBrillo(imageData);
+
+  if (CONFIG.FILTRO_OCR_ACTIVO) {
+    st.brillo = restaurarContrast(st.brillo, st.ancho, st.alto, CONFIG.FILTRO_OCR_PERC_BAJO, CONFIG.FILTRO_OCR_PERC_ALTO);
+    st.brillo = restaurarCLAHE(st.brillo, st.ancho, st.alto, CONFIG.FILTRO_OCR_TILES, CONFIG.FILTRO_OCR_CLIP);
+    log("🎨 Filtro OCR aplicado (contrast " + CONFIG.FILTRO_OCR_PERC_BAJO + "-" + CONFIG.FILTRO_OCR_PERC_ALTO + " + CLAHE " + CONFIG.FILTRO_OCR_TILES + "/" + CONFIG.FILTRO_OCR_CLIP + ")");
+  }
   st.brilloOptica = calcularBrilloColorAgnostico(imageData);
   const saturacion = calcularSaturacionMedia(imageData);
   st.saturacion = saturacion;
@@ -514,6 +520,12 @@ function setup() {
   if (chkCLAHE) chkCLAHE.addEventListener('change', function() {
     CONFIG.CLAHE_ACTIVO = this.checked;
     log('CLAHE ' + (this.checked ? 'ON' : 'OFF'));
+  });
+
+  const chkFiltroOCR = el("chkFiltroOCR");
+  if (chkFiltroOCR) chkFiltroOCR.addEventListener("change", function() {
+    CONFIG.FILTRO_OCR_ACTIVO = this.checked;
+    log("Filtro OCR " + (this.checked ? "ON (recuerda re-analizar)" : "OFF"));
   });
 
   // Checkboxes de capas
