@@ -1,7 +1,6 @@
 // ==============================================
 // ui/runner_restauracion.js
-// Runner de restauracion con persistencia.
-// Guarda PNG en Documents/ via Filesystem.
+// Runner de restauracion. PNG directo a galeria.
 // ==============================================
 
 window.runnerRestauracion = {
@@ -86,7 +85,6 @@ async function rrProcesarBms(files) {
 
 function rrGenerarTanda1() {
   const combos = [];
-
   combos.push({ nombre: 'baseline', tipo: 'none', params: {} });
 
   [1, 2, 3].forEach(function(r) {
@@ -154,8 +152,8 @@ function rrEvaluarImagen(recurso, brilloRestaurado) {
   return r;
 }
 
-// Convierte brillo a base64 PNG
-function rrBrilloAPNG(brillo, ancho, alto) {
+// Genera canvas con la imagen restaurada
+function rrBrilloACanvas(brillo, ancho, alto) {
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
   canvas.height = alto;
@@ -172,45 +170,63 @@ function rrBrilloAPNG(brillo, ancho, alto) {
     }
   }
   ctx.putImageData(imageData, 0, 0);
-  const dataURL = canvas.toDataURL('image/png');
-  return dataURL.replace('data:image/png;base64,', '');
+  return canvas;
 }
 
-// Guarda PNG en Documents/
+// Guardar PNG en galeria via MediaStore del plugin Capacitor
 async function rrGuardarPNG(brillo, ancho, alto, nombreArchivo) {
   try {
-    const base64 = rrBrilloAPNG(brillo, ancho, alto);
     const fs = Capacitor.Plugins.Filesystem;
-    if (!fs) { rrLog("  Filesystem no disponible"); return false; }
+    if (!fs) { rrLog('  Filesystem no disponible'); return false; }
 
-    const chunkSize = 48000;
+    // 1) Generar canvas y dataURL
+    const canvas = rrBrilloACanvas(brillo, ancho, alto);
+    const dataURL = canvas.toDataURL('image/png');
+    const base64 = dataURL.replace('data:image/png;base64,', '');
 
-    try {
-      await fs.deleteFile({ path: nombreArchivo, directory: "DOCUMENTS" });
-    } catch(e) {}
+    // 2) Convertir a Uint8Array
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
+    // 3) Guardar en Cache temporal
+    const tempPath = 'temp_' + nombreArchivo;
     await fs.writeFile({
-      path: nombreArchivo,
-      directory: "DOCUMENTS",
-      encoding: "base64",
-      data: base64.substring(0, chunkSize),
+      path: tempPath,
+      directory: 'CACHE',
+      data: base64,
+      encoding: 'base64',
       recursive: true
     });
 
-    for (let i = chunkSize; i < base64.length; i += chunkSize) {
-      const chunk = base64.substring(i, i + chunkSize);
-      await fs.appendFile({
-        path: nombreArchivo,
-        directory: "DOCUMENTS",
-        encoding: "base64",
-        data: chunk
+    // 4) Copiar a Pictures via copyFile
+    const fromUri = await fs.getUri({ path: tempPath, directory: 'CACHE' });
+    const toUri = await fs.getUri({ path: 'Pictures/' + nombreArchivo, directory: 'EXTERNAL_STORAGE' });
+
+    try {
+      await fs.copy({
+        from: fromUri.uri,
+        to: toUri.uri,
+        directory: 'EXTERNAL_STORAGE'
       });
+      rrLog('  Guardada en Pictures/: ' + nombreArchivo);
+    } catch(eCopy) {
+      rrLog('  copy fallo: ' + eCopy.message + ' — intentando saveFile');
+      // Fallback: usar saveFile si existe (algunos plugins lo tienen)
+      if (typeof fs.saveFile === 'function') {
+        await fs.saveFile({ path: 'Pictures/' + nombreArchivo, data: base64 });
+        rrLog('  Guardada (saveFile): ' + nombreArchivo);
+      } else {
+        throw eCopy;
+      }
     }
 
-    rrLog("  Guardada: " + nombreArchivo + " (" + Math.ceil(base64.length / chunkSize) + " chunks)");
+    // 5) Borrar temp
+    try { await fs.deleteFile({ path: tempPath, directory: 'CACHE' }); } catch(e) {}
+
     return true;
   } catch(e) {
-    rrLog("  Error PNG " + nombreArchivo + ": " + e.message);
+    rrLog('  Error PNG ' + nombreArchivo + ': ' + e.message);
     return false;
   }
 }
@@ -304,7 +320,7 @@ async function rrIniciar() {
 
   const combos = rrGenerarTanda1();
   const total = combos.length;
-  rrLog('Iniciando tanda CORTA: ' + total + ' combos');
+  rrLog('Iniciando tanda: ' + total + ' combos');
 
   const t0 = performance.now();
 
@@ -390,13 +406,12 @@ async function rrCopiarResultados() {
   } catch(e) {
     console.warn('Filesystem fallo: ' + e.message);
   }
-
   alert('No se pudo guardar');
 }
 
 function rrSetup() {
   const logEl = document.getElementById('rrLog');
-  if (logEl) logEl.textContent = 'Runner Restauracion v3 (PNG a Documents)\n';
+  if (logEl) logEl.textContent = 'Runner Restauracion v4 (galeria)\n';
 
   const btnCI = document.getElementById('btnRrCargarImgs');
   const btnCB = document.getElementById('btnRrCargarBms');
@@ -428,7 +443,7 @@ function rrSetup() {
     }
   });
 
-  console.log('runner_restauracion.js v3 listo');
+  console.log('runner_restauracion.js v4 listo');
 }
 
 setTimeout(rrSetup, 500);
