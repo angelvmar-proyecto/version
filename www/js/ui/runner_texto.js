@@ -113,10 +113,12 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
       imageData.data[idx + 2] = v;
       imageData.data[idx + 3] = 255;
     }
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, ancho, alto);
   }
   ctx.putImageData(imageData, 0, 0);
-  const dataURL = canvas.toDataURL('image/png');
-  return dataURL.replace('data:image/png;base64,', '');
+  const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+  return dataURL.replace('data:image/jpeg;base64,', '');
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
@@ -124,10 +126,10 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   const TextRec = Capacitor.Plugins.TextRecognition;
   if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
-  const dataUrl = 'data:image/png;base64,' + txBrilloAPNGBase64(brillo, ancho, alto);
+  const dataUrl = 'data:image/jpeg;base64,' + txBrilloAPNGBase64(brillo, ancho, alto);
 
   try {
-    const fileName = nombreTemp.replace('.png', '');
+    const fileName = nombreTemp.replace('.png', '.jpg');
     const response = await Media.savePhoto({
       path: dataUrl,
       albumIdentifier: window.runnerTexto.albumId,
