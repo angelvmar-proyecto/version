@@ -120,43 +120,62 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
-  const fs = Capacitor.Plugins.Filesystem;
   const TextRec = Capacitor.Plugins.TextRecognition;
-  if (!fs || !TextRec) { txLog('Plugins no disponibles'); return null; }
+  if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
 
   const base64 = txBrilloAPNGBase64(brillo, ancho, alto);
-  const chunkSize = 48000;
-  const path = 'Pictures/' + nombreTemp;
+  const dataUrl = 'data:image/png;base64,' + base64;
 
-  try { await fs.deleteFile({ path: path, directory: 'EXTERNAL_STORAGE' }); } catch(e) {}
-
-  await fs.writeFile({
-    path: path,
-    directory: 'EXTERNAL_STORAGE',
-    encoding: 'base64',
-    data: base64.substring(0, chunkSize),
-    recursive: true
-  });
-
-  for (let i = chunkSize; i < base64.length; i += chunkSize) {
-    await fs.appendFile({
-      path: path,
-      directory: 'EXTERNAL_STORAGE',
-      encoding: 'base64',
-      data: base64.substring(i, i + chunkSize)
-    });
+  // Intento 1: dataURL directo
+  try {
+    txLog('    dataURL (' + base64.length + ' chars)');
+    const result = await TextRec.processImage({ path: dataUrl });
+    txLog('    OK via dataURL');
+    return result;
+  } catch(e1) {
+    txLog('    dataURL fallo: ' + e1.message);
   }
 
-  const uriPath = 'file:///storage/emulated/0/Pictures/' + nombreTemp;
-  txLog('    URI: ' + uriPath);
+  // Intento 2: Media.savePhoto + getMedias
+  const Media = Capacitor.Plugins.Media;
+  if (!Media) { txLog('    Media no disponible'); return null; }
 
   try {
-    const result = await TextRec.processImage({ path: uriPath });
-    return result;
+    const fileName = nombreTemp.replace('.png', '');
+    await Media.savePhoto({
+      path: dataUrl,
+      albumIdentifier: window.runnerTexto.albumId,
+      fileName: fileName
+    });
+    txLog('    Guardado con Media: ' + fileName);
+
+    const medias = await Media.getMedias({ quantity: 1 });
+    if (medias && medias.medias && medias.medias[0]) {
+      const u = medias.medias[0];
+      txLog('    Ultimo identifier: ' + u.identifier);
+
+      // Intento 2a: identifier
+      try {
+        const r2 = await TextRec.processImage({ path: u.identifier });
+        txLog('    OK via identifier');
+        return r2;
+      } catch(e2) { txLog('    identifier fallo: ' + e2.message); }
+
+      // Intento 2b: data como dataURL
+      if (u.data) {
+        try {
+          const d2 = 'data:image/jpeg;base64,' + u.data;
+          const r3 = await TextRec.processImage({ path: d2 });
+          txLog('    OK via media.data');
+          return r3;
+        } catch(e3) { txLog('    media.data fallo: ' + e3.message); }
+      }
+    }
   } catch(e) {
-    txLog('    Error OCR: ' + e.message);
-    return null;
+    txLog('    Media fallo: ' + e.message);
   }
+
+  return null;
 }
 function txContarPalabras(texto) {
   if (!texto) return 0;
