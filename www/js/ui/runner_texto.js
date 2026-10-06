@@ -125,16 +125,14 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   if (!fs || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
   const base64 = txBrilloAPNGBase64(brillo, ancho, alto);
-
-  // Guardar en Cache con chunks (ya probado)
-  const path = nombreTemp;
   const chunkSize = 48000;
+  const path = 'Pictures/' + nombreTemp;
 
-  try { await fs.deleteFile({ path: path, directory: 'DOCUMENTS' }); } catch(e) {}
+  try { await fs.deleteFile({ path: path, directory: 'EXTERNAL_STORAGE' }); } catch(e) {}
 
   await fs.writeFile({
     path: path,
-    directory: 'DOCUMENTS',
+    directory: 'EXTERNAL_STORAGE',
     encoding: 'base64',
     data: base64.substring(0, chunkSize),
     recursive: true
@@ -143,26 +141,23 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   for (let i = chunkSize; i < base64.length; i += chunkSize) {
     await fs.appendFile({
       path: path,
-      directory: 'DOCUMENTS',
+      directory: 'EXTERNAL_STORAGE',
       encoding: 'base64',
       data: base64.substring(i, i + chunkSize)
     });
   }
 
-  // Obtener URI del archivo
-  const uri = await fs.getUri({ path: path, directory: 'DOCUMENTS' });
-  txLog('    URI: ' + uri.uri);
+  const uriPath = 'file:///storage/emulated/0/Pictures/' + nombreTemp;
+  txLog('    URI: ' + uriPath);
 
-  // Correr OCR
   try {
-    const result = await TextRec.processImage({ path: uri.uri });
+    const result = await TextRec.processImage({ path: uriPath });
     return result;
   } catch(e) {
     txLog('    Error OCR: ' + e.message);
     return null;
   }
 }
-
 function txContarPalabras(texto) {
   if (!texto) return 0;
   const palabras = texto.split(/\s+/).filter(function(w) {
