@@ -134,64 +134,28 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
       fileName: fileName
     });
 
-    txLog('    savePhoto respuesta: ' + JSON.stringify(response));
+    if (!response || !response.filePath) {
+      txLog('    Sin filePath en respuesta');
+      return null;
+    }
 
-    if (response && response.filePath) {
-      const path = response.filePath;
-      txLog('    filePath: ' + path);
+    const path = response.filePath;
+    const uri = 'file://' + path;
 
-      try {
-        const result = await TextRec.processImage({ path: path });
-        txLog('    OK via filePath');
-        return result;
-      } catch(e1) {
-        txLog('    filePath fallo: ' + e1.message);
-      }
-
-      // Fallback: probar con file:// prefijo
-      try {
-        const result2 = await TextRec.processImage({ path: 'file://' + path });
-        txLog('    OK via file://filePath');
-        return result2;
-      } catch(e2) {
-        txLog('    file://filePath fallo: ' + e2.message);
-      }
+    try {
+      const result = await TextRec.processImage({ path: uri });
+      const txt = (result && result.text) ? result.text : '';
+      txLog('    text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+      return result;
+    } catch(e1) {
+      txLog('    OCR fallo: ' + e1.message);
+      return null;
     }
   } catch(e) {
     txLog('    Media fallo: ' + e.message);
-  }
-
-  return null;
-}
-async function txAsegurarAlbum() {
-  try {
-    const Media = Capacitor.Plugins.Media;
-    if (!Media) return false;
-
-    let albums = await Media.getAlbums();
-    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
-
-    if (!album) {
-      await Media.createAlbum({ name: "MAR_Caribe_Texto" });
-      txLog("Album MAR_Caribe_Texto creado");
-      albums = await Media.getAlbums();
-      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
-    }
-
-    if (album && album.identifier) {
-      window.runnerTexto.albumId = album.identifier;
-      txLog("Album identifier OK");
-      return true;
-    }
-
-    txLog("No se pudo obtener identifier del album");
-    return false;
-  } catch(e) {
-    txLog("Error album: " + e.message);
-    return false;
+    return null;
   }
 }
-
 function txContarPalabras(texto) {
   if (!texto) return 0;
   const palabras = texto.split(/\s+/).filter(function(w) {
