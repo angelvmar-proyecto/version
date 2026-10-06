@@ -120,54 +120,45 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
-  const fs = Capacitor.Plugins.Filesystem;
+  const Media = Capacitor.Plugins.Media;
   const TextRec = Capacitor.Plugins.TextRecognition;
-  if (!fs || !TextRec) { txLog('Plugins no disponibles'); return null; }
+  if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
-  const base64 = txBrilloAPNGBase64(brillo, ancho, alto);
-  const chunkSize = 48000;
+  const dataUrl = 'data:image/png;base64,' + txBrilloAPNGBase64(brillo, ancho, alto);
 
-  try { await fs.deleteFile({ path: nombreTemp, directory: 'CACHE' }); } catch(e) {}
-
-  await fs.writeFile({
-    path: nombreTemp,
-    directory: 'CACHE',
-    encoding: 'base64',
-    data: base64.substring(0, chunkSize),
-    recursive: true
-  });
-
-  for (let i = chunkSize; i < base64.length; i += chunkSize) {
-    await fs.appendFile({
-      path: nombreTemp,
-      directory: 'CACHE',
-      encoding: 'base64',
-      data: base64.substring(i, i + chunkSize)
+  try {
+    const fileName = nombreTemp.replace('.png', '');
+    const response = await Media.savePhoto({
+      path: dataUrl,
+      albumIdentifier: window.runnerTexto.albumId,
+      fileName: fileName
     });
-  }
 
-  const uri = await fs.getUri({ path: nombreTemp, directory: 'CACHE' });
-  txLog('    uri: ' + uri.uri);
+    txLog('    savePhoto respuesta: ' + JSON.stringify(response));
 
-  const httpUri = Capacitor.convertFileSrc(uri.uri);
-  txLog('    httpUri: ' + httpUri);
+    if (response && response.filePath) {
+      const path = response.filePath;
+      txLog('    filePath: ' + path);
 
-  // Intento 1: httpUri (convertFileSrc)
-  try {
-    const result = await TextRec.processImage({ path: httpUri });
-    txLog('    OK via convertFileSrc');
-    return result;
-  } catch(e1) {
-    txLog('    convertFileSrc fallo: ' + e1.message);
-  }
+      try {
+        const result = await TextRec.processImage({ path: path });
+        txLog('    OK via filePath');
+        return result;
+      } catch(e1) {
+        txLog('    filePath fallo: ' + e1.message);
+      }
 
-  // Intento 2: file://
-  try {
-    const result2 = await TextRec.processImage({ path: uri.uri });
-    txLog('    OK via file://');
-    return result2;
-  } catch(e2) {
-    txLog('    file:// fallo: ' + e2.message);
+      // Fallback: probar con file:// prefijo
+      try {
+        const result2 = await TextRec.processImage({ path: 'file://' + path });
+        txLog('    OK via file://filePath');
+        return result2;
+      } catch(e2) {
+        txLog('    file://filePath fallo: ' + e2.message);
+      }
+    }
+  } catch(e) {
+    txLog('    Media fallo: ' + e.message);
   }
 
   return null;
@@ -207,6 +198,7 @@ async function txEjecutar() {
   window.runnerTexto.ejecutando = true;
   window.runnerTexto.cancelar = false;
   window.runnerTexto.resultados = [];
+n  await txAsegurarAlbum();
 
 
   const combos = txGenerarCombos();
