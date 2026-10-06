@@ -38,6 +38,7 @@
     <div class="tab" data-tab="restauracion">🧪 Restauración</div>
     <div class="tab" data-tab="ocr">📖 OCR</div>
   <div class="tab" data-tab="clahe">🎛️ CLAHE</div>
+  <div class="tab" data-tab="filtros">🧪 Filtros</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -267,6 +268,26 @@
   </div>
 
 
+  <div class="tab-content" id="tab-filtros" style="padding:15px; color:#ddd;">
+    <h2>🧪 Optimizacion de Filtros</h2>
+    <p style="font-size:12px; color:#888;">30 combos para encontrar el set minimo de filtros. Pipeline completo con LIDAR.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnRfCargarImgs">📷 Cargar 4 imagenes</button>
+      <button class="btn" id="btnRfCargarBms">📂 Cargar 4 benchmarks</button>
+      <button class="btn green" id="btnRfIniciar">▶️ Iniciar</button>
+      <button class="btn" id="btnRfParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="rfCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="rfBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="rfLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Filtros listo ===</pre>
+    <input type="file" id="rfInputImgs" accept="image/*" multiple style="display:none;">
+    <input type="file" id="rfInputBms" accept=".json" multiple style="display:none;">
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -298,6 +319,7 @@
   <script src="js/ui/calibrar.js"></script>
   <script src="js/ui/runner.js"></script>
   <script src="js/ui/runner_restauracion.js"></script>
+  <script src="js/ui/runner_filtros.js"></script>
   <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
 
