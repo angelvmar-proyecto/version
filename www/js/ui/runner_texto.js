@@ -130,11 +130,11 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   const path = nombreTemp;
   const chunkSize = 48000;
 
-  try { await fs.deleteFile({ path: path, directory: 'CACHE' }); } catch(e) {}
+  try { await fs.deleteFile({ path: path, directory: 'DOCUMENTS' }); } catch(e) {}
 
   await fs.writeFile({
     path: path,
-    directory: 'CACHE',
+    directory: 'DOCUMENTS',
     encoding: 'base64',
     data: base64.substring(0, chunkSize),
     recursive: true
@@ -143,14 +143,14 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   for (let i = chunkSize; i < base64.length; i += chunkSize) {
     await fs.appendFile({
       path: path,
-      directory: 'CACHE',
+      directory: 'DOCUMENTS',
       encoding: 'base64',
       data: base64.substring(i, i + chunkSize)
     });
   }
 
   // Obtener URI del archivo
-  const uri = await fs.getUri({ path: path, directory: 'CACHE' });
+  const uri = await fs.getUri({ path: path, directory: 'DOCUMENTS' });
   txLog('    URI: ' + uri.uri);
 
   // Correr OCR
