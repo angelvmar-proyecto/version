@@ -40,6 +40,7 @@
   <div class="tab" data-tab="clahe">🎛️ CLAHE</div>
   <div class="tab" data-tab="filtros">🧪 Filtros</div>
   <div class="tab" data-tab="refinamiento">🔬 Refinamiento</div>
+  <div class="tab" data-tab="texto">📝 Texto</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -309,6 +310,24 @@
     <input type="file" id="refInputBms" accept=".json" multiple style="display:none;">
   </div>
 
+  <div class="tab-content" id="tab-texto" style="padding:15px; color:#ddd;">
+    <h2>📝 Runner de Texto (OCR real)</h2>
+    <p style="font-size:12px; color:#888;">Prueba filtros con ML Kit. Mide palabras detectadas por OCR.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTxCargarImgs">📷 Cargar 1-4 imagenes</button>
+      <button class="btn green" id="btnTxIniciar">▶️ Iniciar OCR</button>
+      <button class="btn" id="btnTxParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="txCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="txBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="txLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Texto listo ===</pre>
+    <input type="file" id="txInputImgs" accept="image/*" multiple style="display:none;">
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -342,6 +361,7 @@
   <script src="js/ui/runner_restauracion.js"></script>
   <script src="js/ui/runner_filtros.js"></script>
   <script src="js/ui/runner_refinamiento.js"></script>
+  <script src="js/ui/runner_texto.js"></script>
   <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
 
