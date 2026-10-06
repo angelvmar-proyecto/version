@@ -39,6 +39,7 @@
     <div class="tab" data-tab="ocr">📖 OCR</div>
   <div class="tab" data-tab="clahe">🎛️ CLAHE</div>
   <div class="tab" data-tab="filtros">🧪 Filtros</div>
+  <div class="tab" data-tab="refinamiento">🔬 Refinamiento</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -288,6 +289,26 @@
     <input type="file" id="rfInputBms" accept=".json" multiple style="display:none;">
   </div>
 
+  <div class="tab-content" id="tab-refinamiento" style="padding:15px; color:#ddd;">
+    <h2>🔬 Refinamiento (100 combos)</h2>
+    <p style="font-size:12px; color:#888;">Explora el espacio de filtros a fondo. Percentiles, tiles, clip, Sauvola custom y combinaciones.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnRefCargarImgs">📷 Cargar 4 imagenes</button>
+      <button class="btn" id="btnRefCargarBms">📂 Cargar 4 benchmarks</button>
+      <button class="btn green" id="btnRefIniciar">▶️ Iniciar</button>
+      <button class="btn" id="btnRefParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="refCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="refBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="refLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Refinamiento listo ===</pre>
+    <input type="file" id="refInputImgs" accept="image/*" multiple style="display:none;">
+    <input type="file" id="refInputBms" accept=".json" multiple style="display:none;">
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -320,6 +341,7 @@
   <script src="js/ui/runner.js"></script>
   <script src="js/ui/runner_restauracion.js"></script>
   <script src="js/ui/runner_filtros.js"></script>
+  <script src="js/ui/runner_refinamiento.js"></script>
   <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
 
