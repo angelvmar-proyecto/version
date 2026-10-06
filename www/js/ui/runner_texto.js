@@ -122,70 +122,90 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
-  const Media = Capacitor.Plugins.Media;
+  const fs = Capacitor.Plugins.Filesystem;
   const TextRec = Capacitor.Plugins.TextRecognition;
-  if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
+  if (!fs || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
-  const dataUrl = 'data:image/jpeg;base64,' + txBrilloAPNGBase64(brillo, ancho, alto);
+  // Generar JPEG base64
+  const canvas = document.createElement('canvas');
+  canvas.width = ancho;
+  canvas.height = alto;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, ancho, alto);
+
+  const imageData = ctx.getImageData(0, 0, ancho, alto);
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const v = Math.max(0, Math.min(255, brillo[y][x]));
+      const idx = (y * ancho + x) * 4;
+      imageData.data[idx] = v;
+      imageData.data[idx + 1] = v;
+      imageData.data[idx + 2] = v;
+      imageData.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.92);
+  const base64 = dataURL.replace('data:image/jpeg;base64,', '');
+
+  // Guardar en Cache con chunks
+  const chunkSize = 48000;
+  const cachePath = nombreTemp.replace('.png', '.jpg');
+
+  try { await fs.deleteFile({ path: cachePath, directory: 'CACHE' }); } catch(e) {}
 
   try {
-    const fileName = nombreTemp.replace('.png', '.jpg');
-    const response = await Media.savePhoto({
-      path: dataUrl,
-      albumIdentifier: window.runnerTexto.albumId,
-      fileName: fileName
+    await fs.writeFile({
+      path: cachePath,
+      directory: 'CACHE',
+      encoding: 'base64',
+      data: base64.substring(0, chunkSize),
+      recursive: true
     });
 
-    if (!response || !response.filePath) {
-      txLog('    Sin filePath en respuesta');
-      return null;
-    }
-
-    const path = response.filePath;
-    const uri = 'file://' + path;
-
-    try {
-      const result = await TextRec.processImage({ path: uri });
-      const txt = (result && result.text) ? result.text : '';
-      txLog('    text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
-      return result;
-    } catch(e1) {
-      txLog('    OCR fallo: ' + e1.message);
-      return null;
+    for (let i = chunkSize; i < base64.length; i += chunkSize) {
+      await fs.appendFile({
+        path: cachePath,
+        directory: 'CACHE',
+        encoding: 'base64',
+        data: base64.substring(i, i + chunkSize)
+      });
     }
   } catch(e) {
-    txLog('    Media fallo: ' + e.message);
+    txLog('    Escritura fallo: ' + e.message);
     return null;
   }
-}
 
-async function txAsegurarAlbum() {
+  // Obtener URI
+  const uriInfo = await fs.getUri({ path: cachePath, directory: 'CACHE' });
+  txLog('    uri: ' + uriInfo.uri);
+
+  // Intentar 1: file:// directo
   try {
-    const Media = Capacitor.Plugins.Media;
-    if (!Media) return false;
-
-    let albums = await Media.getAlbums();
-    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
-
-    if (!album) {
-      await Media.createAlbum({ name: "MAR_Caribe_Texto" });
-      txLog("Album MAR_Caribe_Texto creado");
-      albums = await Media.getAlbums();
-      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
-    }
-
-    if (album && album.identifier) {
-      window.runnerTexto.albumId = album.identifier;
-      txLog("Album identifier OK");
-      return true;
-    }
-
-    txLog("No se pudo obtener identifier del album");
-    return false;
-  } catch(e) {
-    txLog("Error album: " + e.message);
-    return false;
+    const result = await TextRec.processImage({ path: uriInfo.uri });
+    const txt = (result && result.text) ? result.text : '';
+    txLog('    OK file:// text len=' + txt.length);
+    return result;
+  } catch(e1) {
+    txLog('    file:// fallo: ' + e1.message);
   }
+
+  // Intentar 2: convertFileSrc
+  try {
+    const httpUri = Capacitor.convertFileSrc(uriInfo.uri);
+    txLog('    httpUri: ' + httpUri);
+    const result2 = await TextRec.processImage({ path: httpUri });
+    const txt2 = (result2 && result2.text) ? result2.text : '';
+    txLog('    OK convertFileSrc text len=' + txt2.length);
+    return result2;
+  } catch(e2) {
+    txLog('    convertFileSrc fallo: ' + e2.message);
+  }
+
+  return null;
 }
 function txContarPalabras(texto) {
   if (!texto) return 0;
