@@ -198,7 +198,7 @@ async function txEjecutar() {
   window.runnerTexto.ejecutando = true;
   window.runnerTexto.cancelar = false;
   window.runnerTexto.resultados = [];
-n  await txAsegurarAlbum();
+  await txAsegurarAlbum();
 
 
   const combos = txGenerarCombos();
