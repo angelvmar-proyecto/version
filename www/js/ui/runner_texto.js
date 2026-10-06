@@ -191,6 +191,14 @@ async function txAsegurarAlbum() {
     return false;
   }
 }
+
+function txContarPalabras(texto) {
+  if (!texto) return 0;
+  const palabras = texto.split(/\s+/).filter(function(w) {
+    return w.length >= 3 && /[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/.test(w);
+  });
+  return palabras.length;
+}
 async function txEjecutar() {
   if (window.runnerTexto.ejecutando) { txLog('Ya corriendo'); return; }
   if (window.runnerTexto.imagenes.length < 1) { txLog('Faltan imagenes'); return; }
