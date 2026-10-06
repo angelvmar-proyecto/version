@@ -170,7 +170,12 @@ async function txEjecutar() {
   window.runnerTexto.ejecutando = true;
   window.runnerTexto.cancelar = false;
   window.runnerTexto.resultados = [];
-  await txAsegurarAlbum();
+
+  try {
+    await txAsegurarAlbum();
+  } catch(e) {
+    txLog('Album fallo (sigo): ' + e.message);
+  }
 
 
   const combos = txGenerarCombos();
@@ -244,6 +249,9 @@ async function txEjecutar() {
 }
 
 function txSetup() {
+  window.runnerTexto.ejecutando = false;
+  window.runnerTexto.cancelar = false;
+
   const logEl = document.getElementById('txLog');
   if (logEl) logEl.textContent = 'Runner Texto v1 listo\n';
 
