@@ -1,8 +1,18 @@
 diff --git a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
-index 8e4efc9..98295b8 100644
+index 8e4efc9..8d4469e 100644
 --- a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
 +++ b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
-@@ -71,6 +71,27 @@ public class TextRecognition {
+@@ -1,6 +1,9 @@
+ package io.capawesome.capacitorjs.plugins.mlkit.textrecognition;
+ 
++import android.graphics.BitmapFactory;
++import android.graphics.ImageFormat;
+ import android.net.Uri;
++import android.util.Base64;
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ import com.google.mlkit.vision.common.InputImage;
+@@ -71,6 +74,27 @@ public class TextRecognition {
      @Nullable
      private InputImage createInputImageFromFilePath(@NonNull String path) {
          try {
@@ -11,10 +21,10 @@ index 8e4efc9..98295b8 100644
 +                int commaIdx = path.indexOf(",");
 +                if (commaIdx > 0) {
 +                    String base64Part = path.substring(commaIdx + 1);
-+                    byte[] bytes = android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT);
-+                    android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
++                    byte[] bytes = Base64.decode(base64Part, Base64.DEFAULT);
++                    BitmapFactory.Options opts = new BitmapFactory.Options();
 +                    opts.inJustDecodeBounds = true;
-+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
++                    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
 +                    int w = opts.outWidth;
 +                    int h = opts.outHeight;
 +                    return InputImage.fromByteArray(
@@ -22,7 +32,7 @@ index 8e4efc9..98295b8 100644
 +                        w,
 +                        h,
 +                        0,
-+                        InputImage.IMAGE_FORMAT_JPEG
++                        ImageFormat.JPEG
 +                    );
 +                }
 +            }
