@@ -59,6 +59,7 @@ async function txProcesarImgs(files) {
 function txGenerarCombos() {
   return [
     { nombre: 'raw_original', tipo: 'raw', params: {} },
+    { nombre: 'raw_upscale_auto', tipo: 'upscale_auto', params: {} },
     { nombre: 'baseline', tipo: 'none', params: {} },
     { nombre: 'contrast_only', tipo: 'contrast', params: { pb: 5, pa: 95 } },
     { nombre: 'cc_p5_t16_c8', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 16, clip: 8 } },
@@ -178,6 +179,69 @@ async function txCorrerOCRRaw(dataURL) {
 }
 
 async function txAsegurarAlbum() {
+
+async function txCorrerOCRUpscaleAuto(img) {
+  const TextRec = Capacitor.Plugins.TextRecognition;
+  if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
+
+  const canvasTmp = document.createElement('canvas');
+  canvasTmp.width = img.ancho; canvasTmp.height = img.alto;
+  const ctxTmp = canvasTmp.getContext('2d');
+  ctxTmp.drawImage(img.img, 0, 0);
+  const imageDataTmp = ctxTmp.getImageData(0, 0, img.ancho, img.alto);
+  const brilloTmp = calcularBrillo(imageDataTmp);
+
+  let estim;
+  try {
+    estim = estimarTamanoTexto(brilloTmp, img.ancho, img.alto);
+  } catch(e) {
+    txLog('    [auto] estimarTamanoTexto fallo: ' + e.message);
+    return txCorrerOCRRaw(img.dataURLOriginal);
+  }
+
+  const tamTexto = estim.tamTexto;
+  txLog('    [auto] ' + img.nombre + ': tamTexto=' + tamTexto.toFixed(1) + 'px, renglones=' + estim.numRenglones);
+
+  let factor;
+  if (tamTexto >= 14) factor = 1.0;
+  else if (tamTexto >= 10) factor = 1.5;
+  else if (tamTexto >= 7) factor = 2.0;
+  else if (tamTexto < 999) factor = 3.0;
+  else factor = 1.0;
+
+  const maxLado = Math.max(img.ancho, img.alto);
+  const factorMax = 2048 / maxLado;
+  const factorReal = Math.min(factor, factorMax);
+
+  txLog('    [auto] factor=' + factorReal.toFixed(2) + ' (pedido=' + factor + ', max=' + factorMax.toFixed(2) + ')');
+
+  if (factorReal <= 1.05) {
+    return txCorrerOCRRaw(img.dataURLOriginal);
+  }
+
+  const wNuevo = Math.round(img.ancho * factorReal);
+  const hNuevo = Math.round(img.alto * factorReal);
+  const canvas = document.createElement('canvas');
+  canvas.width = wNuevo;
+  canvas.height = hNuevo;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img.img, 0, 0, wNuevo, hNuevo);
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+  txLog('    [auto] ' + img.ancho + 'x' + img.alto + ' -> ' + wNuevo + 'x' + hNuevo);
+
+  try {
+    const result = await TextRec.processImage({ path: dataURL });
+    const txt = (result && result.text) ? result.text : '';
+    txLog('    AUTO text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+    return result;
+  } catch(e) {
+    txLog('    AUTO OCR fallo: ' + e.message);
+    return null;
+  }
+}
   try {
     const Media = Capacitor.Plugins.Media;
     if (!Media) return false;
@@ -246,6 +310,14 @@ async function txIniciar() {
           continue;
         }
 
+
+        if (combo.tipo === 'upscale_auto') {
+          const ocrAuto = await txCorrerOCRUpscaleAuto(img);
+          const palabrasAuto = ocrAuto ? txContarPalabras(ocrAuto.text) : 0;
+          totalPalabras += palabrasAuto;
+          resultadosPorImagen[img.nombre] = { palabras: palabrasAuto, texto: ocrAuto ? ocrAuto.text.substring(0, 100) : '' };
+          continue;
+        }
         const canvas = document.createElement('canvas');
         canvas.width = img.ancho; canvas.height = img.alto;
         const ctx = canvas.getContext('2d');
