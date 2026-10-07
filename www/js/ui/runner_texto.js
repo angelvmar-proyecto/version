@@ -126,7 +126,7 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   const TextRec = Capacitor.Plugins.TextRecognition;
   if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
-  // Generar JPEG base64
+  // Generar JPEG base64 (como antes)
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
   canvas.height = alto;
@@ -151,53 +151,34 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   const dataURL = canvas.toDataURL('image/jpeg', 0.92);
   const dataUrl = 'data:image/jpeg;base64,' + dataURL.replace('data:image/jpeg;base64,', '');
 
-  // fileName SIN extension (Media agrega .jpg)
   const fileName = nombreTemp.replace('.png', '');
 
+  // Guardar con Media (para tener una copia visible)
   try {
     const response = await Media.savePhoto({
       path: dataUrl,
       albumIdentifier: window.runnerTexto.albumId,
       fileName: fileName
     });
-
-    if (!response || !response.filePath) {
-      txLog('    Sin filePath');
-      return null;
-    }
-
-    const path = response.filePath;
-    txLog('    filePath: ' + path);
-
-    // Intentar 1: file:// + path
-    try {
-      const result = await TextRec.processImage({ path: 'file://' + path });
-      const txt = (result && result.text) ? result.text : '';
-      txLog('    OK text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
-      return result;
-    } catch(e1) {
-      txLog('    file:// fallo: ' + e1.message);
-    }
-
-    // Intentar 2: convertFileSrc
-    try {
-      const httpUri = Capacitor.convertFileSrc(path);
-      txLog('    httpUri: ' + httpUri);
-      const result2 = await TextRec.processImage({ path: httpUri });
-      const txt2 = (result2 && result2.text) ? result2.text : '';
-      txLog('    OK convert text len=' + txt2.length);
-      return result2;
-    } catch(e2) {
-      txLog('    convert fallo: ' + e2.message);
-    }
-
-    return null;
+    txLog('    guardado: ' + (response && response.filePath ? response.filePath.substring(response.filePath.length - 40) : 'sin path'));
   } catch(e) {
-    txLog('    Media fallo: ' + e.message);
+    txLog('    guardado fallo: ' + e.message);
+  }
+
+  // TEST DE ESCAPE: usar el archivo hardcodeado en Documents
+  const testPath = '/storage/emulated/0/Documents/prueba_mlkit.jpg';
+  txLog('    TEST con: ' + testPath);
+
+  try {
+    const result = await TextRec.processImage({ path: 'file://' + testPath });
+    const txt = (result && result.text) ? result.text : '';
+    txLog('    TEST text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+    return result;
+  } catch(e1) {
+    txLog('    TEST fallo: ' + e1.message);
     return null;
   }
 }
-
 async function txAsegurarAlbum() {
   try {
     const Media = Capacitor.Plugins.Media;
