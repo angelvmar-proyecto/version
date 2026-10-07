@@ -1,42 +1,80 @@
 diff --git a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
-index 8e4efc9..8d4469e 100644
+index 8e4efc9..431521e 100644
 --- a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
 +++ b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
-@@ -1,6 +1,9 @@
+@@ -1,6 +1,10 @@
  package io.capawesome.capacitorjs.plugins.mlkit.textrecognition;
  
++import android.graphics.Bitmap;
 +import android.graphics.BitmapFactory;
-+import android.graphics.ImageFormat;
  import android.net.Uri;
 +import android.util.Base64;
++import android.util.Log;
  import androidx.annotation.NonNull;
  import androidx.annotation.Nullable;
  import com.google.mlkit.vision.common.InputImage;
-@@ -71,6 +74,27 @@ public class TextRecognition {
+@@ -17,6 +21,8 @@ import io.capawesome.capacitorjs.plugins.mlkit.textrecognition.interfaces.NonEmp
+ 
+ public class TextRecognition {
+ 
++    private static final String TAG = "MLKIT_PATCH";
++
+     @NonNull
+     private final TextRecognitionPlugin plugin;
+ 
+@@ -25,8 +31,10 @@ public class TextRecognition {
+     }
+ 
+     public void processImage(@NonNull ProcessImageOptions options, @NonNull NonEmptyResultCallback<ProcessImageResult> callback) {
++        Log.d(TAG, "processImage called, path starts with: " + (options.getPath() != null ? options.getPath().substring(0, Math.min(options.getPath().length(), 40)) : "NULL"));
+         InputImage inputImage = createInputImageFromFilePath(options.getPath());
+         if (inputImage == null) {
++            Log.e(TAG, "inputImage is NULL, returning ERROR_LOAD_IMAGE_FAILED");
+             callback.error(new Exception(TextRecognitionPlugin.ERROR_LOAD_IMAGE_FAILED));
+             return;
+         }
+@@ -37,6 +45,7 @@ public class TextRecognition {
+             textRecognizer
+                 .process(inputImage)
+                 .addOnSuccessListener(text -> {
++                    Log.d(TAG, "OCR success, text len=" + text.getText().length());
+                     textRecognizer.close();
+                     ProcessImageResult result = new ProcessImageResult(text);
+                     callback.success(result);
+@@ -46,6 +55,7 @@ public class TextRecognition {
+                     callback.error(new Exception(TextRecognitionPlugin.ERROR_PROCESS_IMAGE_CANCELED));
+                 })
+                 .addOnFailureListener(exception -> {
++                    Log.e(TAG, "OCR failed", exception);
+                     textRecognizer.close();
+                     callback.error(exception);
+                 });
+@@ -71,8 +81,28 @@ public class TextRecognition {
      @Nullable
      private InputImage createInputImageFromFilePath(@NonNull String path) {
          try {
-+            // Si es data URL con base64, decodificar directo
 +            if (path.startsWith("data:image/")) {
 +                int commaIdx = path.indexOf(",");
++                Log.d(TAG, "dataURL detected, commaIdx=" + commaIdx + ", pathLen=" + path.length());
 +                if (commaIdx > 0) {
 +                    String base64Part = path.substring(commaIdx + 1);
++                    Log.d(TAG, "base64 part length=" + base64Part.length());
 +                    byte[] bytes = Base64.decode(base64Part, Base64.DEFAULT);
-+                    BitmapFactory.Options opts = new BitmapFactory.Options();
-+                    opts.inJustDecodeBounds = true;
-+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
-+                    int w = opts.outWidth;
-+                    int h = opts.outHeight;
-+                    return InputImage.fromByteArray(
-+                        bytes,
-+                        w,
-+                        h,
-+                        0,
-+                        ImageFormat.JPEG
-+                    );
++                    Log.d(TAG, "decoded bytes length=" + bytes.length);
++                    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
++                    if (bitmap == null) {
++                        Log.e(TAG, "BitmapFactory.decodeByteArray returned NULL");
++                        return null;
++                    }
++                    Log.d(TAG, "bitmap OK " + bitmap.getWidth() + "x" + bitmap.getHeight());
++                    return InputImage.fromBitmap(bitmap, 0);
 +                }
++                Log.e(TAG, "dataURL but commaIdx <= 0");
 +            }
-+            // Fallback: tratar como file path
++            Log.d(TAG, "fallback to fromFilePath");
              return InputImage.fromFilePath(plugin.getContext(), Uri.parse(path));
          } catch (Exception exception) {
++            Log.e(TAG, "createInputImageFromFilePath EXCEPTION", exception);
              return null;
+         }
+     }
