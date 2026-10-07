@@ -1,0 +1,32 @@
+diff --git a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
+index 8e4efc9..98295b8 100644
+--- a/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
++++ b/node_modules/@capacitor-mlkit/text-recognition/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/textrecognition/TextRecognition.java
+@@ -71,6 +71,27 @@ public class TextRecognition {
+     @Nullable
+     private InputImage createInputImageFromFilePath(@NonNull String path) {
+         try {
++            // Si es data URL con base64, decodificar directo
++            if (path.startsWith("data:image/")) {
++                int commaIdx = path.indexOf(",");
++                if (commaIdx > 0) {
++                    String base64Part = path.substring(commaIdx + 1);
++                    byte[] bytes = android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT);
++                    android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
++                    opts.inJustDecodeBounds = true;
++                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
++                    int w = opts.outWidth;
++                    int h = opts.outHeight;
++                    return InputImage.fromByteArray(
++                        bytes,
++                        w,
++                        h,
++                        0,
++                        InputImage.IMAGE_FORMAT_JPEG
++                    );
++                }
++            }
++            // Fallback: tratar como file path
+             return InputImage.fromFilePath(plugin.getContext(), Uri.parse(path));
+         } catch (Exception exception) {
+             return null;
