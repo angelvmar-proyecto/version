@@ -401,3 +401,7 @@ if (document.readyState === 'loading') {
 }
 
 console.log('Runner Texto v1 listo');
+try {
+  const elChk = document.getElementById('txLog');
+  if (elChk) elChk.textContent = '[v1-upscale-auto] cargado\n' + elChk.textContent;
+} catch(e) {}
