@@ -122,9 +122,9 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
-  const fs = Capacitor.Plugins.Filesystem;
+  const Media = Capacitor.Plugins.Media;
   const TextRec = Capacitor.Plugins.TextRecognition;
-  if (!fs || !TextRec) { txLog('Plugins no disponibles'); return null; }
+  if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
 
   // Generar JPEG base64
   const canvas = document.createElement('canvas');
@@ -149,63 +149,53 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   ctx.putImageData(imageData, 0, 0);
 
   const dataURL = canvas.toDataURL('image/jpeg', 0.92);
-  const base64 = dataURL.replace('data:image/jpeg;base64,', '');
+  const dataUrl = 'data:image/jpeg;base64,' + dataURL.replace('data:image/jpeg;base64,', '');
 
-  // Guardar en Cache con chunks
-  const chunkSize = 48000;
-  const cachePath = nombreTemp.replace('.png', '.jpg');
-
-  try { await fs.deleteFile({ path: cachePath, directory: 'CACHE' }); } catch(e) {}
+  // fileName SIN extension (Media agrega .jpg)
+  const fileName = nombreTemp.replace('.png', '');
 
   try {
-    await fs.writeFile({
-      path: cachePath,
-      directory: 'CACHE',
-      encoding: 'base64',
-      data: base64.substring(0, chunkSize),
-      recursive: true
+    const response = await Media.savePhoto({
+      path: dataUrl,
+      albumIdentifier: window.runnerTexto.albumId,
+      fileName: fileName
     });
 
-    for (let i = chunkSize; i < base64.length; i += chunkSize) {
-      await fs.appendFile({
-        path: cachePath,
-        directory: 'CACHE',
-        encoding: 'base64',
-        data: base64.substring(i, i + chunkSize)
-      });
+    if (!response || !response.filePath) {
+      txLog('    Sin filePath');
+      return null;
     }
+
+    const path = response.filePath;
+    txLog('    filePath: ' + path);
+
+    // Intentar 1: file:// + path
+    try {
+      const result = await TextRec.processImage({ path: 'file://' + path });
+      const txt = (result && result.text) ? result.text : '';
+      txLog('    OK text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+      return result;
+    } catch(e1) {
+      txLog('    file:// fallo: ' + e1.message);
+    }
+
+    // Intentar 2: convertFileSrc
+    try {
+      const httpUri = Capacitor.convertFileSrc(path);
+      txLog('    httpUri: ' + httpUri);
+      const result2 = await TextRec.processImage({ path: httpUri });
+      const txt2 = (result2 && result2.text) ? result2.text : '';
+      txLog('    OK convert text len=' + txt2.length);
+      return result2;
+    } catch(e2) {
+      txLog('    convert fallo: ' + e2.message);
+    }
+
+    return null;
   } catch(e) {
-    txLog('    Escritura fallo: ' + e.message);
+    txLog('    Media fallo: ' + e.message);
     return null;
   }
-
-  // Obtener URI
-  const uriInfo = await fs.getUri({ path: cachePath, directory: 'CACHE' });
-  txLog('    uri: ' + uriInfo.uri);
-
-  // Intentar 1: file:// directo
-  try {
-    const result = await TextRec.processImage({ path: uriInfo.uri });
-    const txt = (result && result.text) ? result.text : '';
-    txLog('    OK file:// text len=' + txt.length);
-    return result;
-  } catch(e1) {
-    txLog('    file:// fallo: ' + e1.message);
-  }
-
-  // Intentar 2: convertFileSrc
-  try {
-    const httpUri = Capacitor.convertFileSrc(uriInfo.uri);
-    txLog('    httpUri: ' + httpUri);
-    const result2 = await TextRec.processImage({ path: httpUri });
-    const txt2 = (result2 && result2.text) ? result2.text : '';
-    txLog('    OK convertFileSrc text len=' + txt2.length);
-    return result2;
-  } catch(e2) {
-    txLog('    convertFileSrc fallo: ' + e2.message);
-  }
-
-  return null;
 }
 function txContarPalabras(texto) {
   if (!texto) return 0;
