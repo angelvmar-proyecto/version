@@ -197,6 +197,35 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
     return null;
   }
 }
+
+async function txAsegurarAlbum() {
+  try {
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return false;
+
+    let albums = await Media.getAlbums();
+    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
+
+    if (!album) {
+      await Media.createAlbum({ name: "MAR_Caribe_Texto" });
+      txLog("Album MAR_Caribe_Texto creado");
+      albums = await Media.getAlbums();
+      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_Texto"; });
+    }
+
+    if (album && album.identifier) {
+      window.runnerTexto.albumId = album.identifier;
+      txLog("Album identifier OK");
+      return true;
+    }
+
+    txLog("No se pudo obtener identifier del album");
+    return false;
+  } catch(e) {
+    txLog("Error album: " + e.message);
+    return false;
+  }
+}
 function txContarPalabras(texto) {
   if (!texto) return 0;
   const palabras = texto.split(/\s+/).filter(function(w) {
