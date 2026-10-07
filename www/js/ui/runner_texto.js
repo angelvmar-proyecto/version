@@ -42,7 +42,13 @@ async function txProcesarImgs(files) {
         reader.onerror = reject;
         reader.readAsDataURL(arr[i]);
       });
-      imgs.push({ nombre: arr[i].name.replace('.jpg','').replace('.png',''), img, ancho: img.width, alto: img.height });
+      imgs.push({
+        nombre: arr[i].name.replace('.jpg','').replace('.png',''),
+        img,
+        ancho: img.width,
+        alto: img.height,
+        dataURLOriginal: img.src
+      });
     } catch(e) { txLog('Error: ' + e.message); }
   }
   window.runnerTexto.imagenes = imgs;
@@ -52,14 +58,15 @@ async function txProcesarImgs(files) {
 
 function txGenerarCombos() {
   return [
+    { nombre: 'raw_original', tipo: 'raw', params: {} },
     { nombre: 'baseline', tipo: 'none', params: {} },
-    { nombre: 'ocr+sauv+clahe_t32_c2', tipo: 'combo_full', params: {} },
     { nombre: 'contrast_only', tipo: 'contrast', params: { pb: 5, pa: 95 } },
-    { nombre: 'cc_p5_t16_c8', tipo: 'combo_ocr', params: { pb: 5, pa: 95, tiles: 16, clip: 8 } },
-    { nombre: 'cc_p5_t16_c4', tipo: 'combo_ocr', params: { pb: 5, pa: 95, tiles: 16, clip: 4 } },
-    { nombre: 'cc_p5_t8_c8', tipo: 'combo_ocr', params: { pb: 5, pa: 95, tiles: 8, clip: 8 } },
+    { nombre: 'cc_p5_t16_c8', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 16, clip: 8 } },
+    { nombre: 'cc_p5_t16_c4', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 16, clip: 4 } },
+    { nombre: 'cc_p5_t8_c8', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 8, clip: 8 } },
+    { nombre: 'ocr+sauv+clahe_t32_c2', tipo: 'ocr_combo', params: {} },
     { nombre: 'sauvola_solo', tipo: 'sauvola', params: {} },
-    { nombre: 'filtro_ocr_solo', tipo: 'filtro_ocr', params: {} },
+    { nombre: 'filtro_ocr_solo', tipo: 'clahe_only', params: {} },
     { nombre: 'gamma_1.8', tipo: 'gamma', params: { valor: 1.8 } },
     { nombre: 'unsharp_r3_a1.5', tipo: 'unsharp', params: { radio: 3, amount: 1.5 } }
   ];
@@ -70,30 +77,29 @@ function txAplicarFiltro(brillo, ancho, alto, combo) {
     switch (combo.tipo) {
       case 'none': return brillo;
       case 'contrast': return restaurarContrast(brillo, ancho, alto, combo.params.pb, combo.params.pa);
-      case 'combo_ocr': {
+      case 'contrast_clahe': {
         let b = restaurarContrast(brillo, ancho, alto, combo.params.pb, combo.params.pa);
         b = restaurarCLAHE(b, ancho, alto, combo.params.tiles, combo.params.clip);
         return b;
       }
-      case 'combo_full': {
+      case 'ocr_combo': {
         let b = restaurarContrast(brillo, ancho, alto, 5, 95);
         b = restaurarCLAHE(b, ancho, alto, 16, 8);
         b = restaurarCLAHE(b, ancho, alto, 32, 2);
-        b = aplicarSauvola(b, ancho, alto);
         return b;
       }
-      case 'sauvola': return aplicarSauvola(brillo, ancho, alto);
-      case 'filtro_ocr': {
+      case 'clahe_only': {
         let b = restaurarContrast(brillo, ancho, alto, 5, 95);
         b = restaurarCLAHE(b, ancho, alto, 16, 8);
         return b;
       }
+      case 'sauvola': return aplicarSauvola(brillo, ancho, alto);
       case 'gamma': return aplicarGamma(brillo, ancho, alto, combo.params.valor);
       case 'unsharp': return restaurarUnsharp(brillo, ancho, alto, combo.params.radio, combo.params.amount);
       default: return brillo;
     }
   } catch(e) {
-    console.warn('[TX] Error filtro ' + combo.nombre + ': ' + e.message);
+    txLog('Filtro error ' + combo.nombre + ': ' + e.message);
     return brillo;
   }
 }
@@ -113,8 +119,6 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
       imageData.data[idx + 2] = v;
       imageData.data[idx + 3] = 255;
     }
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, ancho, alto);
   }
   ctx.putImageData(imageData, 0, 0);
   const dataURL = canvas.toDataURL('image/jpeg', 0.92);
@@ -125,7 +129,6 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   const TextRec = Capacitor.Plugins.TextRecognition;
   if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
 
-  // Generar JPEG base64
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
   canvas.height = alto;
@@ -159,6 +162,21 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
     return null;
   }
 }
+
+async function txCorrerOCRRaw(dataURL) {
+  const TextRec = Capacitor.Plugins.TextRecognition;
+  if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
+  try {
+    const result = await TextRec.processImage({ path: dataURL });
+    const txt = (result && result.text) ? result.text : '';
+    txLog('    RAW text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+    return result;
+  } catch(e) {
+    txLog('    RAW OCR fallo: ' + e.message);
+    return null;
+  }
+}
+
 async function txAsegurarAlbum() {
   try {
     const Media = Capacitor.Plugins.Media;
@@ -179,57 +197,53 @@ async function txAsegurarAlbum() {
       txLog("Album identifier OK");
       return true;
     }
-
-    txLog("No se pudo obtener identifier del album");
     return false;
   } catch(e) {
-    txLog("Error album: " + e.message);
+    txLog("txAsegurarAlbum error: " + e.message);
     return false;
   }
 }
+
 function txContarPalabras(texto) {
   if (!texto) return 0;
-  const palabras = texto.split(/\s+/).filter(function(w) {
-    return w.length >= 3 && /[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/.test(w);
-  });
-  return palabras.length;
+  return texto.split(/\s+/).filter(function(p) { return p.length > 1; }).length;
 }
-async function txEjecutar() {
-  if (window.runnerTexto.ejecutando) { txLog('Ya corriendo'); return; }
-  if (window.runnerTexto.imagenes.length < 1) { txLog('Faltan imagenes'); return; }
+
+async function txIniciar() {
+  if (window.runnerTexto.ejecutando) { txLog('Ya ejecutando'); return; }
+  if (window.runnerTexto.imagenes.length === 0) { txLog('Carga imagenes primero'); return; }
 
   window.runnerTexto.ejecutando = true;
   window.runnerTexto.cancelar = false;
   window.runnerTexto.resultados = [];
 
-  try {
-    await txAsegurarAlbum();
-  } catch(e) {
-    txLog('Album fallo (sigo): ' + e.message);
-  }
-
+  txLog('Iniciando OCR: 10 filtros x ' + window.runnerTexto.imagenes.length + ' imagenes');
+  await txAsegurarAlbum();
 
   const combos = txGenerarCombos();
   const total = combos.length;
-  txLog('Iniciando OCR: ' + total + ' filtros x ' + window.runnerTexto.imagenes.length + ' imagenes');
-
-  const t0 = performance.now();
 
   for (let i = 0; i < combos.length; i++) {
-    if (window.runnerTexto.cancelar) { txLog('Cancelado en combo ' + (i + 1)); break; }
-
-    const combo = combos[i];
-    const elCombo = document.getElementById('txCombo');
-    const elBar = document.getElementById('txBar');
-    if (elCombo) elCombo.textContent = (i + 1) + '/' + total;
+    if (window.runnerTexto.cancelar) { txLog('Cancelado'); break; }
+    const elBar = document.getElementById('txBarra');
     if (elBar) elBar.style.width = (((i + 1) / total) * 100).toFixed(0) + '%';
 
+    const combo = combos[i];
     const resultadosPorImagen = {};
     let totalPalabras = 0;
 
     for (let j = 0; j < window.runnerTexto.imagenes.length; j++) {
+      if (window.runnerTexto.cancelar) break;
       const img = window.runnerTexto.imagenes[j];
       try {
+        if (combo.tipo === 'raw') {
+          const ocrRaw = await txCorrerOCRRaw(img.dataURLOriginal);
+          const palabrasRaw = ocrRaw ? txContarPalabras(ocrRaw.text) : 0;
+          totalPalabras += palabrasRaw;
+          resultadosPorImagen[img.nombre] = { palabras: palabrasRaw, texto: ocrRaw ? ocrRaw.text.substring(0, 100) : '' };
+          continue;
+        }
+
         const canvas = document.createElement('canvas');
         canvas.width = img.ancho; canvas.height = img.alto;
         const ctx = canvas.getContext('2d');
@@ -257,60 +271,38 @@ async function txEjecutar() {
     });
 
     txLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + totalPalabras + ' palabras');
-
-    await new Promise(function(r) { setTimeout(r, 50); });
   }
 
-  const t1 = performance.now();
-  window.runnerTexto.ejecutando = false;
-  txLog('Terminado en ' + ((t1 - t0) / 1000).toFixed(1) + 's');
-
-  const ranking = window.runnerTexto.resultados.slice().sort(function(a, b) { return b.totalPalabras - a.totalPalabras; });
+  // Ranking
+  const ordenados = window.runnerTexto.resultados.slice().sort(function(a, b) { return b.totalPalabras - a.totalPalabras; });
   txLog('=== TOP 10 ===');
-  ranking.forEach(function(r, i) { txLog((i + 1) + '. ' + r.nombre + ' = ' + r.totalPalabras + ' palabras'); });
-
-  try {
-    const fs = Capacitor.Plugins.Filesystem;
-    const out = { fecha: new Date().toISOString(), total: ranking.length, ranking: ranking };
-    const json = JSON.stringify(out, null, 2);
-    await fs.writeFile({ path: 'texto_ranking.json', directory: 'DOCUMENTS', encoding: 'utf8', data: json, recursive: true });
-    txLog('Guardado en Documents/texto_ranking.json');
-    alert('Guardado en Documents/texto_ranking.json');
-  } catch(e) { txLog('Error guardando: ' + e.message); }
-}
-
-function txSetup() {
-  window.runnerTexto.ejecutando = false;
-  window.runnerTexto.cancelar = false;
-
-  const logEl = document.getElementById('txLog');
-  if (logEl) logEl.textContent = 'Runner Texto v1 listo\n';
-
-  const btnCI = document.getElementById('btnTxCargarImgs');
-  const inpI = document.getElementById('txInputImgs');
-  if (btnCI) btnCI.onclick = txCargarImgsClick;
-  if (inpI) inpI.onchange = function(e) { if (e.target.files.length > 0) txProcesarImgs(e.target.files); };
-
-  const btnI = document.getElementById('btnTxIniciar');
-  const btnP = document.getElementById('btnTxParar');
-  if (btnI) btnI.onclick = txEjecutar;
-  if (btnP) btnP.onclick = function() { window.runnerTexto.cancelar = true; };
-
-  const tabBtns = document.querySelectorAll('.tab');
-  tabBtns.forEach(function(t) {
-    if (t.dataset.tab === 'texto' && !t.dataset.bound) {
-      t.dataset.bound = '1';
-      t.addEventListener('click', function() {
-        document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(x) { x.classList.remove('active'); });
-        this.classList.add('active');
-        const c = document.getElementById('tab-texto');
-        if (c) c.classList.add('active');
-      });
-    }
+  ordenados.forEach(function(r, idx) {
+    txLog('#' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' palabras');
   });
 
-  console.log('runner_texto.js listo');
+  // Persistir ranking
+  try {
+    const fs = Capacitor.Plugins.Filesystem;
+    if (fs) {
+      const json = JSON.stringify(ordenados, null, 2);
+      await fs.writeFile({ path: 'texto_ranking.json', directory: 'DOCUMENTS', encoding: 'utf8', data: json, recursive: true });
+    }
+  } catch(e) {
+    txLog('Error guardando: ' + e.message);
+  }
+
+  txLog('Terminado en ' + '...');
+  window.runnerTexto.ejecutando = false;
 }
 
-setTimeout(txSetup, 500);
+function txParar() {
+  window.runnerTexto.cancelar = true;
+  txLog('Parando...');
+}
+
+window.txIniciar = txIniciar;
+window.txParar = txParar;
+window.txCargarImgsClick = txCargarImgsClick;
+window.txProcesarImgs = txProcesarImgs;
+
+console.log('Runner Texto v1 listo');
