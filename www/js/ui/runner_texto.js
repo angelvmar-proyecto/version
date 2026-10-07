@@ -217,7 +217,7 @@ async function txIniciar() {
   window.runnerTexto.cancelar = false;
   window.runnerTexto.resultados = [];
 
-  txLog('Iniciando OCR: 10 filtros x ' + window.runnerTexto.imagenes.length + ' imagenes');
+  txLog('Iniciando OCR: ' + txGenerarCombos().length + ' filtros x ' + window.runnerTexto.imagenes.length + ' imagenes');
   await txAsegurarAlbum();
 
   const combos = txGenerarCombos();
@@ -225,8 +225,10 @@ async function txIniciar() {
 
   for (let i = 0; i < combos.length; i++) {
     if (window.runnerTexto.cancelar) { txLog('Cancelado'); break; }
-    const elBar = document.getElementById('txBarra');
+    const elBar = document.getElementById('txBar');
     if (elBar) elBar.style.width = (((i + 1) / total) * 100).toFixed(0) + '%';
+    const elCombo = document.getElementById('txCombo');
+    if (elCombo) elCombo.textContent = (i + 1) + '/' + total;
 
     const combo = combos[i];
     const resultadosPorImagen = {};
@@ -275,7 +277,7 @@ async function txIniciar() {
 
   // Ranking
   const ordenados = window.runnerTexto.resultados.slice().sort(function(a, b) { return b.totalPalabras - a.totalPalabras; });
-  txLog('=== TOP 10 ===');
+  txLog('=== TOP ' + ordenados.length + ' ===');
   ordenados.forEach(function(r, idx) {
     txLog('#' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' palabras');
   });
@@ -291,7 +293,7 @@ async function txIniciar() {
     txLog('Error guardando: ' + e.message);
   }
 
-  txLog('Terminado en ' + '...');
+  txLog('Terminado');
   window.runnerTexto.ejecutando = false;
 }
 
@@ -304,5 +306,26 @@ window.txIniciar = txIniciar;
 window.txParar = txParar;
 window.txCargarImgsClick = txCargarImgsClick;
 window.txProcesarImgs = txProcesarImgs;
+
+// Enganche de botones al DOM
+function txEngancharBotones() {
+  const btnCargar = document.getElementById('btnTxCargarImgs');
+  const btnIniciar = document.getElementById('btnTxIniciar');
+  const btnParar = document.getElementById('btnTxParar');
+  const inputImgs = document.getElementById('txInputImgs');
+
+  if (btnCargar) btnCargar.addEventListener('click', txCargarImgsClick);
+  if (btnIniciar) btnIniciar.addEventListener('click', txIniciar);
+  if (btnParar) btnParar.addEventListener('click', txParar);
+  if (inputImgs) inputImgs.addEventListener('change', function(e) { txProcesarImgs(e.target.files); });
+
+  console.log('[TX] Botones enganchados');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', txEngancharBotones);
+} else {
+  txEngancharBotones();
+}
 
 console.log('Runner Texto v1 listo');
