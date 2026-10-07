@@ -122,11 +122,10 @@ function txBrilloAPNGBase64(brillo, ancho, alto) {
 }
 
 async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
-  const Media = Capacitor.Plugins.Media;
   const TextRec = Capacitor.Plugins.TextRecognition;
-  if (!Media || !TextRec) { txLog('Plugins no disponibles'); return null; }
+  if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
 
-  // Generar JPEG base64 (como antes)
+  // Generar JPEG base64
   const canvas = document.createElement('canvas');
   canvas.width = ancho;
   canvas.height = alto;
@@ -149,33 +148,14 @@ async function txCorrerOCR(brillo, ancho, alto, nombreTemp) {
   ctx.putImageData(imageData, 0, 0);
 
   const dataURL = canvas.toDataURL('image/jpeg', 0.92);
-  const dataUrl = 'data:image/jpeg;base64,' + dataURL.replace('data:image/jpeg;base64,', '');
-
-  const fileName = nombreTemp.replace('.png', '');
-
-  // Guardar con Media (para tener una copia visible)
-  try {
-    const response = await Media.savePhoto({
-      path: dataUrl,
-      albumIdentifier: window.runnerTexto.albumId,
-      fileName: fileName
-    });
-    txLog('    guardado: ' + (response && response.filePath ? response.filePath.substring(response.filePath.length - 40) : 'sin path'));
-  } catch(e) {
-    txLog('    guardado fallo: ' + e.message);
-  }
-
-  // TEST DE ESCAPE: usar el archivo hardcodeado en Documents
-  const testPath = '/storage/emulated/0/Documents/prueba_mlkit.jpg';
-  txLog('    TEST con: ' + testPath);
 
   try {
-    const result = await TextRec.processImage({ path: 'file://' + testPath });
+    const result = await TextRec.processImage({ path: dataURL });
     const txt = (result && result.text) ? result.text : '';
-    txLog('    TEST text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
+    txLog('    text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
     return result;
-  } catch(e1) {
-    txLog('    TEST fallo: ' + e1.message);
+  } catch(e) {
+    txLog('    OCR fallo: ' + e.message);
     return null;
   }
 }
