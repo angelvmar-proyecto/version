@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.179-morfologico-v1';
+const BUILD_TAG = 'v14.180-mlkit-dataurl';
 
 const CONFIG = {
   VERSION: '14.0',
