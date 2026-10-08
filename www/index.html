@@ -41,6 +41,7 @@
   <div class="tab" data-tab="filtros">🧪 Filtros</div>
   <div class="tab" data-tab="refinamiento">🔬 Refinamiento</div>
   <div class="tab" data-tab="texto">📝 Texto</div>
+  <div class="tab" data-tab="nitidez">⚡ Nitidez</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -325,6 +326,24 @@
       <div id="txBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
     </div>
     <pre id="txLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Texto listo ===</pre>
+
+  <div class="tab-content" id="tab-nitidez" style="padding:15px; color:#ddd;">
+    <h2>⚡ Runner de Nitidez (25 filtros OCR)</h2>
+    <p style="font-size:12px; color:#888;">Simula los 25 filtros de nitidez con ML Kit. Guarda imagen final de cada combo.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnNitCargarImgs">📷 Cargar 1-4 imagenes</button>
+      <button class="btn green" id="btnNitIniciar">▶️ Iniciar Simulación</button>
+      <button class="btn" id="btnNitParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="nitCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="nitBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="nitLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Nitidez listo ===</pre>
+    <input type="file" id="nitInputImgs" accept="image/*" multiple style="display:none;">
+  </div>
     <input type="file" id="txInputImgs" accept="image/*" multiple style="display:none;">
   </div>
 
@@ -353,6 +372,7 @@
   <script src="js/core/blackhat.js"></script>
   <script src="js/core/hough.js"></script>
   <script src="js/core/sauvola.js"></script>
+  <script src="js/core/nitidez.js"></script>
   <script src="js/ui/dibujo.js"></script>
   <script src="js/ui/zoom.js"></script>
   <script src="js/benchmarks.js"></script>
@@ -365,6 +385,7 @@
   <script src="js/ui/runner_texto.js?v=29"></script>
   <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
+  <script src="js/ui/runner_nitidez.js?v=1"></script>
 
 </body>
 </html>
