@@ -173,6 +173,58 @@ async function nitGuardarImagen(dataURL, nombre) {
   }
 }
 
+// --- Guardar ranking JSON en Documents ---
+async function nitGuardarRanking() {
+  try {
+    const fs = Capacitor.Plugins.Filesystem;
+    if (!fs) return;
+    const ordenados = window.runnerNit.resultados.slice().sort(function(a, b) {
+      return b.totalPalabras - a.totalPalabras;
+    });
+    const out = {
+      fecha: new Date().toISOString(),
+      buildTag: (typeof BUILD_TAG !== 'undefined') ? BUILD_TAG : 'desconocido',
+      totalCombos: ordenados.length,
+      completo: ordenados
+    };
+    const json = JSON.stringify(out, null, 2);
+    await fs.writeFile({
+      path: 'MAR_Caribe_OCR_Sim/ranking_nitidez.json',
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+      data: json,
+      recursive: true
+    });
+  } catch(e) {
+    // Silencioso
+  }
+}
+
+// --- Cargar ranking anterior al arrancar ---
+async function nitCargarRankingAnterior() {
+  try {
+    const fs = Capacitor.Plugins.Filesystem;
+    if (!fs) return;
+    const res = await fs.readFile({
+      path: 'MAR_Caribe_OCR_Sim/ranking_nitidez.json',
+      directory: 'DOCUMENTS',
+      encoding: 'utf8'
+    });
+    if (!res || !res.data) return;
+    const obj = JSON.parse(res.data);
+    nitLog('[ranking previo] ' + obj.fecha + ' (' + obj.buildTag + ')');
+    nitLog('[ranking previo] total combos: ' + obj.totalCombos);
+    if (obj.completo && obj.completo.length > 0) {
+      nitLog('[ranking previo] TOP 5:');
+      obj.completo.slice(0, 5).forEach(function(r, idx) {
+        nitLog('  #' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' palabras');
+      });
+    }
+  } catch(e) {
+    // Silencioso — no hay ranking previo
+  }
+}
+
 async function nitIniciar() {
   if (window.runnerNit.ejecutando) { nitLog('Ya ejecutando'); return; }
   if (window.runnerNit.imagenes.length === 0) { nitLog('Carga imagenes primero'); return; }
@@ -228,6 +280,7 @@ async function nitIniciar() {
       porImagen: resultadosPorImagen
     });
     nitLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + totalPalabras + ' palabras');
+    await nitGuardarRanking();
   }
 
   // Ranking
@@ -271,6 +324,7 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', nitEngancharBotones);
 } else {
   nitEngancharBotones();
+  setTimeout(nitCargarRankingAnterior, 1500);
 }
 
 
