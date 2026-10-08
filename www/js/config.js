@@ -3,7 +3,7 @@
 // 5 algoritmos: Optica, Eco, A3, LVC, IO
 // ==============================================
 
-const BUILD_TAG = 'v14.180-mlkit-dataurl';
+const BUILD_TAG = 'v14.200-nitidez-25f';
 
 const CONFIG = {
   VERSION: '14.0',

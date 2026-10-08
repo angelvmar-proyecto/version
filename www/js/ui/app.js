@@ -467,6 +467,7 @@ function sandboxEjecutar() {
 }
 
 function setup() {
+  try { const elTag = document.getElementById("buildTag"); if (elTag && typeof BUILD_TAG !== "undefined") elTag.textContent = BUILD_TAG; } catch(e) {}
   ['optica','eco','a3','lvc','io','cont','realce','lidar','openv','ml','ws','frangi'].forEach(function(k){ if (!window.estado.capasVisibles[k]) window.estado.capasVisibles[k] = true; });
   el('btnCargar').onclick = function() { el('inputImagen').click(); };
   el('inputImagen').onchange = function(e) {
