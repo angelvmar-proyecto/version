@@ -179,11 +179,67 @@ function ocrPostProcesar(texto, opciones) {
   return out.join('');
 }
 
+// --- Reconstruir texto usando boundingBox de los elementos (Pilar 3) ---
+// Fusiona elementos adyacentes si el gap horizontal es menor al ancho
+// promedio de un carácter. Si no, los separa con espacio.
+function ocrReconstruirTexto(result) {
+  if (!result || !result.blocks || result.blocks.length === 0) {
+    return (result && result.text) ? result.text : '';
+  }
+  const bloquesOut = [];
+  for (const block of result.blocks) {
+    if (!block.lines) continue;
+    const lineasOut = [];
+    for (const line of block.lines) {
+      if (!line.elements || line.elements.length === 0) {
+        if (line.text) lineasOut.push(line.text);
+        continue;
+      }
+      // Calcular ancho promedio por carácter en esta línea
+      let totalAncho = 0, totalChars = 0;
+      for (const el of line.elements) {
+        if (el.boundingBox && el.text) {
+          const ancho = el.boundingBox.right - el.boundingBox.left;
+          totalAncho += ancho;
+          totalChars += el.text.length;
+        }
+      }
+      const anchoPromedio = totalChars > 0 ? (totalAncho / totalChars) : 0;
+      const umbralGap = anchoPromedio * 0.6;
+
+      let linea = '';
+      let prevRight = null;
+      for (let i = 0; i < line.elements.length; i++) {
+        const el = line.elements[i];
+        const txt = el.text || '';
+        const currLeft = el.boundingBox ? el.boundingBox.left : null;
+        if (i === 0) {
+          linea = txt;
+        } else if (prevRight !== null && currLeft !== null) {
+          const gap = currLeft - prevRight;
+          if (gap < umbralGap) {
+            linea += txt;
+          } else {
+            linea += ' ' + txt;
+          }
+        } else {
+          linea += ' ' + txt;
+        }
+        prevRight = el.boundingBox ? el.boundingBox.right : null;
+      }
+      lineasOut.push(linea);
+    }
+    bloquesOut.push(lineasOut.join('\n'));
+  }
+  return bloquesOut.join('\n\n');
+}
+
 window.ocrLevenshtein = ocrLevenshtein;
 window.ocrSimilitud = ocrSimilitud;
 window.ocrHomoglifos = ocrHomoglifos;
 window.ocrCorregirPorDiccionario = ocrCorregirPorDiccionario;
 window.ocrCorregirToken = ocrCorregirToken;
 window.ocrPostProcesar = ocrPostProcesar;
+window.ocrReconstruirTexto = ocrReconstruirTexto;
 
 console.log('core/ocr_post.js cargado');
