@@ -246,6 +246,27 @@ async function txCorrerOCRUpscaleAuto(img) {
   txLog('    [auto] ' + img.ancho + 'x' + img.alto + ' -> ' + wNuevo + 'x' + hNuevo);
   try {
     const result = await TextRec.processImage({ path: dataURL });
+    // LOG DIAGNÓSTICO — ver estructura de bloques/líneas/elementos
+    try {
+      if (result && result.blocks && result.blocks.length > 0) {
+        const b0 = result.blocks[0];
+        txLog('    [diag] blocks=' + result.blocks.length);
+        if (b0.lines) {
+          txLog('    [diag] block0.lines=' + b0.lines.length);
+          if (b0.lines[0] && b0.lines[0].elements) {
+            const l0 = b0.lines[0];
+            txLog('    [diag] line0.elements=' + l0.elements.length);
+            for (let ei = 0; ei < Math.min(5, l0.elements.length); ei++) {
+              const el = l0.elements[ei];
+              const bb = el.boundingBox;
+              txLog('    [diag]   el[' + ei + ']="' + el.text + '" bb=' + (bb ? (bb.left + ',' + bb.right) : 'null'));
+            }
+          }
+        }
+      } else {
+        txLog('    [diag] NO blocks — result.blocks=' + (result && result.blocks ? result.blocks.length : 'undefined'));
+      }
+    } catch(e) { txLog('    [diag] error: ' + e.message); }
     const txtRaw = (result && result.text) ? result.text : '';
     let txtPost = txtRaw;
     try {
