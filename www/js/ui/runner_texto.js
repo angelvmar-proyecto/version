@@ -231,7 +231,21 @@ async function txCorrerOCRUpscaleAuto(img) {
   const factorReal = Math.min(factor, factorMax);
   txLog('    [auto] factor=' + factorReal.toFixed(2) + ' (pedido=' + factor + ', max=' + factorMax.toFixed(2) + ')');
   if (factorReal <= 1.05) {
-    return txCorrerOCRRaw(img.dataURLOriginal);
+    // Sin upscale, pero con post-procesado
+    const resultNoUp = await TextRec.processImage({ path: img.dataURLOriginal });
+    const txtRawNoUp = (resultNoUp && resultNoUp.text) ? resultNoUp.text : '';
+    let txtPostNoUp = txtRawNoUp;
+    try {
+      if (typeof ocrPostProcesar === 'function') {
+        txtPostNoUp = ocrPostProcesar(txtRawNoUp);
+      }
+    } catch(e) {
+      txLog('    [post] error: ' + e.message);
+    }
+    txLog('    AUTO text raw len=' + txtRawNoUp.length + ' post len=' + txtPostNoUp.length);
+    txLog('    [raw]  inicio="' + txtRawNoUp.substring(0, 100).replace(/\n/g, ' ') + '"');
+    txLog('    [post] inicio="' + txtPostNoUp.substring(0, 100).replace(/\n/g, ' ') + '"');
+    return { text: txtPostNoUp, textRaw: txtRawNoUp };
   }
   const wNuevo = Math.round(img.ancho * factorReal);
   const hNuevo = Math.round(img.alto * factorReal);
