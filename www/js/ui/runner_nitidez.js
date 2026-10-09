@@ -59,91 +59,133 @@ async function nitProcesarImgs(files) {
 // --- Lista de los 25 filtros ---
 function nitGenerarCombos() {
   return [
-    { nombre: 'nit_laplaciano_a0.5', fn: 'nitLaplacianoSharpen', args: [0.5] },
-    { nombre: 'nit_laplaciano_a1.0', fn: 'nitLaplacianoSharpen', args: [1.0] },
-    { nombre: 'nit_laplaciano_a1.5', fn: 'nitLaplacianoSharpen', args: [1.5] },
-    { nombre: 'nit_highpass_r3_a1', fn: 'nitHighPass', args: [3, 1.0] },
-    { nombre: 'nit_highpass_r5_a1.5', fn: 'nitHighPass', args: [5, 1.5] },
-    { nombre: 'nit_unsharp_adapt', fn: 'nitUnsharpAdaptativo', args: [2, 1.0, 15] },
-    { nombre: 'nit_unsharp_adapt_fuerte', fn: 'nitUnsharpAdaptativo', args: [3, 1.5, 20] },
-    { nombre: 'nit_gabor', fn: 'nitGaborMulti', args: [0.1, 4] },
-    { nombre: 'nit_sobel_a0.3', fn: 'nitSobelSharpen', args: [0.3] },
-    { nombre: 'nit_sobel_a0.6', fn: 'nitSobelSharpen', args: [0.6] },
-    { nombre: 'nit_prewitt_a0.3', fn: 'nitPrewitt', args: [0.3] },
-    { nombre: 'nit_kirsch_a0.2', fn: 'nitKirsch', args: [0.2] },
-    { nombre: 'nit_estructura_a0.5', fn: 'nitEstructura', args: [0.5] },
-    { nombre: 'nit_rl_5i_s1', fn: 'nitRichardsonLucy', args: [5, 1.0] },
-    { nombre: 'nit_rl_10i_s1', fn: 'nitRichardsonLucy', args: [10, 1.0] },
-    { nombre: 'nit_wiener_k0.01', fn: 'nitWiener', args: [0.01] },
-    { nombre: 'nit_tikhonov_l0.1', fn: 'nitTikhonov', args: [0.1] },
-    { nombre: 'nit_nlm_h10', fn: 'nitNonLocalMeans', args: [10, 3] },
-    { nombre: 'nit_nlm_h15', fn: 'nitNonLocalMeans', args: [15, 3] },
-    { nombre: 'nit_tv_l0.1', fn: 'nitTotalVariation', args: [0.1, 5] },
-    { nombre: 'nit_bilateral_plus', fn: 'nitBilateralPlus', args: [30, 2] },
-    { nombre: 'nit_mediana_plus', fn: 'nitMedianaPlus', args: [1] },
-    { nombre: 'nit_tophat_r3', fn: 'nitTopHat', args: [3] },
-    { nombre: 'nit_blackhat_r3', fn: 'nitBlackHat', args: [3] },
-    { nombre: 'nit_blackhat_r5', fn: 'nitBlackHat', args: [5] },
-    { nombre: 'nit_grad_morfo', fn: 'nitGradienteMorfologico', args: [2] },
-    { nombre: 'nit_cierre_peq', fn: 'nitCierrePequeno', args: [1] },
-    { nombre: 'nit_fourier_hp', fn: 'nitFourierHighPass', args: [5] },
-    { nombre: 'nit_wavelet_2', fn: 'nitWaveletHaar', args: [2] },
-    { nombre: 'nit_bandpass', fn: 'nitFourierBandpass', args: [2, 8] },
-    { nombre: 'nit_gamma_local', fn: 'nitGammaAdaptativaLocal', args: [15] },
-    { nombre: 'nit_dark_channel', fn: 'nitDarkChannel', args: [5] },
-    { nombre: 'nit_contraste_local', fn: 'nitContrasteLocal', args: [10, 1.5] },
-    // Combinaciones de ganadores esperados
-    { nombre: 'nit_lapl+contraste', fn: 'nitLaplacianoSharpen', args: [0.8], extra: 'nitContrasteLocal' },
-    { nombre: 'nit_highpass+unsharp', fn: 'nitHighPass', args: [3, 1.0], extra: 'nitUnsharpAdaptativo' },
-    { nombre: 'nit_rl+blackhat', fn: 'nitRichardsonLucy', args: [5, 1.0], extra: 'nitBlackHat' }
+    // --- Individuales (12) ---
+    { nombre: 'gamma_local_r15', fn: 'nitGammaAdaptativaLocal', args: [15] },
+    { nombre: 'gamma_local_r30', fn: 'nitGammaAdaptativaLocal', args: [30] },
+    { nombre: 'blackhat_r3', fn: 'nitBlackHat', args: [3] },
+    { nombre: 'blackhat_r5', fn: 'nitBlackHat', args: [5] },
+    { nombre: 'blackhat_r7', fn: 'nitBlackHat', args: [7] },
+    { nombre: 'wiener_k0.01', fn: 'nitWiener', args: [0.01] },
+    { nombre: 'wiener_k0.05', fn: 'nitWiener', args: [0.05] },
+    { nombre: 'rl_5i_s1', fn: 'nitRichardsonLucy', args: [5, 1.0] },
+    { nombre: 'highpass_r5_a1.5', fn: 'nitHighPass', args: [5, 1.5] },
+    { nombre: 'laplaciano_a0.5', fn: 'nitLaplacianoSharpen', args: [0.5] },
+    { nombre: 'unsharp_adapt', fn: 'nitUnsharpAdaptativo', args: [2, 1.0, 15] },
+    { nombre: 'bilateral_plus', fn: 'nitBilateralPlus', args: [30, 2] },
+    // --- Combinaciones (13) ---
+    { nombre: 'gamma+blackhat5', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitBlackHat', args: [5]}] },
+    { nombre: 'gamma+wiener', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitWiener', args: [0.01]}] },
+    { nombre: 'gamma+highpass', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitHighPass', args: [5, 1.5]}] },
+    { nombre: 'gamma+laplaciano', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitLaplacianoSharpen', args: [0.5]}] },
+    { nombre: 'blackhat5+wiener', fn: 'nitBlackHat', args: [5], extras: [{fn: 'nitWiener', args: [0.01]}] },
+    { nombre: 'blackhat5+highpass', fn: 'nitBlackHat', args: [5], extras: [{fn: 'nitHighPass', args: [5, 1.5]}] },
+    { nombre: 'blackhat5+laplaciano', fn: 'nitBlackHat', args: [5], extras: [{fn: 'nitLaplacianoSharpen', args: [0.5]}] },
+    { nombre: 'highpass+wiener', fn: 'nitHighPass', args: [5, 1.5], extras: [{fn: 'nitWiener', args: [0.01]}] },
+    { nombre: 'gamma+blackhat5+wiener', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitBlackHat', args: [5]}, {fn: 'nitWiener', args: [0.01]}] },
+    { nombre: 'gamma+blackhat5+highpass', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitBlackHat', args: [5]}, {fn: 'nitHighPass', args: [5, 1.5]}] },
+    { nombre: 'gamma+blackhat5+laplaciano', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitBlackHat', args: [5]}, {fn: 'nitLaplacianoSharpen', args: [0.5]}] },
+    { nombre: 'wiener+blackhat5+highpass', fn: 'nitWiener', args: [0.01], extras: [{fn: 'nitBlackHat', args: [5]}, {fn: 'nitHighPass', args: [5, 1.5]}] },
+    { nombre: 'gamma+wiener+highpass', fn: 'nitGammaAdaptativaLocal', args: [15], extras: [{fn: 'nitWiener', args: [0.01]}, {fn: 'nitHighPass', args: [5, 1.5]}] }
   ];
 }
 
 // --- Aplicar un filtro con upscale adaptativo previo ---
 async function nitAplicarFiltro(img, combo) {
-  // 1. Calcular brillo
-  const canvas = document.createElement('canvas');
-  canvas.width = img.ancho;
-  canvas.height = img.alto;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img.img, 0, 0);
-  const imageData = ctx.getImageData(0, 0, img.ancho, img.alto);
-  const brillo = calcularBrillo(imageData);
+  // 1. Calcular brillo de la imagen original
+  const canvasOrig = document.createElement('canvas');
+  canvasOrig.width = img.ancho;
+  canvasOrig.height = img.alto;
+  const ctxOrig = canvasOrig.getContext('2d');
+  ctxOrig.drawImage(img.img, 0, 0);
+  const imageDataOrig = ctxOrig.getImageData(0, 0, img.ancho, img.alto);
+  const brilloOrig = calcularBrillo(imageDataOrig);
 
-  // 2. Aplicar filtro principal
+  // 2. Estimar tamaño de texto y decidir factor de upscale
+  let factor = 1.0;
+  let tamTextoDetectado = 0;
+  try {
+    const estim = estimarTamanoTexto(brilloOrig, img.ancho, img.alto);
+    tamTextoDetectado = estim.tamTexto;
+    if (estim.tamTexto >= 14) factor = 1.0;
+    else if (estim.tamTexto >= 10) factor = 1.5;
+    else if (estim.tamTexto >= 7) factor = 2.0;
+    else if (estim.tamTexto < 999) factor = 3.0;
+    else factor = 1.0;
+  } catch(e) {
+    factor = 1.0;
+  }
+
+  // 3. Aplicar límite de 2048px (ML Kit)
+  const maxLado = Math.max(img.ancho, img.alto);
+  const factorMax = 2048 / maxLado;
+  const factorReal = Math.min(factor, factorMax);
+
+  // 4. Preparar brillo (con o sin upscale)
+  let brillo;
+  let anchoFilt, altoFilt;
+  if (factorReal <= 1.05) {
+    brillo = brilloOrig;
+    anchoFilt = img.ancho;
+    altoFilt = img.alto;
+  } else {
+    const wNuevo = Math.round(img.ancho * factorReal);
+    const hNuevo = Math.round(img.alto * factorReal);
+    const canvasUp = document.createElement('canvas');
+    canvasUp.width = wNuevo;
+    canvasUp.height = hNuevo;
+    const ctxUp = canvasUp.getContext('2d');
+    ctxUp.imageSmoothingEnabled = true;
+    ctxUp.imageSmoothingQuality = 'high';
+    ctxUp.drawImage(img.img, 0, 0, wNuevo, hNuevo);
+    const imageDataUp = ctxUp.getImageData(0, 0, wNuevo, hNuevo);
+    brillo = calcularBrillo(imageDataUp);
+    anchoFilt = wNuevo;
+    altoFilt = hNuevo;
+  }
+
+  // 5. Aplicar filtro principal
   const fnPrincipal = window[combo.fn];
   if (!fnPrincipal) {
     nitLog('Filtro no existe: ' + combo.fn);
     return null;
   }
-  let brilloFilt = fnPrincipal(brillo, img.ancho, img.alto, ...combo.args);
+  let brilloFilt = fnPrincipal(brillo, anchoFilt, altoFilt, ...combo.args);
 
-  // 3. Aplicar filtro extra si existe
-  if (combo.extra) {
-    const fnExtra = window[combo.extra];
-    if (fnExtra) {
+  // 6. Aplicar extras en orden (soporta array de extras)
+  if (combo.extras && Array.isArray(combo.extras)) {
+    for (let e = 0; e < combo.extras.length; e++) {
+      const ex = combo.extras[e];
+      const fnEx = window[ex.fn];
+      if (fnEx) {
+        brilloFilt = fnEx(brilloFilt, anchoFilt, altoFilt, ...ex.args);
+      }
+    }
+  } else if (combo.extra) {
+    // Compatibilidad con la versión anterior (extra único)
+    const fnEx = window[combo.extra];
+    if (fnEx) {
       if (combo.extra === 'nitUnsharpAdaptativo') {
-        brilloFilt = fnExtra(brilloFilt, img.ancho, img.alto, 2, 0.8, 15);
+        brilloFilt = fnEx(brilloFilt, anchoFilt, altoFilt, 2, 0.8, 15);
       } else if (combo.extra === 'nitContrasteLocal') {
-        brilloFilt = fnExtra(brilloFilt, img.ancho, img.alto, 10, 1.5);
+        brilloFilt = fnEx(brilloFilt, anchoFilt, altoFilt, 10, 1.5);
       } else if (combo.extra === 'nitBlackHat') {
-        brilloFilt = fnExtra(brilloFilt, img.ancho, img.alto, 3);
+        brilloFilt = fnEx(brilloFilt, anchoFilt, altoFilt, 3);
       } else {
-        brilloFilt = fnExtra(brilloFilt, img.ancho, img.alto);
+        brilloFilt = fnEx(brilloFilt, anchoFilt, altoFilt);
       }
     }
   }
 
-  // 4. Convertir a dataURL (imagen de salida)
+  // 7. Convertir brilloFilt a dataURL
   const canvasOut = document.createElement('canvas');
-  canvasOut.width = img.ancho;
-  canvasOut.height = img.alto;
+  canvasOut.width = anchoFilt;
+  canvasOut.height = altoFilt;
   const ctxOut = canvasOut.getContext('2d');
-  const imageDataOut = ctxOut.createImageData(img.ancho, img.alto);
-  for (let y = 0; y < img.alto; y++) {
-    for (let x = 0; x < img.ancho; x++) {
+  const imageDataOut = ctxOut.createImageData(anchoFilt, altoFilt);
+  for (let y = 0; y < altoFilt; y++) {
+    for (let x = 0; x < anchoFilt; x++) {
       const v = Math.max(0, Math.min(255, brilloFilt[y][x] | 0));
-      const idx = (y * img.ancho + x) * 4;
+      const idx = (y * anchoFilt + x) * 4;
       imageDataOut.data[idx] = v;
       imageDataOut.data[idx + 1] = v;
       imageDataOut.data[idx + 2] = v;
@@ -152,9 +194,14 @@ async function nitAplicarFiltro(img, combo) {
   }
   ctxOut.putImageData(imageDataOut, 0, 0);
   const dataURL = canvasOut.toDataURL('image/jpeg', 0.95);
+
+  // Log de upscale (para saber qué hizo)
+  if (factorReal > 1.05) {
+    nitLog('    [upscale x' + factorReal.toFixed(2) + '] ' + img.nombre + ' ' + img.ancho + 'x' + img.alto + ' -> ' + anchoFilt + 'x' + altoFilt + ' (tamTexto=' + tamTextoDetectado.toFixed(1) + 'px)');
+  }
+
   return dataURL;
 }
-
 // --- Guardar imagen de salida en Documents ---
 async function nitGuardarImagen(dataURL, nombre) {
   try {
