@@ -9,7 +9,7 @@
 window.OCR_DICCIONARIO_BASE = [
   // --- Categorías de hotel / tipo de habitación ---
   'SUITE', 'STUDIO', 'PENTHOUSE', 'DELUXE', 'PREMIER', 'ELITE',
-  'DIAMOND', 'JUNIOR', 'STANDARD', 'VIP', 'MASTER', 'PRESIDENTIAL',
+  'DIAMOND', 'JUNIOR', 'STANDARD', 'MASTER', 'PRESIDENTIAL',
   'FAMILY', 'ROYAL', 'CLUB', 'GOLD', 'PLATINUM', 'SENIOR', 'PRIME',
   'OCEAN', 'BEACH', 'GARDEN', 'POOL', 'SUNSET', 'SUNRISE', 'CORNER',
 
@@ -27,7 +27,7 @@ window.OCR_DICCIONARIO_BASE = [
 
   // --- Códigos de programa / reserva ---
   'INT', 'PROG', 'OPC', 'PAX', 'GRP', 'FIT', 'T3A', 'T3B', 'T3C',
-  'T4A', 'T4B', 'T4C', 'T5A', 'T5B', 'MEMB', 'TOTAL', 'FINAL',
+  'T4A', 'T4B', 'T4C', 'T5A', 'T5B', 'MEMB', 'VDP', 'TOTAL', 'FINAL',
   'PREMIER', 'PRIME', 'TIMESHARE',
 
   // --- Contactos / promotores ---

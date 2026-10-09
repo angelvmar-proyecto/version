@@ -246,7 +246,7 @@ async function txCorrerOCRUpscaleAuto(img) {
   txLog('    [auto] ' + img.ancho + 'x' + img.alto + ' -> ' + wNuevo + 'x' + hNuevo);
   try {
     const result = await TextRec.processImage({ path: dataURL });
-    const txtRaw = ocrReconstruirTexto(result);
+    const txtRaw = (result && result.text) ? result.text : '';
     let txtPost = txtRaw;
     try {
       if (typeof ocrPostProcesar === 'function') {
