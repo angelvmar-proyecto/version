@@ -246,9 +246,19 @@ async function txCorrerOCRUpscaleAuto(img) {
   txLog('    [auto] ' + img.ancho + 'x' + img.alto + ' -> ' + wNuevo + 'x' + hNuevo);
   try {
     const result = await TextRec.processImage({ path: dataURL });
-    const txt = (result && result.text) ? result.text : '';
-    txLog('    AUTO text len=' + txt.length + ' inicio="' + txt.substring(0, 80).replace(/\n/g, ' ') + '"');
-    return result;
+    const txtRaw = (result && result.text) ? result.text : '';
+    let txtPost = txtRaw;
+    try {
+      if (typeof ocrPostProcesar === 'function') {
+        txtPost = ocrPostProcesar(txtRaw);
+      }
+    } catch(e) {
+      txLog('    [post] error: ' + e.message);
+    }
+    txLog('    AUTO text raw len=' + txtRaw.length + ' post len=' + txtPost.length);
+    txLog('    [raw]  inicio="' + txtRaw.substring(0, 100).replace(/\n/g, ' ') + '"');
+    txLog('    [post] inicio="' + txtPost.substring(0, 100).replace(/\n/g, ' ') + '"');
+    return { text: txtPost, textRaw: txtRaw };
   } catch(e) {
     txLog('    AUTO OCR fallo: ' + e.message);
     return null;
