@@ -60,6 +60,9 @@ async function nitProcesarImgs(files) {
 function nitGenerarCombos() {
   return [
     // --- Individuales (12) ---
+    // --- Baselines (2) para comparación justa ---
+    { nombre: 'BASELINE_raw_con_upscale', fn: null, args: [] },
+    { nombre: 'BASELINE_raw_sin_upscale', fn: null, args: [], sinUpscale: true },
     { nombre: 'gamma_local_r15', fn: 'nitGammaAdaptativaLocal', args: [15] },
     { nombre: 'gamma_local_r30', fn: 'nitGammaAdaptativaLocal', args: [30] },
     { nombre: 'blackhat_r3', fn: 'nitBlackHat', args: [3] },
@@ -115,6 +118,9 @@ async function nitAplicarFiltro(img, combo) {
     factor = 1.0;
   }
 
+  // Si es baseline sin upscale, forzar factor 1.0
+  if (combo.sinUpscale === true) factor = 1.0;
+
   // 3. Aplicar límite de 2048px (ML Kit)
   const maxLado = Math.max(img.ancho, img.alto);
   const factorMax = 2048 / maxLado;
@@ -143,13 +149,19 @@ async function nitAplicarFiltro(img, combo) {
     altoFilt = hNuevo;
   }
 
-  // 5. Aplicar filtro principal
-  const fnPrincipal = window[combo.fn];
-  if (!fnPrincipal) {
-    nitLog('Filtro no existe: ' + combo.fn);
-    return null;
+
+  // 5. Aplicar filtro principal (si fn=null, no se aplica filtro — baseline)
+  let brilloFilt;
+  if (combo.fn === null || combo.fn === undefined) {
+    brilloFilt = brillo;
+  } else {
+    const fnPrincipal = window[combo.fn];
+    if (!fnPrincipal) {
+      nitLog('Filtro no existe: ' + combo.fn);
+      return null;
+    }
+    brilloFilt = fnPrincipal(brillo, anchoFilt, altoFilt, ...combo.args);
   }
-  let brilloFilt = fnPrincipal(brillo, anchoFilt, altoFilt, ...combo.args);
 
   // 6. Aplicar extras en orden (soporta array de extras)
   if (combo.extras && Array.isArray(combo.extras)) {
