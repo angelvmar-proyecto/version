@@ -60,6 +60,7 @@ function txGenerarCombos() {
   return [
     { nombre: 'raw_original', tipo: 'raw', params: {} },
     { nombre: 'raw_upscale_auto', tipo: 'upscale_auto', params: {} },
+    { nombre: 'raw_tiling', tipo: 'tiling', params: { tileSize: 500, overlap: 50, upscale: 3 } },
     { nombre: 'baseline', tipo: 'none', params: {} },
     { nombre: 'contrast_only', tipo: 'contrast', params: { pb: 5, pa: 95 } },
     { nombre: 'cc_p5_t16_c8', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 16, clip: 8 } },
@@ -280,6 +281,71 @@ async function txCorrerOCRUpscaleAuto(img) {
 }
 
 
+// --- Tiling: dividir en tiles, upscalear cada uno, ML Kit por tile ---
+async function txCorrerOCRTiling(img, tileSize, overlap, upscale) {
+  const TextRec = Capacitor.Plugins.TextRecognition;
+  if (!TextRec) { txLog('TextRecognition no disponible'); return null; }
+
+  const ancho = img.ancho;
+  const alto = img.alto;
+  const step = tileSize - overlap;
+
+  const xs = [];
+  for (let x = 0; x < ancho; x += step) {
+    xs.push(Math.min(x, Math.max(0, ancho - tileSize)));
+    if (x + tileSize >= ancho) break;
+  }
+  const ys = [];
+  for (let y = 0; y < alto; y += step) {
+    ys.push(Math.min(y, Math.max(0, alto - tileSize)));
+    if (y + tileSize >= alto) break;
+  }
+  const xsU = Array.from(new Set(xs));
+  const ysU = Array.from(new Set(ys));
+
+  const totalTiles = xsU.length * ysU.length;
+  txLog('    [tiling] ' + img.nombre + ': ' + xsU.length + 'x' + ysU.length + '=' + totalTiles + ' tiles de ' + tileSize + 'px, x' + upscale);
+
+  const textosPorFila = [];
+  for (const y of ysU) {
+    const textosFila = [];
+    for (const x of xsU) {
+      const w = Math.min(tileSize, ancho - x);
+      const h = Math.min(tileSize, alto - y);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img.img, x, y, w, h, 0, 0, w, h);
+
+      const wUp = Math.round(w * upscale);
+      const hUp = Math.round(h * upscale);
+      const canvasUp = document.createElement('canvas');
+      canvasUp.width = wUp;
+      canvasUp.height = hUp;
+      const ctxUp = canvasUp.getContext('2d');
+      ctxUp.imageSmoothingEnabled = true;
+      ctxUp.imageSmoothingQuality = 'high';
+      ctxUp.drawImage(canvas, 0, 0, wUp, hUp);
+
+      const dataURL = canvasUp.toDataURL('image/jpeg', 0.95);
+
+      try {
+        const result = await TextRec.processImage({ path: dataURL });
+        const txt = (result && result.text) ? result.text : '';
+        textosFila.push(txt);
+      } catch(e) {
+        textosFila.push('');
+      }
+    }
+    textosPorFila.push(textosFila.join(' '));
+  }
+
+  const textoFinal = textosPorFila.join('\n');
+  txLog('    [tiling] texto combinado len=' + textoFinal.length);
+  return { text: textoFinal, textRaw: textoFinal };
+}
+
 function txContarPalabras(texto) {
   if (!texto) return 0;
   return texto.split(/\s+/).filter(function(p) { return p.length > 1; }).length;
@@ -328,6 +394,13 @@ async function txIniciar() {
           const palabrasAuto = ocrAuto ? txContarPalabras(ocrAuto.text) : 0;
           totalPalabras += palabrasAuto;
           resultadosPorImagen[img.nombre] = { palabras: palabrasAuto, texto: ocrAuto ? ocrAuto.text.substring(0, 100) : '' };
+          continue;
+        }
+        if (combo.tipo === 'tiling') {
+          const ocrTile = await txCorrerOCRTiling(img, combo.params.tileSize, combo.params.overlap, combo.params.upscale);
+          const palabrasTile = ocrTile ? txContarPalabras(ocrTile.text) : 0;
+          totalPalabras += palabrasTile;
+          resultadosPorImagen[img.nombre] = { palabras: palabrasTile, texto: ocrTile ? ocrTile.text.substring(0, 100) : '' };
           continue;
         }
         const canvas = document.createElement('canvas');
