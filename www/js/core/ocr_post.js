@@ -195,24 +195,36 @@ function ocrReconstruirTexto(result) {
         if (line.text) lineasOut.push(line.text);
         continue;
       }
-      // Calcular ancho promedio por carácter en esta línea
-      let totalAncho = 0, totalChars = 0;
+
+      // Filtrar elementos vacíos y limpiar textos
+      const elementos = [];
       for (const el of line.elements) {
-        if (el.boundingBox && el.text) {
-          const ancho = el.boundingBox.right - el.boundingBox.left;
-          totalAncho += ancho;
-          totalChars += el.text.length;
+        const t = (el.text || '').trim();
+        if (t.length === 0) continue;
+        elementos.push({ txt: t, bb: el.boundingBox });
+      }
+      if (elementos.length === 0) {
+        if (line.text) lineasOut.push(line.text);
+        continue;
+      }
+
+      // Calcular ancho promedio por carácter usando textos limpios
+      let totalAncho = 0, totalChars = 0;
+      for (const el of elementos) {
+        if (el.bb) {
+          totalAncho += (el.bb.right - el.bb.left);
+          totalChars += el.txt.length;
         }
       }
       const anchoPromedio = totalChars > 0 ? (totalAncho / totalChars) : 0;
-      const umbralGap = anchoPromedio * 0.6;
+      const umbralGap = anchoPromedio * 0.8;
 
       let linea = '';
       let prevRight = null;
-      for (let i = 0; i < line.elements.length; i++) {
-        const el = line.elements[i];
-        const txt = el.text || '';
-        const currLeft = el.boundingBox ? el.boundingBox.left : null;
+      for (let i = 0; i < elementos.length; i++) {
+        const el = elementos[i];
+        const txt = el.txt;
+        const currLeft = el.bb ? el.bb.left : null;
         if (i === 0) {
           linea = txt;
         } else if (prevRight !== null && currLeft !== null) {
@@ -225,7 +237,7 @@ function ocrReconstruirTexto(result) {
         } else {
           linea += ' ' + txt;
         }
-        prevRight = el.boundingBox ? el.boundingBox.right : null;
+        prevRight = el.bb ? el.bb.right : null;
       }
       lineasOut.push(linea);
     }
