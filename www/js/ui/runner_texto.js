@@ -60,7 +60,7 @@ function txGenerarCombos() {
   return [
     { nombre: 'raw_original', tipo: 'raw', params: {} },
     { nombre: 'raw_upscale_auto', tipo: 'upscale_auto', params: {} },
-    { nombre: 'raw_tiling', tipo: 'tiling', params: { tileSize: 500, overlap: 50, upscale: 3 } },
+    { nombre: 'raw_tiling', tipo: 'tiling', params: { tileSize: 500, overlap: 30, upscale: 3 } },
     { nombre: 'baseline', tipo: 'none', params: {} },
     { nombre: 'contrast_only', tipo: 'contrast', params: { pb: 5, pa: 95 } },
     { nombre: 'cc_p5_t16_c8', tipo: 'contrast_clahe', params: { pb: 5, pa: 95, tiles: 16, clip: 8 } },
@@ -306,9 +306,9 @@ async function txCorrerOCRTiling(img, tileSize, overlap, upscale) {
   const totalTiles = xsU.length * ysU.length;
   txLog('    [tiling] ' + img.nombre + ': ' + xsU.length + 'x' + ysU.length + '=' + totalTiles + ' tiles de ' + tileSize + 'px, x' + upscale);
 
-  const textosPorFila = [];
+  // Recolectar todas las líneas de todos los tiles (con post-procesado por tile)
+  const lineasGlobales = [];
   for (const y of ysU) {
-    const textosFila = [];
     for (const x of xsU) {
       const w = Math.min(tileSize, ancho - x);
       const h = Math.min(tileSize, alto - y);
@@ -332,20 +332,42 @@ async function txCorrerOCRTiling(img, tileSize, overlap, upscale) {
 
       try {
         const result = await TextRec.processImage({ path: dataURL });
-        const txt = (result && result.text) ? result.text : '';
-        textosFila.push(txt);
+        let txt = (result && result.text) ? result.text : '';
+        try {
+          if (typeof ocrPostProcesar === 'function') {
+            txt = ocrPostProcesar(txt);
+          }
+        } catch(e) {}
+        const lineas = txt.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+        for (const l of lineas) lineasGlobales.push(l);
       } catch(e) {
-        textosFila.push('');
+        // silent
       }
     }
-    textosPorFila.push(textosFila.join(' '));
   }
 
-  const textoFinal = textosPorFila.join('\n');
-  txLog('    [tiling] texto combinado len=' + textoFinal.length);
+  // Deduplicar líneas similares contra las últimas 5 (evita duplicados por overlap)
+  const lineasFiltradas = [];
+  for (const l of lineasGlobales) {
+    let esDuplicado = false;
+    const inicio = Math.max(0, lineasFiltradas.length - 5);
+    for (let k = inicio; k < lineasFiltradas.length; k++) {
+      const prev = lineasFiltradas[k];
+      let sim = 0;
+      if (typeof ocrSimilitud === 'function') {
+        sim = ocrSimilitud(l, prev);
+      } else {
+        sim = (l === prev) ? 1 : 0;
+      }
+      if (sim > 0.85) { esDuplicado = true; break; }
+    }
+    if (!esDuplicado) lineasFiltradas.push(l);
+  }
+
+  const textoFinal = lineasFiltradas.join('\n');
+  txLog('    [tiling] lineas=' + lineasGlobales.length + ' (dedup=' + lineasFiltradas.length + ') len=' + textoFinal.length);
   return { text: textoFinal, textRaw: textoFinal };
 }
-
 function txContarPalabras(texto) {
   if (!texto) return 0;
   return texto.split(/\s+/).filter(function(p) { return p.length > 1; }).length;
