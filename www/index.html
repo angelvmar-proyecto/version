@@ -42,6 +42,7 @@
   <div class="tab" data-tab="refinamiento">🔬 Refinamiento</div>
   <div class="tab" data-tab="texto">📝 Texto</div>
   <div class="tab" data-tab="nitidez">⚡ Nitidez</div>
+  <div class="tab" data-tab="tiling">🧩 Tiling</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -346,7 +347,23 @@
     <pre id="nitLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Nitidez listo ===</pre>
     <input type="file" id="nitInputImgs" accept="image/*" multiple style="display:none;">
   </div>
-    <input type="file" id="txInputImgs" accept="image/*" multiple style="display:none;">
+
+  <div class="tab-content" id="tab-tiling" style="padding:15px; color:#ddd;">
+    <h2>🧩 Runner de Tiling</h2>
+    <p style="font-size:12px; color:#888;">Prueba tiles de distintos tamaños, overlap, upscale y filtros. Compara palabras detectadas por ML Kit.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTilCargarImgs">📷 Cargar 1-4 imagenes</button>
+      <button class="btn green" id="btnTilIniciar">▶️ Iniciar Simulación</button>
+      <button class="btn" id="btnTilParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <div><b>Progreso:</b> <span id="tilCombo">0/0</span></div>
+    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
+      <div id="tilBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
+    </div>
+    <pre id="tilLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Tiling listo ===</pre>
+    <input type="file" id="tilInputImgs" accept="image/*" multiple style="display:none;">
   </div>
 
   <!-- SCRIPTS -->
@@ -390,6 +407,7 @@
   <script src="js/ui/runner_clahe.js"></script>
   <script src="js/ui/runner_ocr.js"></script>
   <script src="js/ui/runner_nitidez.js?v=1"></script>
+  <script src="js/ui/runner_tiling.js?v=1"></script>
 
 </body>
 </html>
