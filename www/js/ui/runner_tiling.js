@@ -226,6 +226,19 @@ async function tilIniciar() {
   window.runnerTil.cancelar = false;
   window.runnerTil.resultados = [];
 
+  // Cargar referencias (si no están cargadas)
+  tilLog('Cargando referencias...');
+  await ocrCargarReferencia('assets/referencia/01_sep.csv');
+  await ocrCargarReferencia('assets/referencia/23_sep.csv');
+
+  // Mapping imagen → CSV (por nombre)
+  function tilRefDeImagen(nombre) {
+    const n = (nombre || '').toLowerCase();
+    if (n.indexOf('sep23') >= 0 || n.indexOf('sep_23') >= 0) return window.OCR_REF_CACHE['assets/referencia/23_sep.csv'];
+    if (n.indexOf('sep1') >= 0 || n.indexOf('sep_1') >= 0) return window.OCR_REF_CACHE['assets/referencia/01_sep.csv'];
+    return null;
+  }
+
   const combos = tilGenerarCombos();
   const total = combos.length;
   tilLog('Iniciando tiling: ' + total + ' combos x ' + window.runnerTil.imagenes.length + ' imagenes');
@@ -240,6 +253,8 @@ async function tilIniciar() {
     const combo = combos[i];
     const porImagen = {};
     let totalPalabras = 0;
+    let totalF1 = 0;
+    let imagenesConRef = 0;
 
     for (let j = 0; j < window.runnerTil.imagenes.length; j++) {
       if (window.runnerTil.cancelar) break;
@@ -249,21 +264,56 @@ async function tilIniciar() {
         if (!res) continue;
         const palabras = res.text.split(/\s+/).filter(function(p) { return p.length > 1; }).length;
         totalPalabras += palabras;
-        porImagen[img.nombre] = { palabras: palabras, len: res.len, lineas: res.lineas, dedup: res.dedup };
-        tilLog('  ' + combo.nombre + ' x ' + img.nombre + ': ' + palabras + ' palabras (lineas ' + res.lineas + '->' + res.dedup + ')');
+
+        // Fidelidad (solo si hay referencia para esta imagen)
+        let fidelidad = null;
+        const refTokens = tilRefDeImagen(img.nombre);
+        if (refTokens) {
+          try {
+            fidelidad = ocrCalcularFidelidad(res.text, refTokens);
+            totalF1 += fidelidad.f1;
+            imagenesConRef++;
+            tilLog('  ' + combo.nombre + ' x ' + img.nombre + ': ' + palabras + ' pal | F1=' + fidelidad.f1.toFixed(3) + ' (P=' + fidelidad.precision.toFixed(3) + ' R=' + fidelidad.recall.toFixed(3) + ')');
+          } catch(e) {
+            tilLog('  ' + combo.nombre + ' x ' + img.nombre + ': ' + palabras + ' pal | error F1: ' + e.message);
+          }
+        } else {
+          tilLog('  ' + combo.nombre + ' x ' + img.nombre + ': ' + palabras + ' pal (sin ref)');
+        }
+
+        porImagen[img.nombre] = {
+          palabras: palabras,
+          len: res.len,
+          lineas: res.lineas,
+          dedup: res.dedup,
+          f1: fidelidad ? fidelidad.f1 : null,
+          precision: fidelidad ? fidelidad.precision : null,
+          recall: fidelidad ? fidelidad.recall : null
+        };
       } catch(e) {
         tilLog('Error ' + combo.nombre + ' x ' + img.nombre + ': ' + e.message);
       }
     }
 
-    window.runnerTil.resultados.push({ nombre: combo.nombre, totalPalabras: totalPalabras, porImagen: porImagen });
-    tilLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + totalPalabras + ' palabras');
+    const f1Promedio = imagenesConRef > 0 ? (totalF1 / imagenesConRef) : 0;
+    window.runnerTil.resultados.push({
+      nombre: combo.nombre,
+      totalPalabras: totalPalabras,
+      f1Promedio: f1Promedio,
+      porImagen: porImagen
+    });
+    tilLog('#' + (i + 1) + ' ' + combo.nombre + ' = ' + totalPalabras + ' pal | F1=' + f1Promedio.toFixed(3));
     await tilGuardarRanking();
   }
 
   const ordenados = window.runnerTil.resultados.slice().sort(function(a, b) { return b.totalPalabras - a.totalPalabras; });
-  tilLog('=== TOP ' + ordenados.length + ' ===');
-  ordenados.forEach(function(r, idx) { tilLog('#' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' palabras'); });
+  tilLog('=== TOP ' + ordenados.length + ' (por palabras) ===');
+  ordenados.forEach(function(r, idx) { tilLog('#' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' pal | F1=' + r.f1Promedio.toFixed(3)); });
+
+  const ordenadosF1 = window.runnerTil.resultados.slice().sort(function(a, b) { return b.f1Promedio - a.f1Promedio; });
+  tilLog('=== TOP ' + ordenadosF1.length + ' (por F1) ===');
+  ordenadosF1.forEach(function(r, idx) { tilLog('#' + (idx + 1) + ' ' + r.nombre + ' = ' + r.totalPalabras + ' pal | F1=' + r.f1Promedio.toFixed(3)); });
+
   tilLog('Terminado');
   window.runnerTil.ejecutando = false;
 }
