@@ -121,6 +121,44 @@ function tilAplicarFiltroACanvas(canvasUp, filtro) {
   return canvasOut.toDataURL('image/jpeg', 0.95);
 }
 
+// Variable global para el álbum
+window.tilAlbumId = null;
+
+async function tilAsegurarAlbum() {
+  try {
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return false;
+    let albums = await Media.getAlbums();
+    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_OCR_Sim"; });
+    if (!album) {
+      await Media.createAlbum({ name: "MAR_Caribe_OCR_Sim" });
+      albums = await Media.getAlbums();
+      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_OCR_Sim"; });
+    }
+    if (album && album.identifier) {
+      window.tilAlbumId = album.identifier;
+      return true;
+    }
+    return false;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function tilGuardarTile(dataURL, nombre) {
+  try {
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return;
+    if (!window.tilAlbumId) await tilAsegurarAlbum();
+    const nombreLimpio = String(nombre).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    await Media.savePhoto({
+      path: dataURL,
+      albumIdentifier: window.tilAlbumId,
+      fileName: nombreLimpio
+    });
+  } catch(e) {}
+}
+
 async function tilCorrerTiling(img, combo) {
   const TextRec = Capacitor.Plugins.TextRecognition;
   if (!TextRec) { tilLog('TextRecognition no disponible'); return null; }
@@ -146,8 +184,14 @@ async function tilCorrerTiling(img, combo) {
   const ysU = Array.from(new Set(ys));
 
   const lineasGlobales = [];
-  for (const y of ysU) {
-    for (const x of xsU) {
+  // Guardar solo 3 tiles representativos de imagen_04_sep23
+  const esSep23 = (img.nombre || '').toLowerCase().indexOf('sep23') >= 0;
+  const tilesAGuardar = [[0,0],[1,0],[0,1]]; // [yi, xi] — esquina, costado, medio
+
+  for (let yi = 0; yi < ysU.length; yi++) {
+    const y = ysU[yi];
+    for (let xi = 0; xi < xsU.length; xi++) {
+      const x = xsU[xi];
       const w = Math.min(tileSize, ancho - x);
       const h = Math.min(tileSize, alto - y);
       const canvas = document.createElement('canvas');
@@ -167,6 +211,16 @@ async function tilCorrerTiling(img, combo) {
       ctxUp.drawImage(canvas, 0, 0, wUp, hUp);
 
       const dataURL = tilAplicarFiltroACanvas(canvasUp, combo.filtro);
+
+      // Guardar 3 tiles representativos de sep23 en la galería
+      if (esSep23) {
+        const esGuardable = tilesAGuardar.some(function(p) { return p[0] === yi && p[1] === xi; });
+        if (esGuardable) {
+          try {
+            await tilGuardarTile(dataURL, 'til_' + combo.nombre + '_y' + yi + '_x' + xi);
+          } catch(e) {}
+        }
+      }
 
       try {
         const result = await TextRec.processImage({ path: dataURL });
