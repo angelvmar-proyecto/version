@@ -147,16 +147,18 @@ async function tilAsegurarAlbum() {
 
 async function tilGuardarTile(dataURL, nombre) {
   try {
-    const Media = Capacitor.Plugins.Media;
-    if (!Media) return;
-    if (!window.tilAlbumId) await tilAsegurarAlbum();
+    const fs = Capacitor.Plugins.Filesystem;
+    if (!fs) return;
+    const base64 = dataURL.split(',')[1];
     const nombreLimpio = String(nombre).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
-    await Media.savePhoto({
-      path: dataURL,
-      albumIdentifier: window.tilAlbumId,
-      fileName: nombreLimpio
+    await fs.writeFile({
+      path: 'MAR_Caribe_OCR_Sim/' + nombreLimpio + '.jpg',
+      data: base64,
+      directory: 'DOCUMENTS'
     });
-  } catch(e) {}
+  } catch(e) {
+    // Silencioso — no rompe el runner si falla el guardado
+  }
 }
 
 async function tilCorrerTiling(img, combo) {
