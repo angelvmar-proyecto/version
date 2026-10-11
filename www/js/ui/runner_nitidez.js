@@ -215,23 +215,47 @@ async function nitAplicarFiltro(img, combo) {
   return dataURL;
 }
 // --- Guardar imagen de salida en Documents ---
+// Variable global para el álbum
+window.nitAlbumId = null;
+
+async function nitAsegurarAlbum() {
+  try {
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return false;
+    let albums = await Media.getAlbums();
+    let album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_OCR_Sim"; });
+    if (!album) {
+      await Media.createAlbum({ name: "MAR_Caribe_OCR_Sim" });
+      albums = await Media.getAlbums();
+      album = (albums.albums || []).find(function(a) { return a.name === "MAR_Caribe_OCR_Sim"; });
+    }
+    if (album && album.identifier) {
+      window.nitAlbumId = album.identifier;
+      return true;
+    }
+    return false;
+  } catch(e) {
+    return false;
+  }
+}
+
 async function nitGuardarImagen(dataURL, nombre) {
   try {
-    const fs = Capacitor.Plugins.Filesystem;
-    if (!fs) return;
-    const base64 = dataURL.replace('data:image/jpeg;base64,', '');
-    await fs.writeFile({
-      path: 'MAR_Caribe_OCR_Sim/' + nombre + '.jpg',
-      directory: 'DOCUMENTS',
-      encoding: 'base64',
-      data: base64,
-      recursive: true
+    const Media = Capacitor.Plugins.Media;
+    if (!Media) return;
+    if (!window.nitAlbumId) await nitAsegurarAlbum();
+    // Sanitizar nombre (sin caracteres especiales)
+    const nombreLimpio = String(nombre).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    await Media.savePhoto({
+      path: dataURL,
+      albumIdentifier: window.nitAlbumId,
+      fileName: nombreLimpio
     });
   } catch(e) {
     // Silencioso — no rompe el runner si falla el guardado
   }
 }
-
+    // Silencioso — no rompe el runner si falla el guardado
 // --- Guardar ranking JSON en Documents ---
 async function nitGuardarRanking() {
   try {
@@ -292,6 +316,7 @@ async function nitIniciar() {
   window.runnerNit.cancelar = false;
   window.runnerNit.resultados = [];
 
+  await nitAsegurarAlbum();
   const TextRec = Capacitor.Plugins.TextRecognition;
   if (!TextRec) { nitLog('TextRecognition no disponible'); return; }
 
