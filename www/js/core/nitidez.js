@@ -23,21 +23,32 @@ function nitClamp(v) {
 
 // --- Utilidad: box blur rápido ---
 function nitBoxBlur(brillo, ancho, alto, radio) {
-  const out = new Array(alto);
-  for (let y = 0; y < alto; y++) out[y] = new Array(ancho).fill(0);
+  // Imagen integral con padding: suma[y][x] = suma de brillo[0..y-1][0..x-1]
+  const suma = new Array(alto + 1);
+  for (let y = 0; y <= alto; y++) suma[y] = new Array(ancho + 1).fill(0);
   for (let y = 0; y < alto; y++) {
     for (let x = 0; x < ancho; x++) {
-      let suma = 0, count = 0;
-      for (let dy = -radio; dy <= radio; dy++) {
-        for (let dx = -radio; dx <= radio; dx++) {
-          const yy = y + dy, xx = x + dx;
-          if (yy >= 0 && yy < alto && xx >= 0 && xx < ancho) {
-            suma += brillo[yy][xx];
-            count++;
-          }
-        }
-      }
-      out[y][x] = suma / count;
+      suma[y + 1][x + 1] = brillo[y][x]
+        + suma[y][x + 1]
+        + suma[y + 1][x]
+        - suma[y][x];
+    }
+  }
+
+  const out = new Array(alto);
+  for (let y = 0; y < alto; y++) out[y] = new Array(ancho);
+  for (let y = 0; y < alto; y++) {
+    const y1 = Math.max(0, y - radio);
+    const y2 = Math.min(alto - 1, y + radio);
+    for (let x = 0; x < ancho; x++) {
+      const x1 = Math.max(0, x - radio);
+      const x2 = Math.min(ancho - 1, x + radio);
+      const s = suma[y2 + 1][x2 + 1]
+        - suma[y1][x2 + 1]
+        - suma[y2 + 1][x1]
+        + suma[y1][x1];
+      const count = (y2 - y1 + 1) * (x2 - x1 + 1);
+      out[y][x] = s / count;
     }
   }
   return out;
