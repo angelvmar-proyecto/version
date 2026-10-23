@@ -188,7 +188,27 @@ async function tabProcesarFilas(img, grilla) {
     const y1 = Math.max(0, grilla.lineasH[i] - 3);
     const y2 = Math.min(img.alto, grilla.lineasH[i + 1] + 3);
 
-    const elementos = await tabCorrerFranja(img, y1, y2, upscale);
+    const elementosRaw = await tabCorrerFranja(img, y1, y2, upscale);
+
+    // === DEDUPLICACIÓN: eliminar elementos duplicados por overlap ===
+    const elementos = [];
+    for (const el of elementosRaw) {
+      let dup = false;
+      for (const d of elementos) {
+        const diffX = Math.abs(d.absLeft - el.absLeft);
+        const diffY = Math.abs(d.absTop - el.absTop);
+        if (diffX < 25 && diffY < 10) {
+          let sim = 0;
+          if (typeof ocrSimilitud === 'function') {
+            sim = ocrSimilitud(el.text, d.text);
+          } else {
+            sim = (el.text === d.text) ? 1 : 0;
+          }
+          if (sim > 0.65) { dup = true; break; }
+        }
+      }
+      if (!dup) elementos.push(el);
+    }
 
     for (const el of elementos) {
       const cx = (el.absLeft + el.absRight) / 2;
@@ -221,7 +241,11 @@ function tabArmarMatrizYLimpiar(celdas, grilla) {
       const key = i + '_' + j;
       const elems = celdas[key] || [];
       elems.sort(function(a, b) { return a.left - b.left; });
-      fila.push(elems.map(function(e) { return e.text; }).join(' ').trim());
+      let textoCelda = elems.map(function(e) { return e.text; }).join(' ').trim();
+      if (textoCelda.length > 0 && typeof ocrPostProcesar === 'function') {
+        try { textoCelda = ocrPostProcesar(textoCelda); } catch(e) {}
+      }
+      fila.push(textoCelda);
     }
     matriz.push(fila);
   }
