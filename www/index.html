@@ -24,6 +24,47 @@
     .tab-content.active { display: block; }
     .chip { padding: 6px 12px; border-radius: 6px; background: #333; color: #ccc; cursor: pointer; font-size: 13px; }
     .chip.active { background: #2563eb; color: #fff; font-weight: bold; }
+    /* Estilos para la tabla Excel */
+    .excel-container {
+      overflow: auto;
+      max-height: 70vh;
+      border: 1px solid #333;
+      margin-top: 10px;
+    }
+    .excel-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 11px;
+      font-family: monospace;
+      white-space: nowrap;
+    }
+    .excel-table th, .excel-table td {
+      border: 1px solid #444;
+      padding: 2px;
+      color: #ddd;
+    }
+    .excel-table th {
+      background: #1e293b;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 4px 8px;
+    }
+    .excel-table tr:nth-child(even) { background: #0f172a; }
+    .excel-table td input {
+      background: transparent;
+      border: none;
+      color: #ddd;
+      font-family: monospace;
+      font-size: 11px;
+      width: 100%;
+      min-width: 60px;
+      padding: 2px 4px;
+    }
+    .excel-table td input:focus {
+      background: #333;
+      outline: 1px solid #4ea3f5;
+    }
   </style>
 </head>
 <body>
@@ -44,6 +85,7 @@
   <div class="tab" data-tab="nitidez">⚡ Nitidez</div>
   <div class="tab" data-tab="tiling">🧩 Tiling</div>
   <div class="tab" data-tab="tabla">📊 Tabla</div>
+  <div class="tab" data-tab="excel">📉 Excel</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -381,6 +423,27 @@
     <input type="file" id="tabInputImg" accept="image/*" style="display:none;">
   </div>
 
+  <div class="tab-content" id="tab-excel" style="padding:15px; color:#ddd;">
+    <h2>📉 Ver Tabla (Excel)</h2>
+    <p style="font-size:12px; color:#888;">Tabla renderizada del último pipeline. Celdas editables. Cambios se reflejan al exportar.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnExcelRecargar">🔄 Recargar del último resultado</button>
+      <button class="btn green" id="btnExcelExportar">💾 Exportar CSV</button>
+    </div>
+
+    <div class="excel-container">
+      <table class="excel-table" id="excelTable">
+        <thead>
+          <tr><th>Vacío</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Corre el pipeline de tabla primero</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -426,7 +489,8 @@
   <script src="js/ui/runner_ocr.js"></script>
   <script src="js/ui/runner_nitidez.js?v=1"></script>
   <script src="js/ui/runner_tiling.js?v=1"></script>
-  <script src="js/ui/runner_tabla_v2.js?v=4"></script>
+  <script src="js/ui/runner_tabla_v2.js?v=5"></script>
+  <script src="js/ui/tab_excel.js?v=1"></script>
 
 </body>
 </html>

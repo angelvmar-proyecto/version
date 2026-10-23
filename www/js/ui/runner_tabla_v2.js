@@ -367,6 +367,7 @@ async function tabIniciar() {
 
     // Paso 5: matriz + limpieza
     const resultado = tabArmarMatrizYLimpiar(celdas, grilla);
+    window.runnerTabla.matrizFinal = resultado.matriz;
     tabLog('Matriz final: ' + resultado.filasFinales + ' filas x ' + resultado.columnasFinales + ' cols');
     tabLog('  (antes de limpiar: ' + resultado.filasOriginales + ' x ' + resultado.columnasOriginales + ')');
 
@@ -400,6 +401,7 @@ function tabParar() {
 window.tabCargarImagenClick = tabCargarImagenClick;
 window.tabProcesarImagen = tabProcesarImagen;
 window.tabIniciar = tabIniciar;
+window.tabGuardarCsv = tabGuardarCsv;
 window.tabParar = tabParar;
 
 // --- Enganche de botones ---
