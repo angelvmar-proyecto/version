@@ -185,8 +185,8 @@ async function tabProcesarFilas(img, grilla) {
   for (let i = 0; i < total; i++) {
     if (window.runnerTabla.cancelar) break;
 
-    const y1 = Math.max(0, grilla.lineasH[i] - 3);
-    const y2 = Math.min(img.alto, grilla.lineasH[i + 1] + 3);
+    const y1 = Math.max(0, grilla.lineasH[i] - 8);
+    const y2 = Math.min(img.alto, grilla.lineasH[i + 1] + 8);
 
     const elementosRaw = await tabCorrerFranja(img, y1, y2, upscale);
 
@@ -204,7 +204,7 @@ async function tabProcesarFilas(img, grilla) {
           } else {
             sim = (el.text === d.text) ? 1 : 0;
           }
-          if (sim > 0.65) { dup = true; break; }
+          if (sim > 0.85) { dup = true; break; }
         }
       }
       if (!dup) elementos.push(el);
@@ -300,15 +300,12 @@ async function tabGuardarCsv(matriz, nombreBase) {
     if (!fs) return false;
     const csv = tablaMatrizACsv(matriz);
     const nombreLimpio = String(nombreBase).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
-    // btoa no maneja UTF-8 bien; convertir a base64 UTF-8-safe
-    const utf8Bytes = new TextEncoder().encode(csv);
-    let binario = '';
-    for (let i = 0; i < utf8Bytes.length; i++) binario += String.fromCharCode(utf8Bytes[i]);
-    const base64 = btoa(binario);
     await fs.writeFile({
       path: 'MAR_Caribe_OCR_Sim/' + nombreLimpio + '_tabla.csv',
-      data: base64,
-      directory: 'DOCUMENTS'
+      data: csv,
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+      recursive: true
     });
     tabLog('CSV guardado: MAR_Caribe_OCR_Sim/' + nombreLimpio + '_tabla.csv');
     return true;
