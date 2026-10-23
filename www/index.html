@@ -43,6 +43,7 @@
   <div class="tab" data-tab="texto">📝 Texto</div>
   <div class="tab" data-tab="nitidez">⚡ Nitidez</div>
   <div class="tab" data-tab="tiling">🧩 Tiling</div>
+  <div class="tab" data-tab="tabla">📊 Tabla</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -366,6 +367,20 @@
     <input type="file" id="tilInputImgs" accept="image/*" multiple style="display:none;">
   </div>
 
+  <div class="tab-content" id="tab-tabla" style="padding:15px; color:#ddd;">
+    <h2>📊 Runner de Tabla (imagen → CSV)</h2>
+    <p style="font-size:12px; color:#888;">Pipeline: detectar líneas → construir grilla → OCR por fila → CSV estructurado.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTabCargarImg">📷 Cargar imagen</button>
+      <button class="btn green" id="btnTabIniciar">▶️ Iniciar</button>
+      <button class="btn" id="btnTabParar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <pre id="tabLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla listo ===</pre>
+    <input type="file" id="tabInputImg" accept="image/*" style="display:none;">
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -396,6 +411,7 @@
   <script src="js/core/ocr_post.js"></script>
   <script src="js/core/csv_parser.js"></script>
   <script src="js/core/ocr_fidelidad.js"></script>
+  <script src="js/core/tabla_grilla.js"></script>
   <script src="js/ui/dibujo.js"></script>
   <script src="js/ui/zoom.js"></script>
   <script src="js/benchmarks.js"></script>
@@ -410,6 +426,7 @@
   <script src="js/ui/runner_ocr.js"></script>
   <script src="js/ui/runner_nitidez.js?v=1"></script>
   <script src="js/ui/runner_tiling.js?v=1"></script>
+  <script src="js/ui/runner_tabla.js?v=1"></script>
 
 </body>
 </html>
