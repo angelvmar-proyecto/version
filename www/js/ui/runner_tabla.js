@@ -119,6 +119,8 @@ async function tabIniciar() {
     const lineasH = tablaFiltrarLineas(lidar.lineasH, 15);
     const lineasV = tablaFiltrarLineas(lidar.lineasV, 20);
     tabLog('Líneas filtradas: H=' + lineasH.length + ' V=' + lineasV.length);
+    tabLog('[POS] V=' + JSON.stringify(lineasV));
+    tabLog('[POS] H=' + JSON.stringify(lineasH));
 
     // Paso 3: grilla
     const grilla = tablaConstruirGrilla(lineasH, lineasV);
