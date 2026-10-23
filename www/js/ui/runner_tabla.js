@@ -1,6 +1,7 @@
 // ==============================================
 // ui/runner_tabla.js
 // Pipeline: imagen → líneas → grilla → OCR por fila → CSV.
+// Usa pipeline ganador del refinamiento: ocr+sauv+clahe_t32_c2
 // ==============================================
 
 window.runnerTabla = {
@@ -48,6 +49,7 @@ async function tabProcesarImagen(file) {
 }
 
 // Corre el pipeline de líneas (13 detectores + LIDAR)
+// Usa el pipeline ganador del refinamiento: ocr+sauv+clahe_t32_c2
 async function tabDetectarLineas(img) {
   tabLog('Extrayendo brillo...');
   const canvas = document.createElement('canvas');
@@ -62,7 +64,16 @@ async function tabDetectarLineas(img) {
     ancho: img.ancho,
     alto: img.alto
   };
+
+  // === Pipeline ganador del refinamiento (ocr+sauv+clahe_t32_c2) ===
+  tabLog('Aplicando pipeline ganador (contrast + CLAHE x2 + Sauvola)...');
+  st.brillo = restaurarContrast(st.brillo, st.ancho, st.alto, 5, 95);
+  st.brillo = restaurarCLAHE(st.brillo, st.ancho, st.alto, 16, 8);
+  st.brillo = restaurarCLAHE(st.brillo, st.ancho, st.alto, 32, 2);
+  // Guardar pre-Sauvola para morfo (igual que el refinamiento)
   st.brilloOriginal = st.brillo;
+  st.brillo = aplicarSauvola(st.brillo, st.ancho, st.alto);
+  tabLog('Pipeline ganador aplicado');
 
   calcularUmbralesBrillo(st.brillo, st.ancho, st.alto);
   tabLog('Umbrales calculados');
@@ -116,6 +127,7 @@ async function tabIniciar() {
     }
 
     // Paso 2: filtrar líneas duplicadas
+    // Con pipeline ganador las líneas vienen más limpias, umbral más suave
     const lineasH = tablaFiltrarLineas(lidar.lineasH, 15);
     const lineasV = tablaFiltrarLineas(lidar.lineasV, 20);
     tabLog('Líneas filtradas: H=' + lineasH.length + ' V=' + lineasV.length);
