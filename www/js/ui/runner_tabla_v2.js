@@ -212,6 +212,8 @@ async function tabProcesarFilas(img, grilla) {
 
     for (const el of elementos) {
       const cx = (el.absLeft + el.absRight) / 2;
+        const cy = (el.absTop + el.absBottom) / 2;
+        if (cy < grilla.lineasH[i] || cy >= grilla.lineasH[i + 1]) continue;
 
       let col = -1;
       for (let j = 0; j < grilla.lineasV.length - 1; j++) {
@@ -303,7 +305,7 @@ async function tabGuardarCsv(matriz, nombreBase) {
     await fs.writeFile({
       path: 'MAR_Caribe_OCR_Sim/' + nombreLimpio + '_tabla.csv',
       data: csv,
-      directory: 'DOCUMENTS',
+      directory: 'ExternalStorage',
       encoding: 'utf8',
       recursive: true
     });
