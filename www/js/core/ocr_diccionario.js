@@ -35,7 +35,7 @@ window.OCR_DICCIONARIO_BASE = [
   'CASA', 'LEY', 'ELEKTRA',
 
   // --- Nacionalidades / países ---
-  'USA', 'MEX', 'CAN', 'MEXICO', 'CANADA', 'AMERICA', 'AMERICANO',
+  'USA', 'MEX', 'CAN', 'USD', 'MXN', 'CAD', 'MEXICO', 'CANADA', 'AMERICA', 'AMERICANO',
   'AMERICANA', 'ESPANOL', 'ESPANOLA',
 
   // --- Estados / regiones ---

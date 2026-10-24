@@ -87,6 +87,7 @@
   <div class="tab" data-tab="tabla">📊 Tabla</div>
   <div class="tab" data-tab="excel">📉 Excel</div>
   <div class="tab" data-tab="tabla_v3">📊 Tabla v3</div>
+  <div class="tab" data-tab="tabla_v4">📊 Tabla v4</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -459,6 +460,20 @@
     <pre id="tab3Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v3 listo ===</pre>
     <input type="file" id="tab3InputImg" accept="image/*" style="display:none;">
   </div>
+
+  <div class="tab-content" id="tab-tabla-v4" style="padding:15px; color:#ddd;">
+    <h2>📊 Runner Tabla v4 (Iterativo)</h2>
+    <p style="font-size:12px; color:#888;">OCR puro -> Grilla geométrica -> CSV. Sin depender de detectores de líneas.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTab4CargarImg">📷 Cargar imagen</button>
+      <button class="btn green" id="btnTab4Iniciar">▶️ Iniciar v4</button>
+      <button class="btn" id="btnTab4Parar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <pre id="tab4Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v4 listo ===</pre>
+    <input type="file" id="tab4InputImg" accept="image/*" style="display:none;">
+  </div>
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -508,6 +523,8 @@
   <script src="js/ui/tab_excel.js?v=1"></script>
   <script src="js/core/tabla_inferencia.js"></script>
   <script src="js/ui/runner_tabla_v3.js?v=3"></script>
+  <script src="js/core/tabla_motor_v4.js"></script>
+  <script src="js/ui/runner_tabla_v4.js?v=1"></script>
 
 </body>
 </html>
