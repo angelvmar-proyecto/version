@@ -65,7 +65,7 @@ async function tab3DetectarLineasBase(img) {
   st.brilloOriginal = st.brillo;
   st.brillo = aplicarSauvola(st.brillo, st.ancho, st.alto);
 
-  calcularUmbralesBrillo(st.brillo, st.ancho, st.alto);
+  calcularUmbralesBrillo(st.brilloOriginal, st.ancho, st.alto);
 
   // Corremos detectores (para LIDAR necesitamos todos, o al menos los de H)
   try { st.optica = detectarOptica(st.brillo, st.ancho, st.alto); } catch(e) { st.optica = { lineasH: [], lineasV: [] }; }
