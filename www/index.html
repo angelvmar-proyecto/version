@@ -86,6 +86,7 @@
   <div class="tab" data-tab="tiling">🧩 Tiling</div>
   <div class="tab" data-tab="tabla">📊 Tabla</div>
   <div class="tab" data-tab="excel">📉 Excel</div>
+  <div class="tab" data-tab="tabla_v3">📊 Tabla v3</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -444,6 +445,20 @@
     </div>
   </div>
 
+
+  <div class="tab-content" id="tab-tabla-v3" style="padding:15px; color:#ddd;">
+    <h2>📊 Runner Tabla v3 (Inferencia)</h2>
+    <p style="font-size:12px; color:#888;">H de LIDAR + V de Realce + Inferencia por OCR.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTab3CargarImg">📷 Cargar imagen</button>
+      <button class="btn green" id="btnTab3Iniciar">▶️ Iniciar v3</button>
+      <button class="btn" id="btnTab3Parar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <pre id="tab3Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v3 listo ===</pre>
+    <input type="file" id="tab3InputImg" accept="image/*" style="display:none;">
+  </div>
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -491,6 +506,8 @@
   <script src="js/ui/runner_tiling.js?v=1"></script>
   <script src="js/ui/runner_tabla_v2.js?v=7"></script>
   <script src="js/ui/tab_excel.js?v=1"></script>
+  <script src="js/core/tabla_inferencia.js"></script>
+  <script src="js/ui/runner_tabla_v3.js?v=1"></script>
 
 </body>
 </html>
