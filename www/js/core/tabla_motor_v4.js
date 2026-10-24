@@ -33,48 +33,6 @@ function motorClusters(coordenadas, tolerancia) {
 }
 
 // 2. Construye la grilla V (Columnas) a partir de las cajas de texto
-function motorInferirColumnas(elementosPorFila, anchoImagen) {
-  const todosX = [];
-  // Recolectar todos los centros X de todas las palabras
-  for (const fila of elementosPorFila) {
-    for (const el of fila) {
-      const cx = (el.absLeft + el.absRight) / 2;
-      todosX.push(cx);
-    }
-  }
-
-  // Agrupar centros con 20px de tolerancia
-  const clusters = motorClusters(todosX, 20);
-  
-  // Filtrar los clusters que son solo ruido (aparecen muy pocas veces)
-  const umbralMinimo = elementosPorFila.length * 0.05; // 5% de las filas
-  const centrosValidos = clusters
-    .filter(function(c) { return c.count >= umbralMinimo; })
-    .map(function(c) { return c.pos; })
-    .sort(function(a, b) { return a - b; });
-
-  // Crear líneas V a partir de los centros (usando el espacio entre centros)
-  const lineasV = [];
-  if (centrosValidos.length === 0) return [];
-
-  // Línea inicial (margen izquierdo)
-  lineasV.push(Math.max(0, centrosValidos[0] - 20));
-
-  // Líneas intermedias
-  for (let i = 0; i < centrosValidos.length - 1; i++) {
-    const gap = centrosValidos[i+1] - centrosValidos[i];
-    // Si el gap es grande, hay una separación
-    if (gap > 40) {
-      // Poner la línea justo en el medio del hueco
-      lineasV.push(centrosValidos[i] + (gap / 2));
-    }
-  }
-
-  // Línea final (margen derecho)
-  lineasV.push(Math.min(anchoImagen, centrosValidos[centrosValidos.length - 1] + 20));
-
-  return lineasV;
-}
 
 // 3. Construye la grilla H (Filas) a partir de las cajas de texto
 function motorInferirFilas(elementosPorFila, altoImagen) {
