@@ -75,7 +75,7 @@ async function tab3DetectarLineasBase(img) {
   try { st.lvc = detectarLVC(st.brillo, st.ancho, st.alto); } catch(e) { st.lvc = { lineasH: [], lineasV: [] }; }
   try { st.io = detectarIO(st.brillo, st.ancho, st.alto, st.optica.lineasH, st.optica.lineasV); } catch(e) { st.io = { lineasH: [], lineasV: [] }; }
   try { st.cont = detectarContinuidad(st.brillo, st.ancho, st.alto); } catch(e) { st.cont = { lineasH: [], lineasV: [] }; }
-  try { st.realce = detectarRealce(st.brillo, st.ancho, st.alto); } catch(e) { st.realce = { lineasH: [], lineasV: [] }; }
+  try { st.realce = detectarRealce(st.brilloOriginal, st.ancho, st.alto); } catch(e) { st.realce = { lineasH: [], lineasV: [] }; }
   try { st.openv = detectarOPENV(st.brillo, st.ancho, st.alto); } catch(e) { st.openv = { lineasH: [], lineasV: [] }; }
   try { st.ml = detectarML(st.brillo, st.ancho, st.alto); } catch(e) { st.ml = { lineasH: [], lineasV: [] }; }
   try { st.ws = detectarWS(st.brillo, st.ancho, st.alto); } catch(e) { st.ws = { lineasH: [], lineasV: [] }; }
