@@ -451,6 +451,7 @@ window.tabCargarImagenClick = tabCargarImagenClick;
 window.tabProcesarImagen = tabProcesarImagen;
 window.tabIniciar = tabIniciar;
 window.tabGuardarCsv = tabGuardarCsv;
+window.tabArmarMatrizYLimpiar = tabArmarMatrizYLimpiar;
 window.tabParar = tabParar;
 
 // --- Enganche de botones ---
