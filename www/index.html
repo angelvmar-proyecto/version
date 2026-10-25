@@ -90,7 +90,6 @@
   <div class="tab" data-tab="ocr_directo">📄 OCR Directo</div>
   <div class="tab" data-tab="tabla_v3">📊 Tabla v3</div>
   <div class="tab" data-tab="tabla_v4">📊 Tabla v4</div>
-  <div class="tab" data-tab="tabla_v5">📊 Tabla v5</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -491,20 +490,6 @@
     <pre id="odLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner OCR Directo listo ===</pre>
     <input type="file" id="odInputImg" accept="image/*" style="display:none;">
   </div>
-
-  <div class="tab-content" id="tab-tabla-v5" style="padding:15px; color:#ddd;">
-    <h2>📊 Runner Tabla v5 (Gaps Locales)</h2>
-    <p style="font-size:12px; color:#888;">Sin overlap. Sin histograma global. Gaps locales + consenso entre filas.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTab5CargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnTab5Iniciar">▶️ Iniciar v5</button>
-      <button class="btn" id="btnTab5Parar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="tab5Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v5 listo ===</pre>
-    <input type="file" id="tab5InputImg" accept="image/*" style="display:none;">
-  </div>
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -559,7 +544,6 @@
   <script src="js/ui/runner_tabla_v3.js?v=3"></script>
   <script src="js/core/tabla_motor_v4.js?v=2"></script>
   <script src="js/ui/runner_tabla_v4.js?v=1"></script>
-  <script src="js/ui/runner_tabla_v5.js?v=1"></script>
 
 </body>
 </html>

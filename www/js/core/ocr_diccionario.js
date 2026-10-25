@@ -32,6 +32,7 @@ window.OCR_DICCIONARIO_BASE = [
 
   // --- Contactos / promotores ---
   'WALMART', 'CLAC', 'CHEDRAUI', 'SAMS', 'COSTCO', 'SORIANA',
+  'JOLLY', 'BARCO', 'ACUARIO', 'AQUARIO', 'MOUSAI', 'NETCENTER', 'GARZA', 'BLANCA', 'PALMAR', 'REAGENDA', 'REFERRAL', 'T2B', 'T3A', 'T3B', 'T3C', 'T4A', 'T4B', 'T4C',
   'CASA', 'LEY', 'ELEKTRA',
 
   // --- Nacionalidades / países ---

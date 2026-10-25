@@ -213,13 +213,15 @@ async function tab4Iniciar() {
         if (col < 0) continue;
         const key = i + '_' + col;
         if (!celdas[key]) celdas[key] = [];
-        celdas[key].push({ text: el.text, left: el.absLeft });
+        celdas[key].push({ text: el.text, left: el.absLeft, top: el.absTop });
       }
     }
 
     // 5. Armar matriz final y limpiar
     const resultado = tabArmarMatrizYLimpiar(celdas, grilla);
     tab4Log('Matriz final: ' + resultado.filasFinales + ' x ' + resultado.columnasFinales);
+    tab4Log('[tipos] ' + JSON.stringify(resultado.tiposColumnas.map(function(t){ return t.tipo; })));
+    tab4Log('[corrección] ' + resultado.celdasCorregidas + '/' + resultado.celdasTotales);
 
     // 6. Guardar para pestaña Excel
     window.runnerTabla.matrizFinal = resultado.matriz;
