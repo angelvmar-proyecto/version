@@ -236,6 +236,7 @@ async function tabProcesarFilas(img, grilla) {
 
 // === PASO 4: Armar matriz y eliminar vacías ===
 function tabArmarMatrizYLimpiar(celdas, grilla) {
+  // 1. Construir matriz inicial (con texto crudo, sin post-procesar aún)
   const matriz = [];
   for (let i = 0; i < grilla.numFilas; i++) {
     const fila = [];
@@ -243,15 +244,54 @@ function tabArmarMatrizYLimpiar(celdas, grilla) {
       const key = i + '_' + j;
       const elems = celdas[key] || [];
       elems.sort(function(a, b) { return a.left - b.left; });
-      let textoCelda = elems.map(function(e) { return e.text; }).join(' ').trim();
-      if (textoCelda.length > 0 && typeof ocrPostProcesar === 'function') {
-        try { textoCelda = ocrPostProcesar(textoCelda); } catch(e) {}
-      }
+      const textoCelda = elems.map(function(e) { return e.text; }).join(' ').trim();
       fila.push(textoCelda);
     }
     matriz.push(fila);
   }
 
+  // 2. Detectar tipo de cada columna por su CONTENIDO (sobre texto crudo)
+  const tiposColumnas = [];
+  for (let j = 0; j < grilla.numCols; j++) {
+    const valoresCol = [];
+    for (let i = 0; i < grilla.numFilas; i++) {
+      if (matriz[i][j]) valoresCol.push(matriz[i][j]);
+    }
+    const tipo = window.tipoDetectarColumna ? window.tipoDetectarColumna(valoresCol) : { tipo: 'texto_libre' };
+    tiposColumnas.push(tipo);
+  }
+
+  // 3. Aplicar corrector por tipo de columna
+  let celdasCorregidas = 0;
+  let celdasTotales = 0;
+  for (let i = 0; i < grilla.numFilas; i++) {
+    for (let j = 0; j < grilla.numCols; j++) {
+      const texto = matriz[i][j];
+      if (texto && texto.length > 0) {
+        celdasTotales++;
+        const tipoInfo = tiposColumnas[j];
+        const corregido = window.correctorAplicarPorTipo ? window.correctorAplicarPorTipo(texto, tipoInfo) : texto;
+        if (corregido !== texto) celdasCorregidas++;
+        matriz[i][j] = corregido;
+      }
+    }
+  }
+
+  // 4. Log de tipos detectados (si tabLog está disponible)
+  if (typeof tabLog === 'function') {
+    const tiposResumen = {};
+    for (const t of tiposColumnas) {
+      const k = t.tipo;
+      if (!tiposResumen[k]) tiposResumen[k] = 0;
+      tiposResumen[k]++;
+    }
+    let resumenStr = '';
+    for (const k in tiposResumen) resumenStr += k + ':' + tiposResumen[k] + ' ';
+    tabLog('[tipos columnas] ' + resumenStr);
+    tabLog('[corrección] ' + celdasCorregidas + '/' + celdasTotales + ' celdas modificadas');
+  }
+
+  // 5. Filtrar filas y columnas vacías
   const colsConDatos = [];
   for (let j = 0; j < grilla.numCols; j++) {
     let tiene = false;
@@ -284,7 +324,10 @@ function tabArmarMatrizYLimpiar(celdas, grilla) {
     columnasOriginales: grilla.numCols,
     columnasFinales: colsConDatos.length,
     filasOriginales: grilla.numFilas,
-    filasFinales: filasConDatos.length
+    filasFinales: filasConDatos.length,
+    tiposColumnas: tiposColumnas,
+    celdasCorregidas: celdasCorregidas,
+    celdasTotales: celdasTotales
   };
 }
 

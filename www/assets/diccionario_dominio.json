@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "palabras": ["VDP", "GB", "TAFER", "CHEDRAUI", "WALMART", "CLAC", "SAMS", "PREMIER", "ELITE", "DIAMOND", "ROYAL", "HOLIDAY", "TRIAL"],
+  "codigos": ["T1A","T1B","T2A","T2B","T3A","T3B","T3C","T4A","T4B","T4C","T5A","T5B"],
+  "hoteles": ["RIU","PALACE","BARCELO","IBEROSTAR","HARD ROCK","MOON PALACE","SUN PALACE","WESTIN","HILTON","MARRIOTT","HYATT","SHERATON"],
+  "monedas": ["USD","MXN","CAD","EUR"],
+  "estados": ["USA","CAN","MEX","COLO","COSR"],
+  "civil": ["SINGLE","MARRIED","COUPLE","LIVING TOGETHER","DIVORCED","ENGAGED","SINGLE LADY","SINGLE MAN"]
+}
