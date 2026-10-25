@@ -223,7 +223,7 @@ async function tabProcesarFilas(img, grilla) {
 
       const key = i + '_' + col;
       if (!celdas[key]) celdas[key] = [];
-      celdas[key].push({ text: el.text, left: el.absLeft });
+      celdas[key].push({ text: el.text, left: el.absLeft, top: el.absTop });
     }
 
     if ((i + 1) % 10 === 0 || i === total - 1) {
@@ -243,7 +243,11 @@ function tabArmarMatrizYLimpiar(celdas, grilla) {
     for (let j = 0; j < grilla.numCols; j++) {
       const key = i + '_' + j;
       const elems = celdas[key] || [];
-      elems.sort(function(a, b) { return a.left - b.left; });
+      elems.sort(function(a, b) {
+        const diffY = (a.top || 0) - (b.top || 0);
+        if (Math.abs(diffY) > 5) return diffY;
+        return a.left - b.left;
+      });
       const textoCelda = elems.map(function(e) { return e.text; }).join(' ').trim();
       fila.push(textoCelda);
     }
@@ -348,7 +352,7 @@ async function tabGuardarCsv(matriz, nombreBase) {
     await fs.writeFile({
       path: 'MAR_Caribe_OCR_Sim/' + nombreLimpio + '_tabla.csv',
       data: csv,
-      directory: 'ExternalStorage',
+      directory: 'DOCUMENTS',
       encoding: 'utf8',
       recursive: true
     });
