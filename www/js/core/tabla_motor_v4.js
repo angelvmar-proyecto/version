@@ -51,7 +51,7 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
 
   if (typeof console !== 'undefined') {
     tab4Log('[MOTOR-V] Filas totales: ' + elementosPorFila.length);
-    tab4Log('[MOTOR-V] Encabezado detectado: ' + (filaEncabezado ? maxPalabras + ' palabras' : 'NO'));
+    tab4Log('[MOTOR-V] Encabezado detectado: ' + (filaEncabezado ? maxPalabras + ' palabras: ' + filaEncabezado.map(function(e){ return e.text; }).join(' | ') : 'NO'));
   }
 
   // 2. Calcular gaps solo en la fila de encabezado

@@ -189,31 +189,36 @@ async function tab4CorrerOCRTiling(img) {
 // Agrupa elementos por filas (Y)
 function tab4AgruparEnFilas(elementos) {
   if (elementos.length === 0) return [];
-  
+
   // Ordenar por Y
   elementos.sort(function(a, b) { return a.cy - b.cy; });
-  
+
   const filas = [];
   let filaActual = [elementos[0]];
-  
+  let sumaY = elementos[0].cy;
+
   for (let i = 1; i < elementos.length; i++) {
     const el = elementos[i];
-    // Si está cerca en Y de la fila actual, se agrega
-    if (Math.abs(el.cy - filaActual[0].cy) < 20) {
+    // Comparar contra la media Y de la fila actual (más robusto)
+    const mediaY = sumaY / filaActual.length;
+
+    // Margen 40px: abarca celdas con texto de varias líneas (Notes)
+    if (Math.abs(el.cy - mediaY) < 40) {
       filaActual.push(el);
+      sumaY += el.cy;
     } else {
-      // Nueva fila
       filas.push(filaActual);
       filaActual = [el];
+      sumaY = el.cy;
     }
   }
   filas.push(filaActual);
-  
+
   // Ordenar cada fila por X
   for (const f of filas) {
     f.sort(function(a, b) { return a.cx - b.cx; });
   }
-  
+
   return filas;
 }
 
