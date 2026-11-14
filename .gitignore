@@ -1,4 +1,35 @@
+# Dependencias
 node_modules/
-.gradle/
-*.log
+npm-debug.log
+yarn-error.log
+
+# Build Android
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/res/xml/config.xml
+
+# Build web
+dist/
+www/dist/
+
+# Backup / archivo temporal (no subir al repo)
+www/_archivo/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Sistema
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local

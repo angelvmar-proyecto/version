@@ -3,579 +3,235 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MAR Caribe v14</title>
+  <title>MAR Caribe OCR</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 12px; background: #0d1421; color: #ddd; font-family: -apple-system, sans-serif; }
-    h1 { font-size: 18px; color: #4ea3f5; margin: 0 0 4px; }
-    .sub { font-size: 11px; color: #888; margin: 0 0 14px; }
-    .btn { padding: 12px 16px; border-radius: 8px; border: none; background: #2563eb; color: #fff; font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer; }
+    body {
+      margin: 0;
+      padding: 12px;
+      background: #0d1421;
+      color: #ddd;
+      font-family: -apple-system, sans-serif;
+    }
+    h1 {
+      font-size: 18px;
+      color: #4ea3f5;
+      margin: 0 0 4px;
+    }
+    .sub {
+      font-size: 11px;
+      color: #888;
+      margin: 0 0 14px;
+    }
+
+    /* Botones */
+    .btn {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      width: 100%;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .btn.green { background: #16a34a; }
+    .btn.orange { background: #ea580c; }
     .btn.gray { background: #4b5563; }
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
     .btn-grid .btn { margin-bottom: 0; }
-    canvas { width: 100%; display: block; border-radius: 6px; border: 1px solid #333; margin-bottom: 10px; }
-    #log { background: #0a0a0a; color: #9eff9e; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; border: 1px solid #333; }
-    input[type=file] { display: none; }
-    .tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid #333; }
-    .tab { padding: 10px 14px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 13px; color: #888; }
-    .tab.active { background: #1a1a2e; color: #4ea3f5; font-weight: bold; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .chip { padding: 6px 12px; border-radius: 6px; background: #333; color: #ccc; cursor: pointer; font-size: 13px; }
-    .chip.active { background: #2563eb; color: #fff; font-weight: bold; }
-    /* Estilos para la tabla Excel */
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #333;
+    }
+    .tab {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      font-size: 13px;
+      color: #888;
+    }
+    .tab.active {
+      background: #1a1a2e;
+      color: #4ea3f5;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Canvas */
+    canvas {
+      width: 100%;
+      display: block;
+      border-radius: 6px;
+      border: 1px solid #333;
+      margin-bottom: 10px;
+      background: #000;
+    }
+
+    /* Log */
+    #log {
+      background: #0a0a0a;
+      color: #9eff9e;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      line-height: 1.5;
+    }
+
+    /* Tabla resultado */
     .excel-container {
       overflow: auto;
       max-height: 70vh;
       border: 1px solid #333;
       margin-top: 10px;
+      border-radius: 6px;
     }
-    .excel-table {
+    .tabla-resultado {
       min-width: max-content;
       border-collapse: collapse;
       width: 100%;
-      font-size: 11px;
+      font-size: 12px;
       font-family: monospace;
       white-space: nowrap;
     }
-    .excel-table th, .excel-table td {
+    .tabla-resultado th,
+    .tabla-resultado td {
       border: 1px solid #444;
       padding: 2px;
       color: #ddd;
     }
-    .excel-table th {
+    .tabla-resultado th {
       background: #1e293b;
       position: sticky;
       top: 0;
       z-index: 1;
-      padding: 4px 8px;
+      padding: 6px 10px;
+      color: #4ea3f5;
     }
-    .excel-table tr:nth-child(even) { background: #0f172a; }
-    .excel-table td input {
+    .tabla-resultado tr:nth-child(even) {
+      background: #0f172a;
+    }
+    .tabla-resultado td input {
       background: transparent;
       border: none;
       color: #ddd;
       font-family: monospace;
-      font-size: 11px;
+      font-size: 12px;
       width: 100%;
-      min-width: 60px;
-      padding: 2px 4px;
+      min-width: 80px;
+      padding: 4px 6px;
     }
-    .excel-table td input:focus {
-      background: #333;
+    .tabla-resultado td input:focus {
+      background: #1e293b;
       outline: 1px solid #4ea3f5;
     }
-    /* Ocultar tabs inútiles */
-    .tab[data-tab="calibrar"],
-    .tab[data-tab="runner"],
-    .tab[data-tab="restauracion"],
-    .tab[data-tab="ocr"],
-    .tab[data-tab="clahe"],
-    .tab[data-tab="filtros"],
-    .tab[data-tab="refinamiento"],
-    .tab[data-tab="nitidez"],
-    .tab[data-tab="tiling"],
-    .tab[data-tab="tabla"],
-    .tab[data-tab="tabla_v3"],
-    .tab[data-tab="tabla_v1"] {
-      display: none !important;
+
+    /* Info */
+    .info {
+      font-size: 12px;
+      color: #888;
+      padding: 6px 0;
+    }
+    .info b {
+      color: #4ea3f5;
+    }
+
+    /* Input file oculto */
+    input[type=file] {
+      display: none;
     }
   </style>
 </head>
 <body>
 
-  <h1>MAR Caribe <span id="buildTag" style="font-size:13px; color:#888; font-weight:normal;">(cargando...)</span></h1>
-  <p class="sub">Análisis + Calibración</p>
+  <h1>MAR Caribe OCR <span id="buildTag" style="font-size:13px; color:#888; font-weight:normal;"></span></h1>
+  <p class="sub">Lectura de texto con diagnóstico selectivo</p>
 
   <div class="tabs">
-    <div class="tab active" data-tab="analisis">🔬 Análisis</div>
-    <div class="tab" data-tab="calibrar">🎯 Calibrar</div>
-    <div class="tab" data-tab="runner">🧪 Runner</div>
-    <div class="tab" data-tab="restauracion">🧪 Restauración</div>
-    <div class="tab" data-tab="ocr">📖 OCR</div>
-  <div class="tab" data-tab="clahe">🎛️ CLAHE</div>
-  <div class="tab" data-tab="filtros">🧪 Filtros</div>
-  <div class="tab" data-tab="refinamiento">🔬 Refinamiento</div>
-  <div class="tab" data-tab="texto">📝 Texto</div>
-  <div class="tab" data-tab="nitidez">⚡ Nitidez</div>
-  <div class="tab" data-tab="tiling">🧩 Tiling</div>
-  <div class="tab" data-tab="tabla">📊 Tabla</div>
-  <div class="tab" data-tab="excel">📉 Excel</div>
-  <div class="tab" data-tab="ocr_directo">📄 OCR Directo</div>
-  <div class="tab" data-tab="tabla_v3">📊 Tabla v3</div>
-  <div class="tab" data-tab="tabla_v4">📊 Tabla v4</div>
-  <div class="tab" data-tab="tabla_v1">📊 Tabla v1</div>
+    <div class="tab active" data-tab="imagen">📷 Imagen</div>
+    <div class="tab" data-tab="resultado">📊 Resultado</div>
   </div>
 
-  <!-- ============ TAB ANALISIS ============ -->
-  <div class="tab-content active" id="tab-analisis">
+  <!-- ============ TAB IMAGEN ============ -->
+  <div class="tab-content active" id="tab-imagen">
+    <input type="file" id="inputImagen" accept="image/*">
 
     <div class="btn-grid">
-      <input type="file" id="inputImagen" accept="image/*">
       <button class="btn" id="btnCargar">📷 Cargar imagen</button>
-      <button class="btn green" id="btnAnalizar">▶️ Analizar</button>
+      <button class="btn green" id="btnOCR">🔍 Ejecutar OCR</button>
+    </div>
+
+    <div class="info">Imagen: <b id="infoImagen">—</b></div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="log">Listo. Carga una imagen para empezar.</div>
+  </div>
+
+  <!-- ============ TAB RESULTADO ============ -->
+  <div class="tab-content" id="tab-resultado">
+    <div class="btn-grid">
+      <button class="btn orange" id="btnExportar" disabled>💾 Exportar CSV</button>
       <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
-      <button class="btn" id="btnZoomReset" style="background:#7c3aed;">🔍 Resetear zoom</button>
-      <button class="btn" id="btnExportar" style="background:#f59e0b;">🖼️ Exportar capas visibles</button>
-      <button class="btn" id="btnExportarTodo" style="background:#c2410c;">📦 Exportar todo</button>
-    </div>
-
-    <div style="display:flex; flex-wrap:wrap; gap:10px; background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; font-size:13px;">
-      <label><input type="checkbox" id="chkOptica" checked> 🟡 Óptica</label>
-      <label><input type="checkbox" id="chkEco" checked> 🔴🔵 Eco</label>
-      <label><input type="checkbox" id="chkA3" checked> 🟣 A3</label>
-      <label><input type="checkbox" id="chkLVC" checked> 💗 LVC</label>
-      <label><input type="checkbox" id="chkIO" checked> ✚ IO</label>
-      <label><input type="checkbox" id="chkCont" checked> 💠 Continuidad</label>
-      <label><input type="checkbox" id="chkRealce" checked> 🎨 Realce</label>
-      <label><input type="checkbox" id="chkLidar" checked> ⚫ LIDAR</label>
-      <label><input type="checkbox" id="chkOPENV" checked> 🔷 OPENV</label>
-      <label><input type="checkbox" id="chkML" checked> 🟢 ML</label>
-      <label><input type="checkbox" id="chkWS" checked> 🟠 WS</label>
-      <label><input type="checkbox" id="chkFrangi" checked> 🩸 Frangi</label>
-      <label style="color:#fbbf24;"><input type="checkbox" id="chkGamma"> 🔆 Gamma</label>
-      <label style="color:#a78bfa;"><input type="checkbox" id="chkCLAHE"> 🎛️ CLAHE</label>
-      <label style="color:#22d3ee; font-weight:bold;"><input type="checkbox" id="chkZonas"> 🎯 Zonas</label>
-      <label style="color:#dc2626;"><input type="checkbox" id="chkBlackHat" checked> ⬛ BlackHat</label>
-      <label style="color:#7c3aed;"><input type="checkbox" id="chkHough" checked> 📐 Hough</label>
-      <label style="color:#f59e0b;"><input type="checkbox" id="chkSauvola"> 🌫️ Sauvola</label>
-      <label style="color:#22c55e; font-weight:bold;"><input type="checkbox" id="chkFiltroOCR"> 🎨 Filtro OCR</label>
-    </div>
-
-    <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #444;">
-      <h3 style="margin:0 0 8px; font-size:14px; color:#4ea3f5;">🧪 Sandbox (sin rebuild)</h3>
-      <select id="sbFunc" style="width:100%; padding:8px; margin-bottom:8px; background:#222; color:#fff; border:1px solid #444; border-radius:6px;">
-        <option value="lidar">⚫ LIDAR (votacion)</option>
-        <option value="optica">🟡 Optica</option>
-        <option value="eco">🔴🔵 Eco</option>
-        <option value="a3">🟣 A3</option>
-        <option value="lvc">💗 LVC</option>
-        <option value="io">✚ IO</option>
-        <option value="cont">💠 Continuidad</option>
-        <option value="realce">🎨 Realce</option>
-        <option value="openv">🔷 OPENV</option>
-        <option value="ml">🟢 ML</option>
-        <option value="ws">🟠 WS</option>
-        <option value="frangi">🩸 Frangi</option>
-        <option value="blackhat">⬛ BlackHat</option>
-        <option value="hough">📐 Hough</option>
-        <option value="sauvola">🌫️ Sauvola</option>
-      </select>
-      <textarea id="sbParams" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;">{}</textarea>
-      <div style="display:flex; gap:6px; margin-top:8px;">
-        <button id="sbRun" style="flex:2; padding:10px; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:bold;">▶️ Ejecutar</button>
-        <button id="sbAutoFill" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Params actuales</button>
-      </div>
-    </div>
-
-    <div id="canvasWrap" style="position:relative; overflow:hidden; width:100%; max-height:65vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
-      <canvas id="canvas" style="display:block; transform-origin:top left;"></canvas>
-    </div>
-
-    <div id="log">Listo. Carga una imagen.</div>
-  </div>
-
-  <!-- ============ TAB CALIBRAR ============ -->
-  <div class="tab-content" id="tab-calibrar">
-
-    <input type="file" id="inputCalib" accept="image/*">
-
-    <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
-      <div class="chip active" data-slot="0">Slot 1</div>
-      <div class="chip" data-slot="1">Slot 2</div>
-      <div class="chip" data-slot="2">Slot 3</div>
-      <div class="chip" data-slot="3">Slot 4</div>
-    </div>
-
-    <div id="calibInfo" style="background:#1a1a2e; padding:10px; border-radius:6px; margin-bottom:12px; font-size:12px; line-height:1.6;">
-      <div>Slot: <b id="calibSlotNombre">—</b></div>
-      <div>Imagen: <b id="calibImgNombre">vacío</b></div>
-      <div>Benchmark: <b id="calibBmEstado">no guardado</b></div>
-      <div>Marcas: <b id="calibConteo">H=0, V=0</b></div>
-    </div>
-
-    <button class="btn" id="btnCalibCargar">📷 Cargar imagen</button>
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <div class="chip active" id="modeH" style="flex:1; text-align:center; padding:10px;">⬌ H</div>
-      <div class="chip" id="modeV" style="flex:1; text-align:center; padding:10px;">⬍ V</div>
-      <div class="chip" id="modeVer" style="flex:1; text-align:center; padding:10px;">✋ Ver</div>
-    </div>
-
-    <div id="calibWrap" style="position:relative; overflow:hidden; width:100%; max-height:60vh; background:#000; border-radius:6px; border:1px solid #333; margin-bottom:10px; touch-action:none;">
-      <canvas id="canvasCalib" style="display:block; transform-origin:top left;"></canvas>
-    </div>
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button id="btnCalibBorrar" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px; font-size:13px;">↩️ Borrar última</button>
-      <button id="btnCalibLimpiar" style="flex:1; padding:10px; background:#7c3aed; color:#fff; border:none; border-radius:6px; font-size:13px;">🗑️ Limpiar marcas</button>
-      <button id="btnCalibZoomRst" style="flex:1; padding:10px; background:#4b5563; color:#fff; border:none; border-radius:6px; font-size:13px;">🔍 Reset zoom</button>
-    </div>
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button id="btnCalibGuardar" style="flex:1; padding:12px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold;">💾 Guardar bm</button>
-      <button id="btnCalibCopiar" style="flex:1; padding:12px; background:#3b82f6; color:#fff; border:none; border-radius:6px;">📋 Copiar JSON</button>
-      <button id="btnCalibImportar" style="flex:1; padding:12px; background:#a855f7; color:#fff; border:none; border-radius:6px;">📂 Importar</button>
-    </div>
-
-    <div id="importArea" style="display:none; background:#1a1a2e; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid #a855f7;">
-      <h4 style="margin:0 0 6px; font-size:13px; color:#a855f7;">📂 Importar benchmark al Slot actual</h4>
-      <textarea id="importJson" rows="6" style="width:100%; padding:8px; background:#111; color:#9eff9e; border:1px solid #444; border-radius:6px; font-family:monospace; font-size:11px;" placeholder="Pega aquí el JSON del benchmark..."></textarea>
-      <div style="display:flex; gap:6px; margin-top:8px;">
-        <button id="btnImportConfirm" style="flex:1; padding:10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold;">✅ Importar</button>
-        <button id="btnImportCancel" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px;">❌ Cancelar</button>
-      </div>
-    </div>
-
-    <div id="calibLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:150px; overflow-y:auto; border:1px solid #333;">Listo. Carga una imagen y marca las líneas.</div>
-  </div>
-
-  <!-- ============ TAB RUNNER ============ -->
-  <div class="tab-content" id="tab-runner" style="padding:15px; color:#ddd;">
-
-    <h3 style="margin-top:0; color:#4ea3f5;">🧪 Runner automático</h3>
-    <p style="font-size:12px; opacity:0.7;">Ejecuta combinaciones sobre las 4 imágenes y compara contra benchmarks.</p>
-
-    <div style="background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:12px;">
-      <h4 style="margin:0 0 8px; font-size:13px;">Estado:</h4>
-      <div id="runnerStatusImgs" style="font-size:12px;">Imágenes: <b>❌ no cargadas</b></div>
-      <div id="runnerStatusBms" style="font-size:12px;">Benchmarks: <b>❌ no cargados</b></div>
-    </div>
-
-    <input type="file" id="runInputImgs" multiple accept="image/*" style="display:none;">
-    <input type="file" id="runInputBms" multiple accept=".json,application/json" style="display:none;">
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button id="btnRunnerCargarImgs" style="flex:1; padding:10px; background:#a855f7; color:#fff; border:none; border-radius:6px; font-size:13px;">📷 Cargar 4 imágenes</button>
-      <button id="btnRunnerCargarBms" style="flex:1; padding:10px; background:#a855f7; color:#fff; border:none; border-radius:6px; font-size:13px;">📂 Cargar 4 benchmarks</button>
-    </div>
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button id="btnRunnerVerificar" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; font-size:13px;">🔍 Verificar</button>
-      <button id="btnRunnerIniciar" style="flex:1; padding:10px; background:#16a34a; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px;">▶️ Iniciar</button>
-      <button id="btnRunnerParar" style="flex:1; padding:10px; background:#dc2626; color:#fff; border:none; border-radius:6px; font-size:13px;">⏸️ Parar</button>
-    </div>
-
-    <div style="background:#0a0a0a; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid #333;">
-      <div>Combo: <b id="runnerCombo">0/100</b></div>
-      <div>Mejor: <b id="runnerMejor">0</b></div>
-      <div style="background:#222; border-radius:4px; overflow:hidden; margin-top:6px;">
-        <div id="runnerProgressBar" style="background:#22c55e; height:8px; width:0%; transition:width 0.3s;"></div>
-      </div>
-    </div>
-
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button id="btnRunnerCopiar" style="flex:1; padding:10px; background:#3b82f6; color:#fff; border:none; border-radius:6px; font-size:13px;">📋 Copiar resultados</button>
-      <button id="btnRunnerReset" style="flex:1; padding:10px; background:#4b5563; color:#fff; border:none; border-radius:6px; font-size:13px;">🗑️ Reset</button>
-    </div>
-
-    <pre id="runnerLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:10px; max-height:300px; overflow-y:auto; border:1px solid #333;">Listo. Verifica recursos e inicia.</pre>
-
-  </div>
-
-  <!-- ============ TAB RESTAURACION ============ -->
-  <div class="tab-content" id="tab-restauracion" style="padding:15px; color:#ddd;">
-    <h2>🧪 Runner de Restauración</h2>
-    <p style="font-size:12px; color:#888;">Prueba algoritmos de restauración y evalúa cada detector por separado (sin LIDAR).</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnRrCargarImgs">📷 Cargar 4 imágenes</button>
-      <button class="btn" id="btnRrCargarBms">📂 Cargar 4 benchmarks</button>
-      <button class="btn green" id="btnRrIniciar">▶️ Iniciar tanda</button>
-      <button class="btn" id="btnRrParar" style="background:#dc2626;">⏸️ Parar</button>
-      <button class="btn" id="btnRrCopiar" style="background:#2563eb;">📋 Copiar resultados</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="rrCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="rrBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="rrLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Restauración listo ===</pre>
-
-    <input type="file" id="rrInputImgs" accept="image/*" multiple style="visibility:hidden; position:absolute; width:0; height:0;">
-    <input type="file" id="rrInputBms" accept=".json" multiple style="visibility:hidden; position:absolute; width:0; height:0;">
-  </div>
-
-  <!-- ============ TAB OCR ============ -->
-  <div class="tab-content" id="tab-ocr" style="padding:15px; color:#ddd;">
-    <h2>📖 Metricas de Imagen para OCR</h2>
-    <p style="font-size:12px; color:#888;">Prueba filtros y mide nitidez, contraste, ruido y entropia. Sin OCR real.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnOcrCargarImgs">📷 Cargar 4 imagenes</button>
-      <button class="btn green" id="btnOcrIniciar">▶️ Iniciar evaluacion</button>
-      <button class="btn" id="btnOcrParar" style="background:#dc2626;">⏸️ Parar</button>
-      <button class="btn" id="btnOcrCopiar" style="background:#2563eb;">📋 Copiar ranking</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="ocrCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="ocrBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="ocrLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner OCR listo ===</pre>
-    <input type="file" id="ocrInputImgs" accept="image/*" multiple style="display:none;">
-  </div>
-  <div class="tab-content" id="tab-clahe" style="padding:15px; color:#ddd;">
-    <h2>🎛️ Optimizacion CLAHE</h2>
-    <p style="font-size:12px; color:#888;">30 combos de CLAHE + contrast+clahe para maximizar calidad OCR.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnClCargarImgs">📷 Cargar 4 imagenes</button>
-      <button class="btn green" id="btnClIniciar">▶️ Iniciar</button>
-      <button class="btn" id="btnClParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="clCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="clBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="clLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner CLAHE listo ===</pre>
-    <input type="file" id="clInputImgs" accept="image/*" multiple style="display:none;">
-  </div>
-
-
-  <div class="tab-content" id="tab-filtros" style="padding:15px; color:#ddd;">
-    <h2>🧪 Optimizacion de Filtros</h2>
-    <p style="font-size:12px; color:#888;">30 combos para encontrar el set minimo de filtros. Pipeline completo con LIDAR.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnRfCargarImgs">📷 Cargar 4 imagenes</button>
-      <button class="btn" id="btnRfCargarBms">📂 Cargar 4 benchmarks</button>
-      <button class="btn green" id="btnRfIniciar">▶️ Iniciar</button>
-      <button class="btn" id="btnRfParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="rfCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="rfBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="rfLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Filtros listo ===</pre>
-    <input type="file" id="rfInputImgs" accept="image/*" multiple style="display:none;">
-    <input type="file" id="rfInputBms" accept=".json" multiple style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-refinamiento" style="padding:15px; color:#ddd;">
-    <h2>🔬 Refinamiento (100 combos)</h2>
-    <p style="font-size:12px; color:#888;">Explora el espacio de filtros a fondo. Percentiles, tiles, clip, Sauvola custom y combinaciones.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnRefCargarImgs">📷 Cargar 4 imagenes</button>
-      <button class="btn" id="btnRefCargarBms">📂 Cargar 4 benchmarks</button>
-      <button class="btn green" id="btnRefIniciar">▶️ Iniciar</button>
-      <button class="btn" id="btnRefParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="refCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="refBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="refLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Refinamiento listo ===</pre>
-    <input type="file" id="refInputImgs" accept="image/*" multiple style="display:none;">
-    <input type="file" id="refInputBms" accept=".json" multiple style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-texto" style="padding:15px; color:#ddd;">
-    <h2>📝 Runner de Texto (OCR real)</h2>
-    <p style="font-size:12px; color:#888;">Prueba filtros con ML Kit. Mide palabras detectadas por OCR.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTxCargarImgs">📷 Cargar 1-4 imagenes</button>
-      <button class="btn green" id="btnTxIniciar">▶️ Iniciar OCR</button>
-      <button class="btn" id="btnTxParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="txCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="txBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="txLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Texto listo ===</pre>
-    <input type="file" id="txInputImgs" accept="image/*" multiple style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-nitidez" style="padding:15px; color:#ddd;">
-    <h2>⚡ Runner de Nitidez (25 filtros OCR)</h2>
-    <p style="font-size:12px; color:#888;">Simula los 25 filtros de nitidez con ML Kit. Guarda imagen final de cada combo.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnNitCargarImgs">📷 Cargar 1-4 imagenes</button>
-      <button class="btn green" id="btnNitIniciar">▶️ Iniciar Simulación</button>
-      <button class="btn" id="btnNitParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="nitCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="nitBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="nitLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Nitidez listo ===</pre>
-    <input type="file" id="nitInputImgs" accept="image/*" multiple style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-tiling" style="padding:15px; color:#ddd;">
-    <h2>🧩 Runner de Tiling</h2>
-    <p style="font-size:12px; color:#888;">Prueba tiles de distintos tamaños, overlap, upscale y filtros. Compara palabras detectadas por ML Kit.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTilCargarImgs">📷 Cargar 1-4 imagenes</button>
-      <button class="btn green" id="btnTilIniciar">▶️ Iniciar Simulación</button>
-      <button class="btn" id="btnTilParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <div><b>Progreso:</b> <span id="tilCombo">0/0</span></div>
-    <div style="background:#1e293b; height:10px; border-radius:5px; margin:8px 0;">
-      <div id="tilBar" style="background:#22c55e; height:10px; width:0%; transition:width 0.3s;"></div>
-    </div>
-    <pre id="tilLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; margin-top:10px;">=== Runner Tiling listo ===</pre>
-    <input type="file" id="tilInputImgs" accept="image/*" multiple style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-tabla" style="padding:15px; color:#ddd;">
-    <h2>📊 Runner de Tabla (imagen → CSV)</h2>
-    <p style="font-size:12px; color:#888;">Pipeline: detectar líneas → construir grilla → OCR por fila → CSV estructurado.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTabCargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnTabIniciar">▶️ Iniciar</button>
-      <button class="btn" id="btnTabParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="tabLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla listo ===</pre>
-    <input type="file" id="tabInputImg" accept="image/*" style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-excel" style="padding:15px; color:#ddd;">
-    <h2>📉 Ver Tabla (Excel)</h2>
-    <p style="font-size:12px; color:#888;">Tabla renderizada del último pipeline. Celdas editables. Cambios se reflejan al exportar.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnExcelRecargar">🔄 Recargar del último resultado</button>
-      <button class="btn green" id="btnExcelExportar">💾 Exportar CSV</button>
     </div>
 
     <div class="excel-container">
-      <table class="excel-table" id="excelTable">
-        <thead>
-          <tr><th>Vacío</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Corre el pipeline de tabla primero</td></tr>
-        </tbody>
-      </table>
+      <div id="resultado" style="padding:20px; text-align:center; color:#64748b;">
+        Carga una imagen y ejecuta OCR
+      </div>
     </div>
   </div>
 
-
-  <div class="tab-content" id="tab-tabla-v3" style="padding:15px; color:#ddd;">
-    <h2>📊 Runner Tabla v3 (Inferencia)</h2>
-    <p style="font-size:12px; color:#888;">H de LIDAR + V de Realce + Inferencia por OCR.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTab3CargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnTab3Iniciar">▶️ Iniciar v3</button>
-      <button class="btn" id="btnTab3Parar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="tab3Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v3 listo ===</pre>
-    <input type="file" id="tab3InputImg" accept="image/*" style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-tabla-v4" style="padding:15px; color:#ddd;">
-    <h2>📊 Runner Tabla v4 (Iterativo)</h2>
-    <p style="font-size:12px; color:#888;">OCR puro -> Grilla geométrica -> CSV. Sin depender de detectores de líneas.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTab4CargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnTab4Iniciar">▶️ Iniciar v4</button>
-      <button class="btn" id="btnTab4Parar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="tab4Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v4 listo ===</pre>
-    <input type="file" id="tab4InputImg" accept="image/*" style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-ocr-directo" style="padding:15px; color:#ddd;">
-    <h2>📄 OCR Directo (4 variantes)</h2>
-    <p style="font-size:12px; color:#888;">ML Kit lee líneas puras. Sin grilla, sin geometría. 4 filtros para comparar legibilidad.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnOdCargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnOdIniciar">▶️ Iniciar OCR</button>
-      <button class="btn" id="btnOdParar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="odLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner OCR Directo listo ===</pre>
-    <input type="file" id="odInputImg" accept="image/*" style="display:none;">
-  </div>
-
-  <div class="tab-content" id="tab-tabla-v1" style="padding:15px; color:#ddd;">
-    <h2>📊 Runner Tabla v1 (Universal)</h2>
-    <p style="font-size:12px; color:#888;">Motor simplificado: OCR directo → filas por proyección → columnas por consenso → CSV.</p>
-
-    <div class="btn-grid">
-      <button class="btn" id="btnTabV1CargarImg">📷 Cargar imagen</button>
-      <button class="btn green" id="btnTabV1Iniciar">▶️ Procesar v1</button>
-      <button class="btn" id="btnTabV1Parar" style="background:#dc2626;">⏸️ Parar</button>
-    </div>
-
-    <pre id="tabV1Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v1 listo ===</pre>
-    <input type="file" id="tabV1InputImg" accept="image/*" style="display:none;">
-  </div>
-  <!-- SCRIPTS -->
+  <!-- ============ SCRIPTS ============ -->
+  <!-- Config primero -->
   <script src="js/config.js"></script>
+
+  <!-- Core base -->
   <script src="js/core/brillo.js"></script>
-  <script src="js/core/proyecciones.js"></script>
-  <script src="js/core/morfologico.js"></script>
   <script src="js/core/metricas_imagen.js"></script>
   <script src="js/core/analisis_texto.js"></script>
-  <script src="js/core/restauracion.js"></script>
-  <script src="js/core/optica.js"></script>
-  <script src="js/core/eco.js"></script>
-  <script src="js/core/a3.js"></script>
-  <script src="js/core/lvc.js"></script>
-  <script src="js/core/io.js"></script>
-  <script src="js/core/continuidad.js"></script>
-  <script src="js/core/realce.js"></script>
-  <script src="js/core/lidar.js"></script>
   <script src="js/core/preprocesamiento_avanzado.js"></script>
-  <script src="js/core/openv.js"></script>
-  <script src="js/core/ml.js"></script>
-  <script src="js/core/ws.js"></script>
-  <script src="js/core/frangi.js"></script>
-  <script src="js/core/rescate_zonas.js"></script>
-  <script src="js/core/blackhat.js"></script>
-  <script src="js/core/hough.js"></script>
+  <script src="js/core/restauracion.js"></script>
   <script src="js/core/sauvola.js"></script>
   <script src="js/core/nitidez.js"></script>
-  <script src="js/core/ocr_diccionario.js"></script>
-  <script src="js/core/ocr_post.js"></script>
-  <script src="js/core/ocr_tipos_columnas.js"></script>
-  <script src="js/core/ocr_corrector_tipos.js"></script>
-  <script src="js/core/csv_parser.js"></script>
-  <script src="js/core/ocr_fidelidad.js"></script>
-  <script src="js/core/tabla_grilla.js"></script>
-  <script src="js/ui/dibujo.js"></script>
-  <script src="js/ui/zoom.js"></script>
-  <script src="js/benchmarks.js"></script>
+
+  <!-- OCR base (orden de dependencias) -->
+  <script src="js/core/ocr/ocr_diccionario.js"></script>
+  <script src="js/core/ocr/ocr_post.js"></script>
+  <script src="js/core/ocr/ocr_tipos_columnas.js"></script>
+  <script src="js/core/ocr/ocr_corrector_tipos.js"></script>
+  <script src="js/core/ocr/csv_parser.js"></script>
+  <script src="js/core/ocr/ocr_fidelidad.js"></script>
+
+  <!-- Pipeline completo -->
+  <script src="js/core/pipeline_ocr.js"></script>
+
+  <!-- UI -->
   <script src="js/ui/app.js"></script>
-  <script src="js/ui/calibrar.js"></script>
-  <script src="js/ui/runner.js"></script>
-  <script src="js/ui/runner_restauracion.js"></script>
-  <script src="js/ui/runner_filtros.js"></script>
-  <script src="js/ui/runner_refinamiento.js"></script>
-  <script src="js/ui/runner_texto.js?v=29"></script>
-  <script src="js/ui/runner_clahe.js"></script>
-  <script src="js/ui/runner_ocr.js"></script>
-  <script src="js/ui/runner_nitidez.js?v=1"></script>
-  <script src="js/ui/runner_tiling.js?v=1"></script>
-  <script src="js/ui/runner_tabla_v2.js?v=9"></script>
-  <script src="js/ui/tab_excel.js?v=1"></script>
-  <script src="js/ui/runner_ocr_directo.js?v=1"></script>
-  <script src="js/core/tabla_inferencia.js"></script>
-  <script src="js/core/motor_tabla_v1.js?v=1"></script>
-  <script src="js/ui/runner_tabla_v1.js?v=1"></script>
-  <script src="js/ui/runner_tabla_v3.js?v=3"></script>
-  <script src="js/core/tabla_motor_v4.js?v=2"></script>
-  <script src="js/ui/runner_tabla_v4.js?v=1"></script>
 
 </body>
 </html>
