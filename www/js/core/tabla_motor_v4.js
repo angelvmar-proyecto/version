@@ -35,19 +35,21 @@ function motorClusters(coordenadas, tolerancia) {
 function motorInferirColumnas(elementosPorFila, anchoImagen) {
   const histGaps = new Array(Math.ceil(anchoImagen)).fill(0);
 
-  // Filtrar filas: ignorar las que tienen texto muy largo (columna Notes)
-  // Una fila con mucho texto tiene muchos elementos (> 8 palabras)
-  const filasUtiles = [];
-  for (const fila of elementosPorFila) {
-    if (fila.length < 2) continue;
-    if (fila.length <= 8) {
-      filasUtiles.push(fila);
-    }
-  }
-  // Si quedan muy pocas filas útiles, usar todas
-  const filasAnalisis = filasUtiles.length >= 2 ? filasUtiles : elementosPorFila;
+  // Analizar solo las primeras 6 filas (encabezados + primeras filas de datos)
+  // Ahí están los gaps claros entre columnas.
+  const filasAnalisis = elementosPorFila.slice(0, Math.min(6, elementosPorFila.length));
 
-  // 1. Recolectar gaps horizontales
+  // DEBUG
+  if (typeof console !== 'undefined') {
+    console.log('[MOTOR-V] Filas totales:', elementosPorFila.length);
+    console.log('[MOTOR-V] Filas analizadas:', filasAnalisis.length);
+    let totalPalabras = 0;
+    for (const f of filasAnalisis) totalPalabras += f.length;
+    console.log('[MOTOR-V] Palabras en filas analizadas:', totalPalabras);
+  }
+
+  // 1. Recolectar gaps horizontales entre palabras de la misma fila
+  let gapsDetectados = 0;
   for (const fila of filasAnalisis) {
     if (fila.length < 2) continue;
     const ord = fila.slice().sort(function(a,b) { return a.absLeft - b.absLeft; });
@@ -55,18 +57,25 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
       const gapInicio = ord[i].absRight;
       const gapFin = ord[i+1].absLeft;
       const gapAncho = gapFin - gapInicio;
-      if (gapAncho > 10) {
+      // Umbral más alto: 15px (evita gaps internos, captura gaps reales entre columnas)
+      if (gapAncho > 15) {
         const centroGap = Math.round(gapInicio + (gapAncho / 2));
         if (centroGap >= 0 && centroGap < anchoImagen) {
           histGaps[centroGap]++;
+          gapsDetectados++;
         }
       }
     }
   }
 
-  // 2. Encontrar picos (ajustamos umbral: usar filasAnalisis, no todas)
+  if (typeof console !== 'undefined') {
+    console.log('[MOTOR-V] Gaps detectados:', gapsDetectados);
+  }
+
+  // 2. Encontrar picos en el histograma
   const lineasV = [];
-  const umbralConsenso = Math.max(2, filasAnalisis.length * 0.15);
+  // Umbral de consenso: al menos 1 fila (bajo, porque analizamos pocas filas)
+  const umbralConsenso = Math.max(1, Math.min(3, Math.floor(filasAnalisis.length * 0.2)));
 
   let enPico = false;
   let inicioPico = 0;
@@ -81,9 +90,10 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
     }
   }
 
-  // 3. Agregar los bordes (si hay datos)
+  // 3. Agregar los bordes
   if (lineasV.length > 0) {
     if (lineasV[0] > 20) lineasV.unshift(0);
+    if (lineasV[lineasV.length - 1] < anchoImagen - 20) lineasV.push(anchoImagen);
   }
 
   return lineasV;
