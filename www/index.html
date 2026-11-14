@@ -66,6 +66,21 @@
       background: #333;
       outline: 1px solid #4ea3f5;
     }
+    /* Ocultar tabs inútiles */
+    .tab[data-tab="calibrar"],
+    .tab[data-tab="runner"],
+    .tab[data-tab="restauracion"],
+    .tab[data-tab="ocr"],
+    .tab[data-tab="clahe"],
+    .tab[data-tab="filtros"],
+    .tab[data-tab="refinamiento"],
+    .tab[data-tab="nitidez"],
+    .tab[data-tab="tiling"],
+    .tab[data-tab="tabla"],
+    .tab[data-tab="tabla_v3"],
+    .tab[data-tab="tabla_v1"] {
+      display: none !important;
+    }
   </style>
 </head>
 <body>

@@ -50,8 +50,8 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
   const filasAnalisis = filaEncabezado ? [filaEncabezado] : elementosPorFila;
 
   if (typeof console !== 'undefined') {
-    console.log('[MOTOR-V] Filas totales:', elementosPorFila.length);
-    console.log('[MOTOR-V] Encabezado detectado:', filaEncabezado ? maxPalabras + ' palabras' : 'NO');
+    tab4Log('[MOTOR-V] Filas totales:', elementosPorFila.length);
+    tab4Log('[MOTOR-V] Encabezado detectado:', filaEncabezado ? maxPalabras + ' palabras' : 'NO');
   }
 
   // 2. Calcular gaps solo en la fila de encabezado
@@ -74,7 +74,7 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
   }
 
   if (typeof console !== 'undefined') {
-    console.log('[MOTOR-V] Gaps detectados:', gapsDetectados);
+    tab4Log('[MOTOR-V] Gaps detectados:', gapsDetectados);
   }
 
   // 3. Encontrar picos
