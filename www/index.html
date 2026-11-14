@@ -90,6 +90,7 @@
   <div class="tab" data-tab="ocr_directo">📄 OCR Directo</div>
   <div class="tab" data-tab="tabla_v3">📊 Tabla v3</div>
   <div class="tab" data-tab="tabla_v4">📊 Tabla v4</div>
+  <div class="tab" data-tab="tabla_v1">📊 Tabla v1</div>
   </div>
 
   <!-- ============ TAB ANALISIS ============ -->
@@ -490,6 +491,20 @@
     <pre id="odLog" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner OCR Directo listo ===</pre>
     <input type="file" id="odInputImg" accept="image/*" style="display:none;">
   </div>
+
+  <div class="tab-content" id="tab-tabla-v1" style="padding:15px; color:#ddd;">
+    <h2>📊 Runner Tabla v1 (Universal)</h2>
+    <p style="font-size:12px; color:#888;">Motor simplificado: OCR directo → filas por proyección → columnas por consenso → CSV.</p>
+
+    <div class="btn-grid">
+      <button class="btn" id="btnTabV1CargarImg">📷 Cargar imagen</button>
+      <button class="btn green" id="btnTabV1Iniciar">▶️ Procesar v1</button>
+      <button class="btn" id="btnTabV1Parar" style="background:#dc2626;">⏸️ Parar</button>
+    </div>
+
+    <pre id="tabV1Log" style="background:#0a0a0a; color:#9eff9e; padding:10px; border-radius:6px; font-family:monospace; font-size:11px; max-height:400px; overflow-y:auto; margin-top:10px;">=== Runner Tabla v1 listo ===</pre>
+    <input type="file" id="tabV1InputImg" accept="image/*" style="display:none;">
+  </div>
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/core/brillo.js"></script>
@@ -541,6 +556,8 @@
   <script src="js/ui/tab_excel.js?v=1"></script>
   <script src="js/ui/runner_ocr_directo.js?v=1"></script>
   <script src="js/core/tabla_inferencia.js"></script>
+  <script src="js/core/motor_tabla_v1.js?v=1"></script>
+  <script src="js/ui/runner_tabla_v1.js?v=1"></script>
   <script src="js/ui/runner_tabla_v3.js?v=3"></script>
   <script src="js/core/tabla_motor_v4.js?v=2"></script>
   <script src="js/ui/runner_tabla_v4.js?v=1"></script>
