@@ -33,71 +33,55 @@ function motorClusters(coordenadas, tolerancia) {
 }
 // 2. Construye la grilla V (Columnas) a partir de las cajas de texto
 function motorInferirColumnas(elementosPorFila, anchoImagen) {
-  // 1. Buscar la fila de ENCABEZADO: la que tiene MÁS palabras
-  //    pero SIN ser Notes (entre 5 y 20 palabras).
-  let filaEncabezado = null;
-  let maxPalabras = 0;
-  for (const fila of elementosPorFila) {
-    if (fila.length < 5) continue;
-    if (fila.length > 20) continue;
-    if (fila.length > maxPalabras) {
-      maxPalabras = fila.length;
-      filaEncabezado = fila;
-    }
-  }
+  // 1. Filtrar filas cortas (excluir texto largo como Notes)
+  const filasCortas = elementosPorFila.filter(function(f) {
+    return f.length >= 3 && f.length <= 20;
+  });
+  const filasAnalisis = filasCortas.length >= 2 ? filasCortas : elementosPorFila;
 
-  // Fallback: si no hay fila con 5-20 palabras, usar todas
-  const filasAnalisis = filaEncabezado ? [filaEncabezado] : elementosPorFila;
-
-  if (typeof console !== 'undefined') {
-    tab4Log('[MOTOR-V] Filas totales: ' + elementosPorFila.length);
-    tab4Log('[MOTOR-V] Encabezado detectado: ' + (filaEncabezado ? maxPalabras + ' palabras: ' + filaEncabezado.map(function(e){ return e.text; }).join(' | ') : 'NO'));
-  }
-
-  // 2. Calcular gaps solo en la fila de encabezado
-  const histGaps = new Array(Math.ceil(anchoImagen)).fill(0);
-  let gapsDetectados = 0;
-
-  for (const fila of filasAnalisis) {
+  // 2. Recolectar gaps de cada fila
+  const gaps = [];
+  for (let i = 0; i < filasAnalisis.length; i++) {
+    const fila = filasAnalisis[i];
     if (fila.length < 2) continue;
-    const ord = fila.slice().sort(function(a,b) { return a.absLeft - b.absLeft; });
-    for (let i = 0; i < ord.length - 1; i++) {
-      const gap = ord[i+1].absLeft - ord[i].absRight;
-      if (gap > 10) {
-        const centro = Math.round((ord[i].absRight + ord[i+1].absLeft) / 2);
-        if (centro >= 0 && centro < anchoImagen) {
-          histGaps[centro]++;
-          gapsDetectados++;
-        }
+    const ord = fila.slice().sort(function(a,b) { return a.cx - b.cx; });
+    for (let j = 0; j < ord.length - 1; j++) {
+      const gap = ord[j+1].absLeft - ord[j].absRight;
+      if (gap > 15) {
+        gaps.push({ x: (ord[j].absRight + ord[j+1].absLeft) / 2, fila: i });
       }
     }
   }
 
-  if (typeof console !== 'undefined') {
-    tab4Log('[MOTOR-V] Gaps detectados: ' + gapsDetectados);
+  // 3. Clusterizar gaps por X (tolerancia 25px)
+  gaps.sort(function(a,b) { return a.x - b.x; });
+  const clusters = [];
+  let grupo = [];
+  for (const g of gaps) {
+    if (grupo.length === 0 || (g.x - grupo[grupo.length-1].x) < 25) {
+      grupo.push(g);
+    } else {
+      if (grupo.length > 0) clusters.push(grupo);
+      grupo = [g];
+    }
   }
+  if (grupo.length > 0) clusters.push(grupo);
 
-  // 3. Encontrar picos
+  // 4. Solo clusters que aparezcan en >= 2 filas distintas
   const lineasV = [];
-  const umbral = 1; // aceptar cualquier gap que aparezca al menos 1 vez
-  let enPico = false;
-  let inicioPico = 0;
-  for (let x = 1; x < anchoImagen - 1; x++) {
-    const esPico = histGaps[x] >= umbral && histGaps[x] >= histGaps[x-1] && histGaps[x] > histGaps[x+1];
-    if (esPico && !enPico) { enPico = true; inicioPico = x; }
-    else if (!esPico && enPico) {
-      enPico = false;
-      lineasV.push(Math.round(inicioPico + ((x - inicioPico) / 2)));
+  for (const c of clusters) {
+    const filasDistintas = new Set();
+    for (const g of c) filasDistintas.add(g.fila);
+    if (filasDistintas.size >= 2) {
+      let sumaX = 0;
+      for (const g of c) sumaX += g.x;
+      lineasV.push(sumaX / c.length);
     }
   }
 
-  // 4. Agregar bordes
-  if (lineasV.length > 0) {
-    if (lineasV[0] > 20) lineasV.unshift(0);
-    if (lineasV[lineasV.length - 1] < anchoImagen - 20) lineasV.push(anchoImagen);
-  }
-
-  return lineasV;
+  // 5. Ordenar y agregar bordes
+  lineasV.sort(function(a,b) { return a - b; });
+  return [0, ...lineasV, anchoImagen];
 }
 
 // 3. Construye la grilla H (Filas) a partir de las cajas de texto
