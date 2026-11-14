@@ -31,22 +31,30 @@ function motorClusters(coordenadas, tolerancia) {
 
   return clusters;
 }
-
 // 2. Construye la grilla V (Columnas) a partir de las cajas de texto
 function motorInferirColumnas(elementosPorFila, anchoImagen) {
   const histGaps = new Array(Math.ceil(anchoImagen)).fill(0);
-  
-  // 1. Recolectar todos los espacios (gaps) horizontales entre palabras
+
+  // Filtrar filas: ignorar las que tienen texto muy largo (columna Notes)
+  // Una fila con mucho texto tiene muchos elementos (> 8 palabras)
+  const filasUtiles = [];
   for (const fila of elementosPorFila) {
     if (fila.length < 2) continue;
+    if (fila.length <= 8) {
+      filasUtiles.push(fila);
+    }
+  }
+  // Si quedan muy pocas filas útiles, usar todas
+  const filasAnalisis = filasUtiles.length >= 2 ? filasUtiles : elementosPorFila;
+
+  // 1. Recolectar gaps horizontales
+  for (const fila of filasAnalisis) {
+    if (fila.length < 2) continue;
     const ord = fila.slice().sort(function(a,b) { return a.absLeft - b.absLeft; });
-    
     for (let i = 0; i < ord.length - 1; i++) {
       const gapInicio = ord[i].absRight;
       const gapFin = ord[i+1].absLeft;
       const gapAncho = gapFin - gapInicio;
-      
-      // Si el espacio es mayor a 10px, lo sumamos al histograma
       if (gapAncho > 10) {
         const centroGap = Math.round(gapInicio + (gapAncho / 2));
         if (centroGap >= 0 && centroGap < anchoImagen) {
@@ -56,16 +64,14 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
     }
   }
 
-  // 2. Encontrar los picos en el histograma
+  // 2. Encontrar picos (ajustamos umbral: usar filasAnalisis, no todas)
   const lineasV = [];
-  const umbralConsenso = Math.max(2, elementosPorFila.length * 0.10); // Al menos 10% de las filas
-  
+  const umbralConsenso = Math.max(2, filasAnalisis.length * 0.15);
+
   let enPico = false;
   let inicioPico = 0;
-
   for (let x = 1; x < anchoImagen - 1; x++) {
     const esPico = histGaps[x] > umbralConsenso && histGaps[x] >= histGaps[x-1] && histGaps[x] > histGaps[x+1];
-    
     if (esPico && !enPico) {
       enPico = true;
       inicioPico = x;
@@ -78,7 +84,6 @@ function motorInferirColumnas(elementosPorFila, anchoImagen) {
   // 3. Agregar los bordes (si hay datos)
   if (lineasV.length > 0) {
     if (lineasV[0] > 20) lineasV.unshift(0);
-    if (lineasV[lineasV.length - 1] < anchoImagen - 20) lineasV.push(anchoImagen);
   }
 
   return lineasV;

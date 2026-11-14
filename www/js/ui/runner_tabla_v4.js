@@ -49,6 +49,50 @@ async function tab4ProcesarImagen(file) {
 // Recolector de elementos OCR en toda la imagen
 async function tab4CorrerOCRTiling(img) {
   const TextRec = Capacitor.Plugins.TextRecognition;
+  // === MODO ADAPTATIVO ===
+  // Si la imagen es apaisada (ancho > alto × 1.5), no usar tiling.
+  // Hacer OCR directo sobre la imagen completa.
+  const esApaisada = img.ancho > img.alto * 1.5;
+  if (esApaisada) {
+    tab4Log('  Imagen apaisada (' + img.ancho + 'x' + img.alto + ') → OCR directo (sin tiling)');
+    const canvas = document.createElement('canvas');
+    canvas.width = img.ancho;
+    canvas.height = img.alto;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img.img, 0, 0);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+
+    try {
+      const result = await TextRec.processImage({ path: dataURL });
+      const elementos = [];
+      if (result && result.blocks) {
+        for (const block of result.blocks) {
+          if (!block.lines) continue;
+          for (const line of block.lines) {
+            if (!line.elements) continue;
+            for (const el of line.elements) {
+              if (!el.boundingBox) continue;
+              elementos.push({
+                text: el.text,
+                absLeft: el.boundingBox.left,
+                absRight: el.boundingBox.right,
+                absTop: el.boundingBox.top,
+                absBottom: el.boundingBox.bottom,
+                cx: (el.boundingBox.left + el.boundingBox.right) / 2,
+                cy: (el.boundingBox.top + el.boundingBox.bottom) / 2
+              });
+            }
+          }
+        }
+      }
+      tab4Log('  OCR directo: ' + elementos.length + ' elementos');
+      return elementos;
+    } catch(e) {
+      tab4Log('  OCR directo falló: ' + e.message);
+      return [];
+    }
+  }
+
   if (!TextRec) return [];
   
   const tileSize = 500;
