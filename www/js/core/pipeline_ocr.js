@@ -1,34 +1,29 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo con gestión de archivos temporales (Offloading).
+// Pipeline completo con diagnóstico de filas
+// y corte por líneas virtuales basadas en texto.
 // ==============================================
 
 (function() {
   'use strict';
 
-  // Variable global para el Filesystem
   let FS = null;
 
   function diagnosticarImagen(brillo, ancho, alto) {
     const problemas = [];
     const metricas = {};
-
     metricas.iluminacion = window.metricaIluminacionDesigual(brillo, ancho, alto);
     if (metricas.iluminacion > CONFIG.DIAG_UMBRAL_ILUMINACION) problemas.push('iluminacion');
-
     metricas.nitidez = window.metricaNitidez(brillo, ancho, alto);
     if (metricas.nitidez < CONFIG.DIAG_UMBRAL_NITIDEZ) problemas.push('desenfoque');
-
     metricas.ruido = window.metricaRuido(brillo, ancho, alto);
     if (metricas.ruido > CONFIG.DIAG_UMBRAL_RUIDO) problemas.push('ruido');
-
     metricas.contraste = window.metricaContrasteRMS(brillo, ancho, alto);
     if (metricas.contraste < CONFIG.DIAG_UMBRAL_CONTRASTE) problemas.push('contraste');
-
     const est = window.estimarTamanoTexto(brillo, ancho, alto);
     metricas.tamTexto = est.tamTexto;
     if (est.tamTexto < CONFIG.DIAG_UMBRAL_TEXTO_CHICO && est.tamTexto < 999) problemas.push('texto_chico');
-
+    
     let pixelesBrillantes = 0;
     for (let y = 0; y < alto; y += 4) {
       for (let x = 0; x < ancho; x += 4) {
@@ -38,7 +33,6 @@
     const totalMuestreado = Math.ceil(alto / 4) * Math.ceil(ancho / 4);
     metricas.brillo = pixelesBrillantes / totalMuestreado;
     if (metricas.brillo > 0.02) problemas.push('brillo');
-
     return { problemas, metricas };
   }
 
@@ -46,7 +40,6 @@
     const metricaAntes = window.metricaNitidez(brillo, ancho, alto);
     const resultado = funcionFiltro(brillo);
     const metricaDespues = window.metricaNitidez(resultado, ancho, alto);
-
     if (metricaDespues >= metricaAntes * 1.05) {
       aplicados.push(nombre + ' (mejora: ' + (metricaDespues - metricaAntes).toFixed(1) + ')');
       return resultado;
@@ -59,7 +52,6 @@
   function aplicarPreprocesamientoSelectivo(brillo, ancho, alto, problemas) {
     let resultado = brillo;
     const aplicados = [];
-
     if (problemas.indexOf('brillo') >= 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'quitar_brillos',
         function(b) { return window.restaurarQuitarBrillos(b, ancho, alto); }, aplicados);
@@ -85,7 +77,6 @@
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'contraste',
         function(b) { return window.restaurarContrast(b, ancho, alto, 5, 95); }, aplicados);
     }
-
     return { brillo: resultado, aplicados };
   }
 
@@ -115,11 +106,9 @@
     return extraerElementos(result, 0, 1);
   }
 
-  // --- OCR POR FRANJAS USANDO ARCHIVOS TEMPORALES ---
   async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
-
     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
       FS = Capacitor.Plugins.Filesystem;
     } else {
@@ -145,8 +134,6 @@
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
-      
-      // 1. Recortar la franja y guardarla en disco
       const canvasFranja = document.createElement('canvas');
       canvasFranja.width = ancho;
       canvasFranja.height = f.alto;
@@ -154,7 +141,6 @@
       
       const franjaBase64 = canvasFranja.toDataURL('image/jpeg', 0.95).split(',')[1];
       const nombreBase = 'franja_' + i + '.jpg';
-      
       await FS.writeFile({ path: nombreBase, data: franjaBase64, directory: 'CACHE' });
       canvasFranja.width = 0;
       canvasFranja.height = 0;
@@ -167,11 +153,9 @@
         canvasRot.width = Math.round(diag * factorFinal);
         canvasRot.height = Math.round(diag * factorFinal);
         const ctxRot = canvasRot.getContext('2d');
-        
         ctxRot.imageSmoothingEnabled = true;
         ctxRot.imageSmoothingQuality = 'high';
         
-        // Cargar la franja desde el disco y rotarla
         const imgFranja = new Image();
         imgFranja.src = 'data:image/jpeg;base64,' + franjaBase64;
         await new Promise(r => imgFranja.onload = r);
@@ -183,7 +167,6 @@
         
         const rotBase64 = canvasRot.toDataURL('image/jpeg', 0.95).split(',')[1];
         const nombreRot = 'franja_' + i + '_rot_' + angulo + '.jpg';
-        
         await FS.writeFile({ path: nombreRot, data: rotBase64, directory: 'CACHE' });
         canvasRot.width = 0;
         canvasRot.height = 0;
@@ -199,13 +182,11 @@
           try { await FS.deleteFile({ path: nombreRot, directory: 'CACHE' }); } catch(e) {}
         }
       }
-
       try { await FS.deleteFile({ path: nombreBase, directory: 'CACHE' }); } catch(e) {}
 
       const elementosVotados = votarElementos(lecturasFranja);
       todosElementos.push.apply(todosElementos, elementosVotados);
     }
-
     return deduplicarElementos(todosElementos);
   }
 
@@ -289,31 +270,65 @@
     return elementos;
   }
 
+  // --- NUEVA AGRUPACIÓN CON LOG Y CORTE POR LÍNEAS VIRTUALES ---
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
-    let sumaAltura = 0;
-    for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
-    const alturaProm = sumaAltura / elementos.length;
-    const umbralVertical = Math.max(25, alturaProm * 1.8);
-
+    
+    // Ordenar por Y
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
+    
+    // Calcular altura promedio para el log
+    let sumaAltura = 0;
+    for (const el of ordenados) sumaAltura += (el.absBottom - el.absTop);
+    const alturaProm = sumaAltura / ordenados.length;
+    console.log('[DIAG] Total palabras: ' + ordenados.length + ', altura promedio: ' + alturaProm.toFixed(2) + 'px');
+
     const filas = [];
-    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
+    let grupoActual = [ordenados[0]];
+    
+    // Log de la primera fila
+    let topActual = ordenados[0].absTop;
+    let bottomActual = ordenados[0].absBottom;
 
     for (let i = 1; i < ordenados.length; i++) {
-      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
-        grupo.push(ordenados[i]);
-        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
+      const el = ordenados[i];
+      
+      // Criterio de corte: Si hay un espacio vertical entre el grupo y el nuevo elemento
+      // que sea mayor al 50% de la altura promedio, es una nueva fila.
+      // (Ajusta este 0.5 si necesitas ser más o menos estricto).
+      const umbralCorte = Math.max(10, alturaProm * 0.5);
+      
+      if (el.absTop > bottomActual + umbralCorte) {
+        // Hay un hueco -> nueva fila
+        grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
+        filas.push(grupoActual);
+        
+        // Log de la fila cerrada
+        if (grupoActual.length > 20) {
+          console.log('[DIAG] Fila ' + filas.length + ' tiene ' + grupoActual.length + ' palabras (posible fusión).');
+        }
+        
+        grupoActual = [el];
+        topActual = el.absTop;
+        bottomActual = el.absBottom;
       } else {
-        grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
-        filas.push(grupo);
-        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
+        // Misma fila (se solapan o están muy cerca)
+        grupoActual.push(el);
+        if (el.absTop < topActual) topActual = el.absTop;
+        if (el.absBottom > bottomActual) bottomActual = el.absBottom;
       }
     }
-    if (grupo.length > 0) {
-      grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
-      filas.push(grupo);
+    
+    // Añadir la última
+    if (grupoActual.length > 0) {
+      grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
+      filas.push(grupoActual);
+      if (grupoActual.length > 20) {
+         console.log('[DIAG] Fila ' + filas.length + ' tiene ' + grupoActual.length + ' palabras (posible fusión).');
+      }
     }
+
+    console.log('[DIAG] Filas detectadas por corte virtual: ' + filas.length);
     return filas;
   }
 
@@ -336,27 +351,26 @@
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
 
-    const gaps = [];
+    // Inferir columnas por bordes izquierdos repetidos
+    const bordesX = [];
     for (const fila of filas) {
-      if (fila.length < 2) continue;
-      for (let i = 0; i < fila.length - 1; i++) {
-        const gap = fila[i + 1].absLeft - fila[i].absRight;
-        if (gap > 20) gaps.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
+      for (const el of fila) {
+        bordesX.push(el.absLeft);
       }
     }
+    bordesX.sort(function(a, b) { return a - b; });
 
-    gaps.sort(function(a, b) { return a - b; });
     const columnas = [];
-    let grupoGap = [];
-    for (const g of gaps) {
-      if (grupoGap.length === 0 || Math.abs(g - grupoGap[grupoGap.length - 1]) < 30) {
-        grupoGap.push(g);
+    let grupoX = [bordesX[0]];
+    for (let i = 1; i < bordesX.length; i++) {
+      if (bordesX[i] - grupoX[grupoX.length - 1] < 30) {
+        grupoX.push(bordesX[i]);
       } else {
-        columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
-        grupoGap = [g];
+        if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
+        grupoX = [bordesX[i]];
       }
     }
-    if (grupoGap.length > 0) columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
+    if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
 
     const matriz = [];
     for (const fila of filas) {
@@ -463,5 +477,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (gestión de archivos temporales)');
+  console.log('[core] pipeline_ocr.js cargado (corte por líneas virtuales + log)');
 })();

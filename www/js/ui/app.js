@@ -1,6 +1,6 @@
 // ==============================================
 // ui/app.js
-// Interfaz mínima con barra de progreso y validación.
+// Interfaz mínima con barra de progreso y log de exportación.
 // ==============================================
 
 (function() {
@@ -87,7 +87,7 @@
 
       log('📄 OCR modo: ' + resultado.modoOCR, 'info');
       log('⏱️ Tiempo total: ' + resultado.tiempo.toFixed(0) + 'ms', 'exito');
-      log('📊 Matriz: ' + resultado.matriz.length + ' filas × ' + (resultado.matriz[0] ? resultado.matriz[0].length : 0) + ' cols', 'exito');
+      log('📊 Matriz en memoria: ' + resultado.matriz.length + ' filas × ' + (resultado.matriz[0] ? resultado.matriz[0].length : 0) + ' cols', 'exito');
 
       estado.ultimoResultado = resultado;
       mostrarResultado(resultado.matriz);
@@ -146,6 +146,8 @@
     inputs.forEach(function(inp) {
       matriz[parseInt(inp.dataset.row)][parseInt(inp.dataset.col)] = inp.value;
     });
+
+    log('📊 Matriz antes de exportar: ' + matriz.length + ' filas', 'info');
 
     try {
       const wb = XLSX.utils.book_new();
