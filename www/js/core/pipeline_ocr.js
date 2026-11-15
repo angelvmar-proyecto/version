@@ -94,8 +94,8 @@
 
     const dataURL = canvas.toDataURL('image/jpeg', 0.95);
     const result = await TextRec.processImage({
-      path: dataURL,
-      script: 'Latin'
+      path: dataURL
+
     });
 
     return extraerElementos(result);
@@ -125,7 +125,7 @@
     const dataURLMini = canvasMini.toDataURL('image/jpeg', 0.9);
     let elementosMini = [];
     try {
-      const resultMini = await TextRec.processImage({ path: dataURLMini, script: 'Latin' });
+      const resultMini = await TextRec.processImage({ path: dataURLMini });
       elementosMini = extraerElementos(resultMini);
     } catch (e) {
       // Si falla la miniatura, caemos a OCR directo
@@ -153,7 +153,7 @@
 
       const dataURLF = canvasFranja.toDataURL('image/jpeg', 0.95);
       try {
-        const resultF = await TextRec.processImage({ path: dataURLF, script: 'Latin' });
+        const resultF = await TextRec.processImage({ path: dataURLF });
         const elementosF = extraerElementos(resultF, f.y0);
         todosElementos.push.apply(todosElementos, elementosF);
       } catch (e) {
