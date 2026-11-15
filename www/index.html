@@ -6,168 +6,36 @@
   <title>Imagen Tabla MAR Caribe</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 12px;
-      background: #0d1421;
-      color: #ddd;
-      font-family: -apple-system, sans-serif;
-    }
-    h1 {
-      font-size: 18px;
-      color: #4ea3f5;
-      margin: 0 0 4px;
-    }
-    .sub {
-      font-size: 11px;
-      color: #888;
-      margin: 0 0 14px;
-    }
-
-    /* Botones */
-    .btn {
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: none;
-      background: #2563eb;
-      color: #fff;
-      font-size: 14px;
-      font-weight: bold;
-      width: 100%;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    body { margin: 0; padding: 12px; background: #0d1421; color: #ddd; font-family: -apple-system, sans-serif; }
+    h1 { font-size: 18px; color: #4ea3f5; margin: 0 0 4px; }
+    .sub { font-size: 11px; color: #888; margin: 0 0 14px; }
+    .btn { padding: 12px 16px; border-radius: 8px; border: none; background: #2563eb; color: #fff; font-size: 14px; font-weight: bold; width: 100%; margin-bottom: 10px; cursor: pointer; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn.green { background: #16a34a; }
     .btn.orange { background: #ea580c; }
     .btn.gray { background: #4b5563; }
-    .btn-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .btn-grid .btn { margin-bottom: 0; }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 12px;
-      border-bottom: 1px solid #333;
-    }
-    .tab {
-      padding: 10px 14px;
-      cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      font-size: 13px;
-      color: #888;
-    }
-    .tab.active {
-      background: #1a1a2e;
-      color: #4ea3f5;
-      font-weight: bold;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-
-    /* Canvas */
-    canvas {
-      width: 100%;
-      display: block;
-      border-radius: 6px;
-      border: 1px solid #333;
-      margin-bottom: 10px;
-      background: #000;
-    }
-
-    /* Log */
-    #log {
-      background: #0a0a0a;
-      color: #9eff9e;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 11px;
-      max-height: 280px;
-      overflow-y: auto;
-      border: 1px solid #333;
-      line-height: 1.5;
-    }
-
-    /* Tabla resultado */
-    .excel-container {
-      overflow: auto;
-      max-height: 70vh;
-      border: 1px solid #333;
-      margin-top: 10px;
-      border-radius: 6px;
-    }
-    .tabla-resultado {
-      min-width: max-content;
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 12px;
-      font-family: monospace;
-      white-space: nowrap;
-    }
-    .tabla-resultado th,
-    .tabla-resultado td {
-      border: 1px solid #444;
-      padding: 2px;
-      color: #ddd;
-    }
-    .tabla-resultado th {
-      background: #1e293b;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      padding: 6px 10px;
-      color: #4ea3f5;
-    }
-    .tabla-resultado tr:nth-child(even) {
-      background: #0f172a;
-    }
-    .tabla-resultado td input {
-      background: transparent;
-      border: none;
-      color: #ddd;
-      font-family: monospace;
-      font-size: 12px;
-      width: 100%;
-      min-width: 80px;
-      padding: 4px 6px;
-    }
-    .tabla-resultado td input:focus {
-      background: #1e293b;
-      outline: 1px solid #4ea3f5;
-    }
-
-    /* Info */
-    .info {
-      font-size: 12px;
-      color: #888;
-      padding: 6px 0;
-    }
-    .info b {
-      color: #4ea3f5;
-    }
-
-    /* Input file oculto */
-    input[type=file] {
-      display: none;
-    }
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid #333; }
+    .tab { padding: 10px 14px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 13px; color: #888; }
+    .tab.active { background: #1a1a2e; color: #4ea3f5; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    canvas { width: 100%; display: block; border-radius: 6px; border: 1px solid #333; margin-bottom: 10px; background: #000; }
+    #log { background: #0a0a0a; color: #9eff9e; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 280px; overflow-y: auto; border: 1px solid #333; line-height: 1.5; }
+    .excel-container { overflow: auto; max-height: 70vh; border: 1px solid #333; margin-top: 10px; border-radius: 6px; }
+    .tabla-resultado { min-width: max-content; border-collapse: collapse; width: 100%; font-size: 12px; font-family: monospace; white-space: nowrap; }
+    .tabla-resultado th, .tabla-resultado td { border: 1px solid #444; padding: 2px; color: #ddd; }
+    .tabla-resultado th { background: #1e293b; position: sticky; top: 0; z-index: 1; padding: 6px 10px; color: #4ea3f5; }
+    .tabla-resultado tr:nth-child(even) { background: #0f172a; }
+    .tabla-resultado td input { background: transparent; border: none; color: #ddd; font-family: monospace; font-size: 12px; width: 100%; min-width: 80px; padding: 4px 6px; }
+    .tabla-resultado td input:focus { background: #1e293b; outline: 1px solid #4ea3f5; }
+    .info { font-size: 12px; color: #888; padding: 6px 0; }
+    .info b { color: #4ea3f5; }
+    input[type=file] { display: none; }
   </style>
 </head>
 <body>
-
   <h1>Imagen Tabla MAR Caribe <span id="buildTag" style="font-size:13px; color:#888; font-weight:normal;"></span></h1>
   <p class="sub">Lectura de texto con diagnóstico selectivo</p>
 
@@ -176,29 +44,22 @@
     <div class="tab" data-tab="resultado">📊 Resultado</div>
   </div>
 
-  <!-- ============ TAB IMAGEN ============ -->
   <div class="tab-content active" id="tab-imagen">
     <input type="file" id="inputImagen" accept="image/*">
-
     <div class="btn-grid">
       <button class="btn" id="btnCargar">📷 Cargar imagen</button>
       <button class="btn green" id="btnOCR">🔍 Ejecutar OCR</button>
     </div>
-
     <div class="info">Imagen: <b id="infoImagen">—</b></div>
-
     <canvas id="canvas"></canvas>
-
     <div id="log">Listo. Carga una imagen para empezar.</div>
   </div>
 
-  <!-- ============ TAB RESULTADO ============ -->
   <div class="tab-content" id="tab-resultado">
     <div class="btn-grid">
-      <button class="btn orange" id="btnExportar" disabled>💾 Exportar CSV</button>
+      <button class="btn orange" id="btnExportar" disabled>📊 Exportar a Excel</button>
       <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
     </div>
-
     <div class="excel-container">
       <div id="resultado" style="padding:20px; text-align:center; color:#64748b;">
         Carga una imagen y ejecuta OCR
@@ -206,11 +67,8 @@
     </div>
   </div>
 
-  <!-- ============ SCRIPTS ============ -->
-  <!-- Config primero -->
+  <script src="lib/xlsx.full.min.js"></script>
   <script src="js/config.js"></script>
-
-  <!-- Core base -->
   <script src="js/core/brillo.js"></script>
   <script src="js/core/metricas_imagen.js"></script>
   <script src="js/core/analisis_texto.js"></script>
@@ -218,20 +76,13 @@
   <script src="js/core/restauracion.js"></script>
   <script src="js/core/sauvola.js"></script>
   <script src="js/core/nitidez.js"></script>
-
-  <!-- OCR base (orden de dependencias) -->
   <script src="js/core/ocr/ocr_diccionario.js"></script>
   <script src="js/core/ocr/ocr_post.js"></script>
   <script src="js/core/ocr/ocr_tipos_columnas.js"></script>
   <script src="js/core/ocr/ocr_corrector_tipos.js"></script>
   <script src="js/core/ocr/csv_parser.js"></script>
   <script src="js/core/ocr/ocr_fidelidad.js"></script>
-
-  <!-- Pipeline completo -->
   <script src="js/core/pipeline_ocr.js"></script>
-
-  <!-- UI -->
   <script src="js/ui/app.js"></script>
-
 </body>
 </html>
