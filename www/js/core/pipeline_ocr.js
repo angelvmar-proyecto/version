@@ -1,7 +1,6 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo de OCR.
-// Sin downscale para no perder resolución en texto chico.
+// Pipeline completo de OCR con validación empírica.
 // ==============================================
 
 (function() {
@@ -27,7 +26,7 @@
     metricas.tamTexto = est.tamTexto;
     if (est.tamTexto < CONFIG.DIAG_UMBRAL_TEXTO_CHICO && est.tamTexto < 999) problemas.push('texto_chico');
 
-    // Detección rápida de brillos
+    // Detección de brillos
     let pixelesBrillantes = 0;
     for (let y = 0; y < alto; y += 4) {
       for (let x = 0; x < ancho; x += 4) {
@@ -41,34 +40,59 @@
     return { problemas, metricas };
   }
 
+  // Función de validación empírica
+  function aplicarFiltroConValidacion(brillo, ancho, alto, nombre, funcionFiltro, aplicados) {
+    const metricaAntes = window.metricaNitidez(brillo, ancho, alto);
+    const resultado = funcionFiltro(brillo);
+    const metricaDespues = window.metricaNitidez(resultado, ancho, alto);
+
+    // Si la nitidez mejora (o se mantiene), aceptamos el filtro
+    if (metricaDespues >= metricaAntes * 1.05) { // 5% de mejora
+      aplicados.push(nombre + ' (mejora: ' + (metricaDespues - metricaAntes).toFixed(1) + ')');
+      return resultado;
+    } else {
+      aplicados.push(nombre + ' DESCARTADO (empeoró)');
+      return brillo; // Devolver el original
+    }
+  }
+
   function aplicarPreprocesamientoSelectivo(brillo, ancho, alto, problemas) {
     let resultado = brillo;
     const aplicados = [];
 
+    // 1. Quitar brillos
     if (problemas.indexOf('brillo') >= 0) {
-      resultado = window.restaurarQuitarBrillos(resultado, ancho, alto);
-      aplicados.push('quitar_brillos');
+      resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'quitar_brillos',
+        function(b) { return window.restaurarQuitarBrillos(b, ancho, alto); }, aplicados);
     }
+
+    // 2. Iluminación (Retinex o Flatten)
     if (problemas.indexOf('iluminacion') >= 0) {
       if (problemas.indexOf('contraste') >= 0) {
-        resultado = window.restaurarRetinex(resultado, ancho, alto);
-        aplicados.push('retinex');
+        resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'retinex',
+          function(b) { return window.restaurarRetinex(b, ancho, alto); }, aplicados);
       } else {
-        resultado = window.restaurarFlattenIluminacion(resultado, ancho, alto);
-        aplicados.push('flatten_iluminacion');
+        resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'flatten_iluminacion',
+          function(b) { return window.restaurarFlattenIluminacion(b, ancho, alto); }, aplicados);
       }
     }
+
+    // 3. Desenfoque
     if (problemas.indexOf('desenfoque') >= 0) {
-      resultado = window.nitRichardsonLucy(resultado, ancho, alto, 5, 1.0);
-      aplicados.push('richardson_lucy');
+      resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'richardson_lucy',
+        function(b) { return window.nitRichardsonLucy(b, ancho, alto, 5, 1.0); }, aplicados);
     }
-    if (problemas.indexOf('ruido') >= 0) {
-      resultado = window.restaurarMediana(resultado, ancho, alto, 1);
-      aplicados.push('mediana');
+
+    // 4. Ruido (solo si el texto NO es chico, para no borrar letras pequeñas)
+    if (problemas.indexOf('ruido') >= 0 && problemas.indexOf('texto_chico') < 0) {
+      resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'mediana',
+        function(b) { return window.restaurarMediana(b, ancho, alto, 1); }, aplicados);
     }
+
+    // 5. Contraste
     if (problemas.indexOf('contraste') >= 0 && problemas.indexOf('iluminacion') < 0) {
-      resultado = window.restaurarContrast(resultado, ancho, alto, 5, 95);
-      aplicados.push('contraste');
+      resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'contraste',
+        function(b) { return window.restaurarContrast(b, ancho, alto, 5, 95); }, aplicados);
     }
 
     return { brillo: resultado, aplicados };
@@ -100,7 +124,6 @@
     return extraerElementos(result, 0, 1);
   }
 
-  // --- FRANJAS CON MÚLTIPLES PERSPECTIVAS ---
   async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
@@ -152,8 +175,14 @@
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
         } catch(e) {
           console.warn('Falló ángulo ' + angulo + ' en franja ' + i);
+        } finally {
+          canvasRot.width = 0;
+          canvasRot.height = 0;
         }
       }
+
+      canvasFranja.width = 0;
+      canvasFranja.height = 0;
 
       const elementosVotados = votarElementos(lecturasFranja);
       todosElementos.push.apply(todosElementos, elementosVotados);
@@ -343,21 +372,29 @@
     return { matriz: matrizLimpia, tipos, filas };
   }
 
-  async function ejecutarPipelineOCR(canvas, opciones) {
+  async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    // SIN DOWNSCALE: trabajamos con la imagen original para no perder resolución
+    const notificar = function(msg, pct) {
+      if (typeof onProgress === 'function') onProgress(msg, pct);
+    };
+
+    notificar('Iniciando...', 5);
+
     const ancho = canvas.width, alto = canvas.height;
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, ancho, alto);
     const brillo = window.calcularBrillo(imageData);
-
+    
+    notificar('Diagnosticando imagen...', 15);
     const diag = diagnosticarImagen(brillo, ancho, alto);
+    
+    notificar('Aplicando filtros (validando)...', 30);
     const preproc = aplicarPreprocesamientoSelectivo(brillo, ancho, alto, diag.problemas);
 
     let canvasProcesado = canvas;
-    if (preproc.aplicados.length > 0) {
+    if (preproc.aplicados.some(function(a) { return a.indexOf('DESCARTADO') === -1; })) {
       canvasProcesado = brilloACanvas(preproc.brillo, ancho, alto);
     }
 
@@ -367,10 +404,11 @@
       preproc.aplicados.push('upscale_x' + factorUpscale);
     }
 
+    notificar('Ejecutando OCR...', 50);
+
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
     let elementos, modoOCR;
 
-    // Siempre usamos franjas para no perder resolución en imágenes grandes o con texto chico
     if (ancho > umbralFranjas || alto > umbralFranjas || factorUpscale > 1) {
       modoOCR = 'franjas_perspectivas';
       elementos = await ocrPorFranjas(canvasProcesado, ancho, alto, diag.metricas.tamTexto, factorUpscale);
@@ -379,6 +417,7 @@
       elementos = await ocrDirecto(canvasProcesado);
     }
 
+    notificar('Organizando matriz...', 85);
     const organizado = organizarEnMatriz(elementos, ancho, alto);
 
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
@@ -394,6 +433,7 @@
       }
     }
 
+    notificar('Completado', 100);
     const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
     return {
@@ -407,5 +447,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (sin downscale)');
+  console.log('[core] pipeline_ocr.js cargado (validacion empirica)');
 })();

@@ -1,33 +1,40 @@
 // ==============================================
 // ui/app.js
-// Interfaz mínima de MAR Caribe v15 (OCR).
+// Interfaz mínima con barra de progreso y validación.
 // ==============================================
 
 (function() {
   'use strict';
 
-  const estado = {
-    imagen: null,
-    canvas: null,
-    ultimoResultado: null
-  };
-
+  const estado = { imagen: null, canvas: null, ultimoResultado: null };
   const el = function(id) { return document.getElementById(id); };
 
   function log(msg, tipo) {
     const cont = el('log');
     if (!cont) return;
     const linea = document.createElement('div');
-    const colores = {
-      info: '#94a3b8', exito: '#22c55e', error: '#ef4444',
-      alerta: '#f59e0b', etapa: '#38bdf8'
-    };
+    const colores = { info: '#94a3b8', exito: '#22c55e', error: '#ef4444', alerta: '#f59e0b', etapa: '#38bdf8' };
     linea.style.color = colores[tipo] || '#94a3b8';
     if (tipo === 'etapa') linea.style.fontWeight = 'bold';
     linea.textContent = msg;
     cont.appendChild(linea);
     cont.scrollTop = cont.scrollHeight;
     console.log(msg);
+  }
+
+  function actualizarBarra(msg, pct) {
+    const cont = el('progresoContainer');
+    const barra = el('progresoBarra');
+    const texto = el('progresoTexto');
+    if (!cont || !barra || !texto) return;
+    cont.style.display = 'block';
+    texto.textContent = msg;
+    barra.style.width = pct + '%';
+  }
+
+  function ocultarBarra() {
+    const cont = el('progresoContainer');
+    if (cont) cont.style.display = 'none';
   }
 
   function cargarImagen(file) {
@@ -40,8 +47,7 @@
         const canvas = el('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        canvas.getContext('2d').drawImage(img, 0, 0);
         estado.canvas = canvas;
         el('infoImagen').textContent = img.width + '×' + img.height + ' px';
         log('✅ Imagen cargada: ' + img.width + '×' + img.height, 'exito');
@@ -57,30 +63,27 @@
 
     el('btnOCR').disabled = true;
     el('btnOCR').textContent = '⏳ Procesando...';
+    actualizarBarra('Iniciando...', 0);
     log('═══════════════════════════════════', 'etapa');
     log('🔬 NUEVO OCR', 'etapa');
     log('═══════════════════════════════════', 'etapa');
 
     try {
-      const resultado = await window.ejecutarPipelineOCR(estado.canvas, {});
+      const resultado = await window.ejecutarPipelineOCR(estado.canvas, {}, function(msg, pct) {
+        actualizarBarra(msg, pct);
+        log('   ' + msg + ' (' + pct + '%)', 'info');
+      });
 
       log('🔍 Diagnóstico:', 'etapa');
-      if (resultado.diagnosticos.problemas.length === 0) {
-        log('   Sin problemas detectados', 'exito');
-      } else {
-        resultado.diagnosticos.problemas.forEach(function(p) {
-          log('   ⚠️ ' + p, 'alerta');
-        });
-      }
+      resultado.diagnosticos.problemas.forEach(function(p) { log('   ⚠️ ' + p, 'alerta'); });
       const m = resultado.diagnosticos.metricas;
-      log('   Nitidez: ' + m.nitidez.toFixed(1) + ' | Contraste: ' + m.contraste.toFixed(1) +
-          ' | Ruido: ' + m.ruido.toFixed(1) + ' | Iluminación: ' + m.iluminacion.toFixed(1), 'info');
-      
-      if (resultado.filtrosAplicados.length > 0) {
-        log('🎨 Filtros aplicados: ' + resultado.filtrosAplicados.join(', '), 'exito');
-      } else {
-        log('🎨 Sin filtros aplicados', 'exito');
-      }
+      log('   Nitidez: ' + m.nitidez.toFixed(1) + ' | Contraste: ' + m.contraste.toFixed(1) + ' | Ruido: ' + m.ruido.toFixed(1), 'info');
+
+      log('🎨 Filtros aplicados:', 'etapa');
+      resultado.filtrosAplicados.forEach(function(f) {
+        if (f.indexOf('DESCARTADO') >= 0) log('   ❌ ' + f, 'error');
+        else log('   ✅ ' + f, 'exito');
+      });
 
       log('📄 OCR modo: ' + resultado.modoOCR, 'info');
       log('⏱️ Tiempo total: ' + resultado.tiempo.toFixed(0) + 'ms', 'exito');
@@ -92,8 +95,8 @@
 
     } catch (e) {
       log('❌ Error: ' + e.message, 'error');
-      console.error(e);
     } finally {
+      ocultarBarra();
       el('btnOCR').disabled = false;
       el('btnOCR').textContent = '🔍 Ejecutar OCR';
     }
@@ -148,7 +151,6 @@
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(matriz);
       XLSX.utils.book_append_sheet(wb, ws, 'OCR');
-      
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
       const nombre = 'resultado_' + Date.now() + '.xlsx';
       const fs = (typeof Capacitor !== 'undefined' && Capacitor.Plugins) ? Capacitor.Plugins.Filesystem : null;

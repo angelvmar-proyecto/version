@@ -33,6 +33,12 @@
     .info { font-size: 12px; color: #888; padding: 6px 0; }
     .info b { color: #4ea3f5; }
     input[type=file] { display: none; }
+    
+    /* Barra de progreso */
+    #progresoContainer { display: none; margin-top: 10px; background: #1a1a2e; border-radius: 8px; padding: 10px; border: 1px solid #333; }
+    #progresoTexto { font-size: 12px; color: #4ea3f5; margin-bottom: 6px; font-weight: bold; }
+    #progresoBarraFondo { background: #333; border-radius: 4px; overflow: hidden; height: 10px; }
+    #progresoBarra { background: #22c55e; height: 100%; width: 0%; transition: width 0.3s ease; }
   </style>
 </head>
 <body>
@@ -50,6 +56,14 @@
       <button class="btn" id="btnCargar">📷 Cargar imagen</button>
       <button class="btn green" id="btnOCR">🔍 Ejecutar OCR</button>
     </div>
+    
+    <div id="progresoContainer">
+      <div id="progresoTexto">Iniciando...</div>
+      <div id="progresoBarraFondo">
+        <div id="progresoBarra"></div>
+      </div>
+    </div>
+
     <div class="info">Imagen: <b id="infoImagen">—</b></div>
     <canvas id="canvas"></canvas>
     <div id="log">Listo. Carga una imagen para empezar.</div>
