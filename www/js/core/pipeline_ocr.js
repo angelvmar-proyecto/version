@@ -1,7 +1,8 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo de OCR con diagnóstico selectivo.
-// Franjas optimizadas (máx 3 llamadas a ML Kit).
+// Pipeline completo de OCR.
+// Incluye: diagnóstico selectivo, brillos, Retinex,
+// franjas y múltiples perspectivas (rotaciones).
 // ==============================================
 
 (function() {
@@ -27,6 +28,17 @@
     metricas.tamTexto = est.tamTexto;
     if (est.tamTexto < CONFIG.DIAG_UMBRAL_TEXTO_CHICO && est.tamTexto < 999) problemas.push('texto_chico');
 
+    // Detección rápida de brillos
+    let pixelesBrillantes = 0;
+    for (let y = 0; y < alto; y += 4) {
+      for (let x = 0; x < ancho; x += 4) {
+        if (brillo[y][x] > 240) pixelesBrillantes++;
+      }
+    }
+    const totalMuestreado = Math.ceil(alto / 4) * Math.ceil(ancho / 4);
+    metricas.brillo = pixelesBrillantes / totalMuestreado;
+    if (metricas.brillo > 0.02) problemas.push('brillo');
+
     return { problemas, metricas };
   }
 
@@ -34,9 +46,18 @@
     let resultado = brillo;
     const aplicados = [];
 
+    if (problemas.indexOf('brillo') >= 0) {
+      resultado = window.restaurarQuitarBrillos(resultado, ancho, alto);
+      aplicados.push('quitar_brillos');
+    }
     if (problemas.indexOf('iluminacion') >= 0) {
-      resultado = window.restaurarFlattenIluminacion(resultado, ancho, alto);
-      aplicados.push('flatten_iluminacion');
+      if (problemas.indexOf('contraste') >= 0) {
+        resultado = window.restaurarRetinex(resultado, ancho, alto);
+        aplicados.push('retinex');
+      } else {
+        resultado = window.restaurarFlattenIluminacion(resultado, ancho, alto);
+        aplicados.push('flatten_iluminacion');
+      }
     }
     if (problemas.indexOf('desenfoque') >= 0) {
       resultado = window.nitRichardsonLucy(resultado, ancho, alto, 5, 1.0);
@@ -46,7 +67,7 @@
       resultado = window.restaurarMediana(resultado, ancho, alto, 1);
       aplicados.push('mediana');
     }
-    if (problemas.indexOf('contraste') >= 0) {
+    if (problemas.indexOf('contraste') >= 0 && problemas.indexOf('iluminacion') < 0) {
       resultado = window.restaurarContrast(resultado, ancho, alto, 5, 95);
       aplicados.push('contraste');
     }
@@ -64,10 +85,8 @@
       for (let x = 0; x < ancho; x++) {
         const v = Math.max(0, Math.min(255, brillo[y][x]));
         const idx = (y * ancho + x) * 4;
-        imgData.data[idx] = v;
-        imgData.data[idx + 1] = v;
-        imgData.data[idx + 2] = v;
-        imgData.data[idx + 3] = 255;
+        imgData.data[idx] = v; imgData.data[idx + 1] = v;
+        imgData.data[idx + 2] = v; imgData.data[idx + 3] = 255;
       }
     }
     ctx.putImageData(imgData, 0, 0);
@@ -82,12 +101,11 @@
     return extraerElementos(result, 0, 1);
   }
 
-  // --- FRANJAS OPTIMIZADAS ---
+  // --- FRANJAS CON MÚLTIPLES PERSPECTIVAS ---
   async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
 
-    // Calcular franjas fijas de ~600px de alto (máximo 3 llamadas)
     const ALTO_FRANJA = 600;
     const SOLAPE = 50;
     const numFranjas = Math.ceil(alto / ALTO_FRANJA);
@@ -103,6 +121,7 @@
 
     const todosElementos = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
+    const angulos = [0, -3, 3];
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
@@ -111,35 +130,89 @@
       canvasFranja.height = f.alto;
       canvasFranja.getContext('2d').drawImage(canvas, 0, f.y0, ancho, f.alto, 0, 0, ancho, f.alto);
 
-      let canvasFinal = canvasFranja;
-      if (factorFinal > 1) {
-        const canvasUp = document.createElement('canvas');
-        canvasUp.width = Math.round(ancho * factorFinal);
-        canvasUp.height = Math.round(f.alto * factorFinal);
-        const ctxUp = canvasUp.getContext('2d');
-        ctxUp.imageSmoothingEnabled = true;
-        ctxUp.imageSmoothingQuality = 'high';
-        ctxUp.drawImage(canvasFranja, 0, 0, canvasUp.width, canvasUp.height);
-        canvasFinal = canvasUp;
+      const lecturasFranja = [];
+
+      for (const angulo of angulos) {
+        const diag = Math.ceil(Math.sqrt(ancho*ancho + f.alto*f.alto));
+        const canvasRot = document.createElement('canvas');
+        canvasRot.width = Math.round(diag * factorFinal);
+        canvasRot.height = Math.round(diag * factorFinal);
+        const ctxRot = canvasRot.getContext('2d');
+        
+        ctxRot.imageSmoothingEnabled = true;
+        ctxRot.imageSmoothingQuality = 'high';
+        
+        ctxRot.translate(canvasRot.width/2, canvasRot.height/2);
+        ctxRot.rotate(angulo * Math.PI / 180);
+        ctxRot.scale(factorFinal, factorFinal);
+        ctxRot.drawImage(canvasFranja, -ancho/2, -f.alto/2);
+        
+        try {
+          const result = await TextRec.processImage({ path: canvasRot.toDataURL('image/jpeg', 0.95) });
+          const elementos = extraerElementosRotados(result, f.y0, factorFinal, angulo, ancho, f.alto, diag);
+          lecturasFranja.push({ angulo: angulo, elementos: elementos });
+        } catch(e) {
+          console.warn('Falló ángulo ' + angulo + ' en franja ' + i);
+        }
       }
 
-      try {
-        const resultF = await TextRec.processImage({ path: canvasFinal.toDataURL('image/jpeg', 0.95) });
-        const elementosF = extraerElementos(resultF, f.y0, factorFinal);
-        todosElementos.push.apply(todosElementos, elementosF);
-      } catch (e) {
-        console.warn('Falló franja ' + i + ': ' + e.message);
-      }
+      const elementosVotados = votarElementos(lecturasFranja);
+      todosElementos.push.apply(todosElementos, elementosVotados);
     }
 
     return deduplicarElementos(todosElementos);
   }
 
+  function votarElementos(lecturas) {
+    const votos = [];
+    for (const lectura of lecturas) {
+      for (const el of lectura.elementos) {
+        let encontrado = false;
+        for (const v of votos) {
+          if (Math.abs(v.cx - el.cx) < 20 && Math.abs(v.cy - el.cy) < 20) {
+            const sim = (typeof window.ocrSimilitud === 'function') ? window.ocrSimilitud(el.text, v.text) : (el.text === v.text ? 1 : 0);
+            if (sim > 0.5) {
+              v.contador++;
+              if (el.text.length > v.text.length) v.text = el.text;
+              encontrado = true;
+              break;
+            }
+          }
+        }
+        if (!encontrado) votos.push({ ...el, contador: 1 });
+      }
+    }
+    return votos.filter(v => v.contador >= 2);
+  }
+
   function extraerElementos(result, offsetY, factor) {
-    offsetY = offsetY || 0;
-    factor = factor || 1;
+    offsetY = offsetY || 0; factor = factor || 1;
     const elementos = [];
     if (!result || !result.blocks) return elementos;
+    for (const block of result.blocks) {
+      if (!block.lines) continue;
+      for (const line of block.lines) {
+        if (!line.elements) continue;
+        for (const el of line.elements) {
+          if (!el.boundingBox) continue;
+          const bb = el.boundingBox;
+          const left = bb.left / factor, right = bb.right / factor;
+          const top = (bb.top / factor) + offsetY, bottom = (bb.bottom / factor) + offsetY;
+          elementos.push({
+            text: el.text || '', absLeft: left, absRight: right,
+            absTop: top, absBottom: bottom, cx: (left + right) / 2, cy: (top + bottom) / 2
+          });
+        }
+      }
+    }
+    return elementos;
+  }
+
+  function extraerElementosRotados(result, offsetY, factor, angulo, anchoOrig, altoOrig, diag) {
+    const elementos = [];
+    if (!result || !result.blocks) return elementos;
+    const rad = angulo * Math.PI / 180;
+    const cos = Math.cos(-rad), sin = Math.sin(-rad);
 
     for (const block of result.blocks) {
       if (!block.lines) continue;
@@ -148,16 +221,21 @@
         for (const el of line.elements) {
           if (!el.boundingBox) continue;
           const bb = el.boundingBox;
-          const left = bb.left / factor;
-          const right = bb.right / factor;
-          const top = (bb.top / factor) + offsetY;
-          const bottom = (bb.bottom / factor) + offsetY;
+          const cxRot = ((bb.left + bb.right) / 2) - (diag * factor)/2;
+          const cyRot = ((bb.top + bb.bottom) / 2) - (diag * factor)/2;
+          const cxOrig = (cxRot * cos - cyRot * sin) + anchoOrig/2;
+          const cyOrig = (cxRot * sin + cyRot * cos) + altoOrig/2;
+          const w = (bb.right - bb.left) / factor;
+          const h = (bb.bottom - bb.top) / factor;
+          
+          const left = (cxOrig / factor) - (w/2);
+          const right = left + w;
+          const top = (cyOrig / factor) + offsetY - (h/2);
+          const bottom = top + h;
+
           elementos.push({
-            text: el.text || '',
-            absLeft: left, absRight: right,
-            absTop: top, absBottom: bottom,
-            cx: (left + right) / 2,
-            cy: (top + bottom) / 2
+            text: el.text || '', absLeft: left, absRight: right,
+            absTop: top, absBottom: bottom, cx: (left + right) / 2, cy: (top + bottom) / 2
           });
         }
       }
@@ -174,8 +252,7 @@
 
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
     const filas = [];
-    let grupo = [ordenados[0]];
-    let grupoY = ordenados[0].cy;
+    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
       if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
@@ -184,8 +261,7 @@
       } else {
         grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
         filas.push(grupo);
-        grupo = [ordenados[i]];
-        grupoY = ordenados[i].cy;
+        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
       }
     }
     if (grupo.length > 0) {
@@ -285,9 +361,7 @@
       canvas = canvasDown;
     }
 
-    const ancho = canvas.width;
-    const alto = canvas.height;
-
+    const ancho = canvas.width, alto = canvas.height;
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, ancho, alto);
     const brillo = window.calcularBrillo(imageData);
@@ -302,17 +376,15 @@
 
     let factorUpscale = 1;
     if (diag.problemas.indexOf('texto_chico') >= 0) {
-      if (diag.metricas.tamTexto < 7) factorUpscale = 3;
-      else factorUpscale = 2;
-      preproc.aplicados.push('upscale_x' + factorUpscale + '_franjas');
+      factorUpscale = (diag.metricas.tamTexto < 7) ? 3 : 2;
+      preproc.aplicados.push('upscale_x' + factorUpscale);
     }
 
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
-    let elementos;
-    let modoOCR;
+    let elementos, modoOCR;
 
     if (ancho > umbralFranjas || alto > umbralFranjas || factorUpscale > 1) {
-      modoOCR = 'franjas';
+      modoOCR = 'franjas_perspectivas';
       elementos = await ocrPorFranjas(canvasProcesado, ancho, alto, diag.metricas.tamTexto, factorUpscale);
     } else {
       modoOCR = 'directo';
@@ -337,14 +409,9 @@
     const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
     return {
-      matriz: organizado.matriz,
-      tipos: organizado.tipos,
-      filas: organizado.filas,
-      elementos: elementos,
-      diagnosticos: diag,
-      filtrosAplicados: preproc.aplicados,
-      modoOCR: modoOCR,
-      tiempo: t1 - t0
+      matriz: organizado.matriz, tipos: organizado.tipos, filas: organizado.filas,
+      elementos: elementos, diagnosticos: diag, filtrosAplicados: preproc.aplicados,
+      modoOCR: modoOCR, tiempo: t1 - t0
     };
   }
 
@@ -352,5 +419,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado');
+  console.log('[core] pipeline_ocr.js cargado (perspectivas)');
 })();
