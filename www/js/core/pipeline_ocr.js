@@ -1,7 +1,7 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo con diagnóstico de filas
-// y corte por líneas virtuales basadas en texto.
+// Pipeline completo de OCR.
+// Corte por LÍNEAS REALES (proyección de píxeles oscuros).
 // ==============================================
 
 (function() {
@@ -270,107 +270,164 @@
     return elementos;
   }
 
-  // --- NUEVA AGRUPACIÓN CON LOG Y CORTE POR LÍNEAS VIRTUALES ---
-  function agruparEnFilas(elementos) {
-    if (elementos.length === 0) return [];
-    
-    // Ordenar por Y
+  // --- NUEVA DETECCIÓN DE LÍNEAS REALES POR PROYECCIÓN ---
+  function detectarLineas(brillo, ancho, alto) {
+    const umbralOscuro = 128; // Píxel oscuro (línea negra)
+    const perfilH = new Array(alto).fill(0);
+    const perfilV = new Array(ancho).fill(0);
+
+    // Contar píxeles oscuros por fila/columna
+    for (let y = 0; y < alto; y++) {
+      for (let x = 0; x < ancho; x++) {
+        if (brillo[y][x] < umbralOscuro) {
+          perfilH[y]++;
+          perfilV[x]++;
+        }
+      }
+    }
+
+    // Detectar líneas H (filas donde la mayoría son píxeles oscuros)
+    const lineasH = [];
+    const minPixelesH = ancho * 0.5; // Al menos 50% de la fila debe ser oscura
+    for (let y = 0; y < alto; y++) {
+      if (perfilH[y] > minPixelesH) {
+        lineasH.push(y);
+      }
+    }
+
+    // Detectar líneas V (columnas donde la mayoría son píxeles oscuros)
+    const lineasV = [];
+    const minPixelesV = alto * 0.5;
+    for (let x = 0; x < ancho; x++) {
+      if (perfilV[x] > minPixelesV) {
+        lineasV.push(x);
+      }
+    }
+
+    return { lineasH, lineasV };
+  }
+
+  // --- CONSTRUCCIÓN DE MATRIZ USANDO LÍNEAS REALES ---
+  function organizarEnMatrizConLineas(elementos, lineasH, lineasV) {
+    if (elementos.length === 0) return { matriz: [], tipos: [] };
+
+    // Si no se detectaron líneas suficientes, usar fallback
+    if (lineasH.length < 2 || lineasV.length < 2) {
+      console.warn('Pocas líneas detectadas. H=' + lineasH.length + ', V=' + lineasV.length);
+      return organizarEnMatrizFallback(elementos);
+    }
+
+    // Filtrar elementos que caen fuera de las líneas
+    const elementosFiltrados = [];
+    for (const el of elementos) {
+      let dentroH = false;
+      for (let i = 0; i < lineasH.length; i++) {
+        if (el.cy >= lineasH[i] && el.cy <= (lineasH[i+1] || alto)) {
+          dentroH = true;
+          break;
+        }
+      }
+      if (!dentroH) continue;
+      elementosFiltrados.push(el);
+    }
+
+    // Crear matriz
+    const matriz = [];
+    const numFilas = lineasH.length - 1;
+    const numCols = lineasV.length - 1;
+
+    for (let f = 0; f < numFilas; f++) {
+      const fila = new Array(numCols).fill('');
+      const y1 = lineasH[f];
+      const y2 = lineasH[f + 1];
+
+      for (const el of elementosFiltrados) {
+        if (el.cy < y1 || el.cy > y2) continue;
+        for (let c = 0; c < numCols; c++) {
+          const x1 = lineasV[c];
+          const x2 = lineasV[c + 1];
+          if (el.cx >= x1 && el.cx <= x2) {
+            fila[c] = (fila[c] ? fila[c] + ' ' : '') + el.text;
+            break;
+          }
+        }
+      }
+      matriz.push(fila);
+    }
+
+    // Detectar tipos de columna
+    const tipos = [];
+    for (let c = 0; c < numCols; c++) {
+      const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
+      tipos.push(window.tipoDetectarColumna ? window.tipoDetectarColumna(valores) : { tipo: 'texto_libre' });
+    }
+
+    // Aplicar corrector por tipo
+    for (let f = 0; f < matriz.length; f++) {
+      for (let c = 0; c < matriz[f].length; c++) {
+        if (matriz[f][c] && tipos[c] && window.correctorAplicarPorTipo) {
+          matriz[f][c] = window.correctorAplicarPorTipo(matriz[f][c], tipos[c]);
+        }
+      }
+    }
+
+    // Eliminar filas vacías
+    const matrizLimpia = matriz.filter(function(fila) {
+      return fila.some(function(celda) { return celda && celda.trim().length > 0; });
+    });
+
+    return { matriz: matrizLimpia, tipos, filas: lineasH };
+  }
+
+  // Fallback para cuando no se detectan líneas
+  function organizarEnMatrizFallback(elementos) {
+    // Usar la agrupación por centros (la que funcionaba)
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
-    
-    // Calcular altura promedio para el log
     let sumaAltura = 0;
     for (const el of ordenados) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / ordenados.length;
-    console.log('[DIAG] Total palabras: ' + ordenados.length + ', altura promedio: ' + alturaProm.toFixed(2) + 'px');
+    const umbralVertical = Math.max(25, alturaProm * 1.8);
 
     const filas = [];
-    let grupoActual = [ordenados[0]];
-    
-    // Log de la primera fila
-    let topActual = ordenados[0].absTop;
-    let bottomActual = ordenados[0].absBottom;
+    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
-      const el = ordenados[i];
-      
-      // Criterio de corte: Si hay un espacio vertical entre el grupo y el nuevo elemento
-      // que sea mayor al 50% de la altura promedio, es una nueva fila.
-      // (Ajusta este 0.5 si necesitas ser más o menos estricto).
-      const umbralCorte = Math.max(10, alturaProm * 0.5);
-      
-      if (el.absTop > bottomActual + umbralCorte) {
-        // Hay un hueco -> nueva fila
-        grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
-        filas.push(grupoActual);
-        
-        // Log de la fila cerrada
-        if (grupoActual.length > 20) {
-          console.log('[DIAG] Fila ' + filas.length + ' tiene ' + grupoActual.length + ' palabras (posible fusión).');
-        }
-        
-        grupoActual = [el];
-        topActual = el.absTop;
-        bottomActual = el.absBottom;
+      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
+        grupo.push(ordenados[i]);
+        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
       } else {
-        // Misma fila (se solapan o están muy cerca)
-        grupoActual.push(el);
-        if (el.absTop < topActual) topActual = el.absTop;
-        if (el.absBottom > bottomActual) bottomActual = el.absBottom;
+        grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+        filas.push(grupo);
+        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
       }
     }
-    
-    // Añadir la última
-    if (grupoActual.length > 0) {
-      grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
-      filas.push(grupoActual);
-      if (grupoActual.length > 20) {
-         console.log('[DIAG] Fila ' + filas.length + ' tiene ' + grupoActual.length + ' palabras (posible fusión).');
-      }
+    if (grupo.length > 0) {
+      grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+      filas.push(grupo);
     }
 
-    console.log('[DIAG] Filas detectadas por corte virtual: ' + filas.length);
-    return filas;
-  }
-
-  function deduplicarElementos(elementos) {
-    const limpios = [];
-    for (const el of elementos) {
-      let dup = false;
-      for (const d of limpios) {
-        if (Math.abs(d.cx - el.cx) < 20 && Math.abs(d.cy - el.cy) < 20) {
-          const sim = (typeof window.ocrSimilitud === 'function') ? window.ocrSimilitud(el.text, d.text) : (el.text === d.text ? 1 : 0);
-          if (sim > 0.8) { dup = true; break; }
-        }
-      }
-      if (!dup) limpios.push(el);
-    }
-    return limpios;
-  }
-
-  function organizarEnMatriz(elementos, ancho, alto) {
-    const filas = agruparEnFilas(elementos);
-    if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
-
-    // Inferir columnas por bordes izquierdos repetidos
-    const bordesX = [];
+    // Inferir columnas por gaps
+    const gaps = [];
     for (const fila of filas) {
-      for (const el of fila) {
-        bordesX.push(el.absLeft);
+      if (fila.length < 2) continue;
+      for (let i = 0; i < fila.length - 1; i++) {
+        const gap = fila[i + 1].absLeft - fila[i].absRight;
+        if (gap > 20) gaps.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
       }
     }
-    bordesX.sort(function(a, b) { return a - b; });
 
+    gaps.sort(function(a, b) { return a - b; });
     const columnas = [];
-    let grupoX = [bordesX[0]];
-    for (let i = 1; i < bordesX.length; i++) {
-      if (bordesX[i] - grupoX[grupoX.length - 1] < 30) {
-        grupoX.push(bordesX[i]);
+    let grupoGap = [];
+    for (const g of gaps) {
+      if (grupoGap.length === 0 || Math.abs(g - grupoGap[grupoGap.length - 1]) < 30) {
+        grupoGap.push(g);
       } else {
-        if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
-        grupoX = [bordesX[i]];
+        columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
+        grupoGap = [g];
       }
     }
-    if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
+    if (grupoGap.length > 0) columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
 
     const matriz = [];
     for (const fila of filas) {
@@ -447,8 +504,12 @@
       elementos = await ocrDirecto(canvasProcesado);
     }
 
+    notificar('Detectando líneas...', 75);
+    const lineas = detectarLineas(brillo, ancho, alto);
+    console.log('[LÍNEAS] H=' + lineas.lineasH.length + ', V=' + lineas.lineasV.length);
+
     notificar('Organizando matriz...', 85);
-    const organizado = organizarEnMatriz(elementos, ancho, alto);
+    const organizado = organizarEnMatrizConLineas(elementos, lineas.lineasH, lineas.lineasV);
 
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
       for (let f = 0; f < organizado.matriz.length; f++) {
@@ -477,5 +538,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (corte por líneas virtuales + log)');
+  console.log('[core] pipeline_ocr.js cargado (corte por líneas reales)');
 })();
