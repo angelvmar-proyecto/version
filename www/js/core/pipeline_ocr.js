@@ -1,6 +1,7 @@
 // ==============================================
 // core/pipeline_ocr.js
 // Pipeline completo de OCR con diagnóstico selectivo.
+// Franjas optimizadas (máx 3 llamadas a ML Kit).
 // ==============================================
 
 (function() {
@@ -53,7 +54,6 @@
     return { brillo: resultado, aplicados };
   }
 
-  // Función auxiliar: convierte brillo a canvas
   function brilloACanvas(brillo, ancho, alto) {
     const canvas = document.createElement('canvas');
     canvas.width = ancho;
@@ -79,80 +79,39 @@
     if (!TextRec) throw new Error('TextRecognition no disponible');
     const dataURL = canvas.toDataURL('image/jpeg', 0.95);
     const result = await TextRec.processImage({ path: dataURL });
-    return extraerElementos(result);
+    return extraerElementos(result, 0, 1);
   }
 
-  // --- NUEVA LÓGICA DE FRANJAS CON UPSCALE ---
+  // --- FRANJAS OPTIMIZADAS ---
   async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
 
-    // 1. Detectar filas lógicas sobre la imagen original (o miniatura)
-    const maxAltoMini = 800;
-    const factorMini = Math.min(1, maxAltoMini / alto);
-    const canvasMini = document.createElement('canvas');
-    canvasMini.width = Math.round(ancho * factorMini);
-    canvasMini.height = Math.round(alto * factorMini);
-    canvasMini.getContext('2d').drawImage(canvas, 0, 0, canvasMini.width, canvasMini.height);
-
-    let elementosMini = [];
-    try {
-      const resultMini = await TextRec.processImage({ path: canvasMini.toDataURL('image/jpeg', 0.9) });
-      elementosMini = extraerElementos(resultMini);
-    } catch (e) {
-      // Si falla la miniatura, hacemos OCR directo sobre la imagen original
-      const canvasOrig = document.createElement('canvas');
-      canvasOrig.width = ancho;
-      canvasOrig.height = alto;
-      canvasOrig.getContext('2d').drawImage(canvas, 0, 0);
-      return ocrDirecto(canvasOrig);
-    }
-
-    const filasMini = agruparEnFilas(elementosMini);
-    if (filasMini.length === 0) {
-      const canvasOrig = document.createElement('canvas');
-      canvasOrig.width = ancho;
-      canvasOrig.height = alto;
-      canvasOrig.getContext('2d').drawImage(canvas, 0, 0);
-      return ocrDirecto(canvasOrig);
-    }
-
-    // 2. Calcular franjas basadas en las filas reales
-    const ALTO_OBJETIVO = 1500;
+    // Calcular franjas fijas de ~600px de alto (máximo 3 llamadas)
+    const ALTO_FRANJA = 600;
     const SOLAPE = 50;
+    const numFranjas = Math.ceil(alto / ALTO_FRANJA);
     const franjas = [];
-    let inicioFila = 0;
-    let y0 = 0;
 
-    for (let i = 0; i < filasMini.length; i++) {
-      const filaRealY = filasMini[i][0].cy / factorMini;
-      if (filaRealY - y0 > ALTO_OBJETIVO && i > inicioFila) {
-        const filaAnteriorY = filasMini[i - 1][0].cy / factorMini;
-        const altoFranja = Math.min(alto, filaAnteriorY + 30) - y0;
-        franjas.push({ y0: Math.max(0, y0 - SOLAPE), alto: Math.min(alto, altoFranja + 2 * SOLAPE) });
-        y0 = filaAnteriorY - 10;
-        inicioFila = i;
-      }
+    for (let i = 0; i < numFranjas; i++) {
+      let y0 = i * ALTO_FRANJA;
+      let y1 = Math.min(alto, y0 + ALTO_FRANJA);
+      if (i > 0) y0 = Math.max(0, y0 - SOLAPE);
+      if (i < numFranjas - 1) y1 = Math.min(alto, y1 + SOLAPE);
+      franjas.push({ y0: y0, alto: y1 - y0 });
     }
-    if (y0 < alto) franjas.push({ y0: Math.max(0, y0 - SOLAPE), alto: alto - y0 + SOLAPE });
-    if (franjas.length === 0) franjas.push({ y0: 0, alto: alto });
 
-    // 3. Procesar cada franja con upscale individual
     const todosElementos = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
-      
-      // Recortar la franja de la imagen original
       const canvasFranja = document.createElement('canvas');
       canvasFranja.width = ancho;
       canvasFranja.height = f.alto;
       canvasFranja.getContext('2d').drawImage(canvas, 0, f.y0, ancho, f.alto, 0, 0, ancho, f.alto);
 
       let canvasFinal = canvasFranja;
-
-      // Si hay texto chico, upscalear SOLO esta franja
       if (factorFinal > 1) {
         const canvasUp = document.createElement('canvas');
         canvasUp.width = Math.round(ancho * factorFinal);
@@ -166,9 +125,6 @@
 
       try {
         const resultF = await TextRec.processImage({ path: canvasFinal.toDataURL('image/jpeg', 0.95) });
-        // Extraer elementos y ajustar coordenadas:
-        // 1. Dividir por factorFinal (porque la franja estaba escalada)
-        // 2. Sumar f.y0 (porque la franja empieza más abajo)
         const elementosF = extraerElementos(resultF, f.y0, factorFinal);
         todosElementos.push.apply(todosElementos, elementosF);
       } catch (e) {
@@ -179,9 +135,6 @@
     return deduplicarElementos(todosElementos);
   }
 
-  // Extrae elementos de un resultado de ML Kit, ajustando coordenadas
-  // offsetY: desplazamiento vertical (si es franja)
-  // factor: factor de upscale aplicado a la franja (default 1)
   function extraerElementos(result, offsetY, factor) {
     offsetY = offsetY || 0;
     factor = factor || 1;
@@ -195,21 +148,14 @@
         for (const el of line.elements) {
           if (!el.boundingBox) continue;
           const bb = el.boundingBox;
-          
-          // Ajustar coordenadas:
-          // 1. Dividir por factor (para volver a escala original)
-          // 2. Sumar offsetY (para volver a posición original)
           const left = bb.left / factor;
           const right = bb.right / factor;
           const top = (bb.top / factor) + offsetY;
           const bottom = (bb.bottom / factor) + offsetY;
-          
           elementos.push({
             text: el.text || '',
-            absLeft: left,
-            absRight: right,
-            absTop: top,
-            absBottom: bottom,
+            absLeft: left, absRight: right,
+            absTop: top, absBottom: bottom,
             cx: (left + right) / 2,
             cy: (top + bottom) / 2
           });
@@ -221,7 +167,6 @@
 
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
-    
     let sumaAltura = 0;
     for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / elementos.length;
@@ -327,7 +272,6 @@
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    // 1. DOWNSCALE DEFENSIVO (max 1500px) para análisis inicial
     const MAX_LADO = 1500;
     if (canvas.width > MAX_LADO || canvas.height > MAX_LADO) {
       const factor = Math.min(MAX_LADO / canvas.width, MAX_LADO / canvas.height);
@@ -351,13 +295,11 @@
     const diag = diagnosticarImagen(brillo, ancho, alto);
     const preproc = aplicarPreprocesamientoSelectivo(brillo, ancho, alto, diag.problemas);
 
-    // Si se aplicaron filtros, convertir brillo de vuelta a canvas
     let canvasProcesado = canvas;
     if (preproc.aplicados.length > 0) {
       canvasProcesado = brilloACanvas(preproc.brillo, ancho, alto);
     }
 
-    // 2. Calcular factor de upscale para franjas (si hay texto chico)
     let factorUpscale = 1;
     if (diag.problemas.indexOf('texto_chico') >= 0) {
       if (diag.metricas.tamTexto < 7) factorUpscale = 3;
@@ -365,7 +307,6 @@
       preproc.aplicados.push('upscale_x' + factorUpscale + '_franjas');
     }
 
-    // 3. Decidir modo de OCR
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
     let elementos;
     let modoOCR;
@@ -378,10 +319,8 @@
       elementos = await ocrDirecto(canvasProcesado);
     }
 
-    // 4. Organizar en matriz
     const organizado = organizarEnMatriz(elementos, ancho, alto);
 
-    // 5. Post-procesar el texto (diccionario + homóglifos)
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
       for (let f = 0; f < organizado.matriz.length; f++) {
         for (let c = 0; c < organizado.matriz[f].length; c++) {
