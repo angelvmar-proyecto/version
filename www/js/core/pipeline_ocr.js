@@ -1,8 +1,6 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo de OCR con diagnóstico selectivo.
-// Agrupación de filas por solapamiento vertical.
-// Inferencia de columnas por bordes izquierdos.
+// Pipeline completo de OCR con validación empírica.
 // ==============================================
 
 (function() {
@@ -28,6 +26,7 @@
     metricas.tamTexto = est.tamTexto;
     if (est.tamTexto < CONFIG.DIAG_UMBRAL_TEXTO_CHICO && est.tamTexto < 999) problemas.push('texto_chico');
 
+    // Detección de brillos
     let pixelesBrillantes = 0;
     for (let y = 0; y < alto; y += 4) {
       for (let x = 0; x < ancho; x += 4) {
@@ -41,17 +40,19 @@
     return { problemas, metricas };
   }
 
+  // Función de validación empírica
   function aplicarFiltroConValidacion(brillo, ancho, alto, nombre, funcionFiltro, aplicados) {
     const metricaAntes = window.metricaNitidez(brillo, ancho, alto);
     const resultado = funcionFiltro(brillo);
     const metricaDespues = window.metricaNitidez(resultado, ancho, alto);
 
-    if (metricaDespues >= metricaAntes * 1.05) {
+    // Si la nitidez mejora (o se mantiene), aceptamos el filtro
+    if (metricaDespues >= metricaAntes * 1.05) { // 5% de mejora
       aplicados.push(nombre + ' (mejora: ' + (metricaDespues - metricaAntes).toFixed(1) + ')');
       return resultado;
     } else {
       aplicados.push(nombre + ' DESCARTADO (empeoró)');
-      return brillo;
+      return brillo; // Devolver el original
     }
   }
 
@@ -59,10 +60,13 @@
     let resultado = brillo;
     const aplicados = [];
 
+    // 1. Quitar brillos
     if (problemas.indexOf('brillo') >= 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'quitar_brillos',
         function(b) { return window.restaurarQuitarBrillos(b, ancho, alto); }, aplicados);
     }
+
+    // 2. Iluminación (Retinex o Flatten)
     if (problemas.indexOf('iluminacion') >= 0) {
       if (problemas.indexOf('contraste') >= 0) {
         resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'retinex',
@@ -72,14 +76,20 @@
           function(b) { return window.restaurarFlattenIluminacion(b, ancho, alto); }, aplicados);
       }
     }
+
+    // 3. Desenfoque
     if (problemas.indexOf('desenfoque') >= 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'richardson_lucy',
         function(b) { return window.nitRichardsonLucy(b, ancho, alto, 5, 1.0); }, aplicados);
     }
+
+    // 4. Ruido (solo si el texto NO es chico, para no borrar letras pequeñas)
     if (problemas.indexOf('ruido') >= 0 && problemas.indexOf('texto_chico') < 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'mediana',
         function(b) { return window.restaurarMediana(b, ancho, alto, 1); }, aplicados);
     }
+
+    // 5. Contraste
     if (problemas.indexOf('contraste') >= 0 && problemas.indexOf('iluminacion') < 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'contraste',
         function(b) { return window.restaurarContrast(b, ancho, alto, 5, 95); }, aplicados);
@@ -261,35 +271,30 @@
     return elementos;
   }
 
-  // NUEVA AGRUPACIÓN POR SOLAPAMIENTO VERTICAL
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
+    let sumaAltura = 0;
+    for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
+    const alturaProm = sumaAltura / elementos.length;
+    const umbralVertical = Math.max(25, alturaProm * 1.8);
+
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
     const filas = [];
-    let grupoActual = [ordenados[0]];
-    let topActual = ordenados[0].absTop;
-    let bottomActual = ordenados[0].absBottom;
+    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
-      const el = ordenados[i];
-      const alturaEl = el.absBottom - el.absTop;
-      const margenTolerancia = Math.max(5, alturaEl * 0.3);
-      
-      if (el.absTop <= bottomActual + margenTolerancia) {
-        grupoActual.push(el);
-        if (el.absTop < topActual) topActual = el.absTop;
-        if (el.absBottom > bottomActual) bottomActual = el.absBottom;
+      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
+        grupo.push(ordenados[i]);
+        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
       } else {
-        grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
-        filas.push(grupoActual);
-        grupoActual = [el];
-        topActual = el.absTop;
-        bottomActual = el.absBottom;
+        grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+        filas.push(grupo);
+        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
       }
     }
-    if (grupoActual.length > 0) {
-      grupoActual.sort(function(a, b) { return a.absLeft - b.absLeft; });
-      filas.push(grupoActual);
+    if (grupo.length > 0) {
+      grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+      filas.push(grupo);
     }
     return filas;
   }
@@ -309,28 +314,31 @@
     return limpios;
   }
 
-  // NUEVA INFERENCIA DE COLUMNAS POR BORDES
   function organizarEnMatriz(elementos, ancho, alto) {
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
 
-    const bordesX = [];
+    const gaps = [];
     for (const fila of filas) {
-      for (const el of fila) bordesX.push(el.absLeft);
-    }
-    bordesX.sort(function(a, b) { return a - b; });
-
-    const columnas = [];
-    let grupoX = [bordesX[0]];
-    for (let i = 1; i < bordesX.length; i++) {
-      if (bordesX[i] - grupoX[grupoX.length - 1] < 30) {
-        grupoX.push(bordesX[i]);
-      } else {
-        if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
-        grupoX = [bordesX[i]];
+      if (fila.length < 2) continue;
+      for (let i = 0; i < fila.length - 1; i++) {
+        const gap = fila[i + 1].absLeft - fila[i].absRight;
+        if (gap > 20) gaps.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
       }
     }
-    if (grupoX.length >= 2) columnas.push(grupoX.reduce(function(s, v) { return s + v; }, 0) / grupoX.length);
+
+    gaps.sort(function(a, b) { return a - b; });
+    const columnas = [];
+    let grupoGap = [];
+    for (const g of gaps) {
+      if (grupoGap.length === 0 || Math.abs(g - grupoGap[grupoGap.length - 1]) < 30) {
+        grupoGap.push(g);
+      } else {
+        columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
+        grupoGap = [g];
+      }
+    }
+    if (grupoGap.length > 0) columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
 
     const matriz = [];
     for (const fila of filas) {
@@ -373,6 +381,7 @@
     };
 
     notificar('Iniciando...', 5);
+
     const ancho = canvas.width, alto = canvas.height;
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, ancho, alto);
@@ -396,6 +405,7 @@
     }
 
     notificar('Ejecutando OCR...', 50);
+
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
     let elementos, modoOCR;
 
@@ -437,5 +447,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (agrupacion por solapamiento)');
+  console.log('[core] pipeline_ocr.js cargado (validacion empirica)');
 })();
