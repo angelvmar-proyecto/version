@@ -296,7 +296,7 @@
       window.ocrCargarDiccionarioExtra();
     }
 
-    log('✅ App lista. Carga una imagen para empezar.', 'exito');
+    log('✅ Imagen Tabla MAR Caribe lista.', 'exito');
   }
 
   if (document.readyState === 'loading') {

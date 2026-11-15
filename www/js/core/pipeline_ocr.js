@@ -359,6 +359,21 @@
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
+    // --- DEFENSA 1: Reducción de emergencia para imágenes gigantes ---
+    const MAX_LADO = 2048;
+    if (canvas.width > MAX_LADO || canvas.height > MAX_LADO) {
+      const factor = Math.min(MAX_LADO / canvas.width, MAX_LADO / canvas.height);
+      const canvasDown = document.createElement('canvas');
+      canvasDown.width = Math.round(canvas.width * factor);
+      canvasDown.height = Math.round(canvas.height * factor);
+      const ctxDown = canvasDown.getContext('2d');
+      ctxDown.imageSmoothingEnabled = true;
+      ctxDown.imageSmoothingQuality = 'high';
+      ctxDown.drawImage(canvas, 0, 0, canvasDown.width, canvasDown.height);
+      canvas = canvasDown;
+    }
+    // --- FIN DEFENSA 1 ---
+
     const ancho = canvas.width;
     const alto = canvas.height;
 

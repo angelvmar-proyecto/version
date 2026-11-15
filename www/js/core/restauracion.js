@@ -165,20 +165,31 @@
   function restaurarMediana(brillo, ancho, alto, radio) {
     if (radio < 1) return brillo;
     const out = new Array(alto);
-    const ventana = (2 * radio + 1) * (2 * radio + 1);
-    const buffer = new Array(ventana);
+    const hist = new Array(256);
 
     for (let y = 0; y < alto; y++) {
       const fila = new Array(ancho);
       for (let x = 0; x < ancho; x++) {
-        let k = 0;
+        for (let i = 0; i < 256; i++) hist[i] = 0;
+        let count = 0;
         const y0 = Math.max(0, y - radio), y1 = Math.min(alto - 1, y + radio);
         const x0 = Math.max(0, x - radio), x1 = Math.min(ancho - 1, x + radio);
+        
         for (let yy = y0; yy <= y1; yy++) {
-          for (let xx = x0; xx <= x1; xx++) buffer[k++] = brillo[yy][xx];
+          for (let xx = x0; xx <= x1; xx++) {
+            hist[brillo[yy][xx] | 0]++;
+            count++;
+          }
         }
-        const sub = buffer.slice(0, k).sort(function(a, b) { return a - b; });
-        fila[x] = sub[Math.floor(sub.length / 2)];
+        
+        let acumulado = 0;
+        let mediana = 128;
+        const mitad = Math.floor(count / 2);
+        for (let i = 0; i < 256; i++) {
+          acumulado += hist[i];
+          if (acumulado > mitad) { mediana = i; break; }
+        }
+        fila[x] = mediana;
       }
       out[y] = fila;
     }
