@@ -1,8 +1,7 @@
 // ==============================================
 // core/pipeline_ocr.js
 // Pipeline completo de OCR.
-// Incluye: diagnóstico selectivo, brillos, Retinex,
-// franjas y múltiples perspectivas (rotaciones).
+// Sin downscale para no perder resolución en texto chico.
 // ==============================================
 
 (function() {
@@ -348,19 +347,7 @@
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
-    const MAX_LADO = 1500;
-    if (canvas.width > MAX_LADO || canvas.height > MAX_LADO) {
-      const factor = Math.min(MAX_LADO / canvas.width, MAX_LADO / canvas.height);
-      const canvasDown = document.createElement('canvas');
-      canvasDown.width = Math.round(canvas.width * factor);
-      canvasDown.height = Math.round(canvas.height * factor);
-      const ctxDown = canvasDown.getContext('2d');
-      ctxDown.imageSmoothingEnabled = true;
-      ctxDown.imageSmoothingQuality = 'high';
-      ctxDown.drawImage(canvas, 0, 0, canvasDown.width, canvasDown.height);
-      canvas = canvasDown;
-    }
-
+    // SIN DOWNSCALE: trabajamos con la imagen original para no perder resolución
     const ancho = canvas.width, alto = canvas.height;
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, ancho, alto);
@@ -383,6 +370,7 @@
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
     let elementos, modoOCR;
 
+    // Siempre usamos franjas para no perder resolución en imágenes grandes o con texto chico
     if (ancho > umbralFranjas || alto > umbralFranjas || factorUpscale > 1) {
       modoOCR = 'franjas_perspectivas';
       elementos = await ocrPorFranjas(canvasProcesado, ancho, alto, diag.metricas.tamTexto, factorUpscale);
@@ -419,5 +407,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (perspectivas)');
+  console.log('[core] pipeline_ocr.js cargado (sin downscale)');
 })();
