@@ -73,8 +73,8 @@
     }
 
     if (problemas.indexOf('ruido') >= 0) {
-      resultado = window.nitNonLocalMeans(resultado, ancho, alto, 10, 3);
-      aplicados.push('nlm');
+      resultado = window.restaurarMediana(resultado, ancho, alto, 1);
+      aplicados.push('mediana');
     }
 
     if (problemas.indexOf('contraste') >= 0) {
