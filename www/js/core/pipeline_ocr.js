@@ -291,10 +291,14 @@
     let sumaAltura = 0;
     for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / elementos.length;
-    const umbralVertical = Math.max(25, alturaProm * 1.8);
+    const umbralVertical = Math.max(20, alturaProm * 1.5);
 
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
     const filas = [];
+  let sumaAltura = 0;
+  for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
+  const alturaProm = sumaAltura / elementos.length;
+  console.log("[DIAG-FILAS] Altura promedio: " + alturaProm.toFixed(1) + "px, Umbral: " + umbralVertical.toFixed(1) + "px");
     let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
