@@ -114,9 +114,10 @@
     return extraerElementos(result, 0, 1);
   }
 
-    async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
+  async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
+
     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
       FS = Capacitor.Plugins.Filesystem;
     } else {
@@ -138,27 +139,21 @@
 
     const todosElementos = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
-    const angulos = [0, -3, 3];
+    const angulos = [0, -1.5, 1.5];
     const MAX_PX_ROT = 8000000;
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
+      const diag = Math.ceil(Math.sqrt(ancho * ancho + f.alto * f.alto));
 
-      // --- BOUNDING BOX REAL + FACTOR UNICO POR FRANJA (peor caso de los 3 angulos) ---
-      const radMax = 3 * Math.PI / 180;
-      const bbMaxAncho = ancho * Math.cos(radMax) + f.alto * Math.sin(radMax);
-      const bbMaxAlto  = ancho * Math.sin(radMax) + f.alto * Math.cos(radMax);
-
+      // --- factor UNICO por franja (peor caso de los 3 angulos) ---
       let factorRot = factorFinal;
-      const pxConUpscale = (bbMaxAncho * factorRot) * (bbMaxAlto * factorRot);
-      if (pxConUpscale > MAX_PX_ROT) {
-        factorRot = Math.sqrt(MAX_PX_ROT / (bbMaxAncho * bbMaxAlto));
-        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2) + ' (bbMax=' + bbMaxAncho.toFixed(0) + 'x' + bbMaxAlto.toFixed(0) + ')');
+      const pxPeor = (diag * factorRot) * (diag * factorRot);
+      if (pxPeor > MAX_PX_ROT) {
+        factorRot = Math.sqrt(MAX_PX_ROT) / diag;
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
       } else {
-        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico ' + factorRot.toFixed(2) + ' (bbMax=' + bbMaxAncho.toFixed(0) + 'x' + bbMaxAlto.toFixed(0) + ')');
-      }
-      if (factorRot < 1) {
-        console.warn('[DIAG-MEM] franja ' + i + ': factorRot < 1 (' + factorRot.toFixed(2) + '). La imagen se reducira.');
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
       }
 
       const canvasFranja = document.createElement('canvas');
@@ -175,13 +170,9 @@
       const lecturasFranja = [];
 
       for (const angulo of angulos) {
-        const rad = Math.abs(angulo) * Math.PI / 180;
-        const bbAncho = ancho * Math.cos(rad) + f.alto * Math.sin(rad);
-        const bbAlto  = ancho * Math.sin(rad) + f.alto * Math.cos(rad);
-
         const canvasRot = document.createElement('canvas');
-        canvasRot.width  = Math.max(1, Math.round(bbAncho * factorRot));
-        canvasRot.height = Math.max(1, Math.round(bbAlto  * factorRot));
+        canvasRot.width = Math.max(1, Math.round(diag * factorRot));
+        canvasRot.height = Math.max(1, Math.round(diag * factorRot));
 
         console.log('[DIAG-MEM] franja ' + i + '/' + franjas.length + ' ang ' + angulo + ' canvasRot=' + canvasRot.width + 'x' + canvasRot.height + ' (' + ((canvasRot.width * canvasRot.height) / 1e6).toFixed(2) + ' MPx) factor=' + factorRot.toFixed(2));
 
@@ -207,8 +198,7 @@
         try {
           const uri = await FS.getUri({ path: nombreRot, directory: 'CACHE' });
           const result = await TextRec.processImage({ path: uri.uri });
-          const diagLado = Math.max(Math.round(bbAncho * factorRot), Math.round(bbAlto * factorRot));
-          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, canvasRot.width, canvasRot.height);
+          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diag);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
           console.log('[EXP-FRANJA] franja ' + i + ' ang ' + angulo + ' -> ' + elementos.length + ' elementos');
         } catch (e) {
@@ -231,7 +221,7 @@
     return deduplicarElementos(todosElementos);
   }
 
-function votarElementos(lecturas) {
+  function votarElementos(lecturas) {
     const votos = [];
     for (const lectura of lecturas) {
       for (const el of lectura.elementos) {
@@ -276,15 +266,11 @@ function votarElementos(lecturas) {
     return elementos;
   }
 
-  function extraerElementosRotados(result, offsetY, factor, angulo, anchoOrig, altoOrig, anchoCanvas, altoCanvas) {
+  function extraerElementosRotados(result, offsetY, factor, angulo, anchoOrig, altoOrig, diag) {
     const elementos = [];
     if (!result || !result.blocks) return elementos;
     const rad = angulo * Math.PI / 180;
     const cos = Math.cos(-rad), sin = Math.sin(-rad);
-
-    // Centro real del canvas rotado (puede ser rectangular)
-    const centroX = anchoCanvas / 2;
-    const centroY = altoCanvas / 2;
 
     for (const block of result.blocks) {
       if (!block.lines) continue;
@@ -293,22 +279,16 @@ function votarElementos(lecturas) {
         for (const el of line.elements) {
           if (!el.boundingBox) continue;
           const bb = el.boundingBox;
-
-          // Coordenadas en el canvas rotado, relativas al centro real
-          const cxRot = ((bb.left + bb.right) / 2) - centroX;
-          const cyRot = ((bb.top + bb.bottom) / 2) - centroY;
-
-          // Des-rotar para volver al espacio de la franja original
-          const cxFranja = (cxRot * cos - cyRot * sin) + anchoOrig / 2;
-          const cyFranja = (cxRot * sin + cyRot * cos) + altoOrig / 2;
-
-          // Volver a escala original (el canvas estaba escalado por factor)
+          const cxRot = ((bb.left + bb.right) / 2) - (diag * factor) / 2;
+          const cyRot = ((bb.top + bb.bottom) / 2) - (diag * factor) / 2;
+          const cxOrig = (cxRot * cos - cyRot * sin) + anchoOrig / 2;
+          const cyOrig = (cxRot * sin + cyRot * cos) + altoOrig / 2;
           const w = (bb.right - bb.left) / factor;
           const h = (bb.bottom - bb.top) / factor;
 
-          const left = cxFranja / factor - (w / 2);
+          const left = (cxOrig / factor) - (w / 2);
           const right = left + w;
-          const top = cyFranja / factor + offsetY - (h / 2);
+          const top = (cyOrig / factor) + offsetY - (h / 2);
           const bottom = top + h;
 
           elementos.push({
