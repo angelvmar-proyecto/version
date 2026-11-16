@@ -74,7 +74,28 @@
       <button class="btn orange" id="btnExportar" disabled>📊 Exportar a Excel</button>
       <button class="btn gray" id="btnLimpiar">🗑️ Limpiar</button>
     </div>
-    <div class="excel-container">
+        <div style="margin:10px 0; padding:8px 12px; background:#1e293b; border-radius:6px; font-size:13px; color:#ddd;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="chkExperimentoDirecto" style="width:18px; height:18px;">
+        <span>🧪 Experimento: forzar OCR directo (sin franjas ni rotaciones)</span>
+      </label>
+      <button class="btn gray" id="btnVerLog" style="margin-top:6px;">📋 Ver log de diagnóstico</button>
+    </div>
+
+    <div id="modalLog" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; padding:16px;">
+      <div style="background:#0f172a; border-radius:8px; padding:12px; height:100%; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#4ea3f5;">Log de diagnóstico</strong>
+          <div>
+            <button class="btn gray" id="btnCopiarLog" style="margin-right:6px;">📋 Copiar</button>
+            <button class="btn gray" id="btnCerrarLog">✖ Cerrar</button>
+          </div>
+        </div>
+        <pre id="logContenido" style="flex:1; overflow:auto; background:#000; color:#0f0; padding:8px; font-size:11px; white-space:pre-wrap; word-break:break-all; margin:0;"></pre>
+      </div>
+    </div>
+
+<div class="excel-container">
       <div id="resultado" style="padding:20px; text-align:center; color:#64748b;">
         Carga una imagen y ejecuta OCR
       </div>
