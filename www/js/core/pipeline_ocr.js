@@ -303,6 +303,7 @@
 
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
+
     let sumaAltura = 0;
     for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / elementos.length;
@@ -310,16 +311,17 @@
 
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
     const filas = [];
-    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
+    let grupo = [ordenados[0]];
+    let anclaY = ordenados[0].cy; // ancla fija: no se actualiza al agregar
 
     for (let i = 1; i < ordenados.length; i++) {
-      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
+      if (Math.abs(ordenados[i].cy - anclaY) < umbralVertical) {
         grupo.push(ordenados[i]);
-        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
       } else {
         grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
         filas.push(grupo);
-        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
+        grupo = [ordenados[i]];
+        anclaY = ordenados[i].cy;
       }
     }
     if (grupo.length > 0) {
