@@ -286,46 +286,46 @@
     return limpios;
   }
 
-  // --- AGRUPACIÓN POR FILAS CON DIAGNÓSTICO ---
+    // --- AGRUPACIÓN POR FILAS (ANCLA FIJA) ---
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
-    
+
     let sumaAltura = 0;
     for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / elementos.length;
     const umbralVertical = Math.max(20, alturaProm * 1.5);
 
-    const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
+    const ordenados = elementos.slice().sort((a, b) => a.cy - b.cy);
     const filas = [];
-    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
+    let grupo = [ordenados[0]];
+    let anclaY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
-      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
+      if (Math.abs(ordenados[i].cy - anclaY) < umbralVertical) {
         grupo.push(ordenados[i]);
-        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
       } else {
-        grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+        grupo.sort((a, b) => a.absLeft - b.absLeft);
         filas.push(grupo);
-        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
+        grupo = [ordenados[i]];
+        anclaY = ordenados[i].cy;
       }
     }
     if (grupo.length > 0) {
-      grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+      grupo.sort((a, b) => a.absLeft - b.absLeft);
       filas.push(grupo);
     }
 
-    // LOG DE DIAGNÓSTICO
     console.log('[DIAG-FILAS] Altura promedio: ' + alturaProm.toFixed(1) + 'px, Umbral: ' + umbralVertical.toFixed(1) + 'px');
     console.log('[DIAG-FILAS] Filas detectadas: ' + filas.length);
     for (let i = 0; i < filas.length; i++) {
       if (filas[i].length > 15) {
-        console.warn('[DIAG-FILAS] ALERTA: Fila ' + (i+1) + ' tiene ' + filas[i].length + ' palabras (posible fusión)');
+        console.warn('[DIAG-FILAS] ALERTA: Fila ' + (i + 1) + ' tiene ' + filas[i].length + ' palabras (posible fusión)');
       }
     }
-
     return filas;
   }
 
+  // --- INFERENCIA DE COLUMNAS ADAPTATIVA + CONSTRUCCIÓN DE MATRIZ ---
   function organizarEnMatriz(elementos, ancho, alto) {
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
@@ -335,29 +335,71 @@
       if (fila.length < 2) continue;
       for (let i = 0; i < fila.length - 1; i++) {
         const gap = fila[i + 1].absLeft - fila[i].absRight;
-        if (gap > 20) gaps.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
+        if (gap > 0) gaps.push(gap);
       }
     }
 
-    gaps.sort(function(a, b) { return a - b; });
-    const columnas = [];
-    let grupoGap = [];
-    for (const g of gaps) {
-      if (grupoGap.length === 0 || Math.abs(g - grupoGap[grupoGap.length - 1]) < 30) {
-        grupoGap.push(g);
-      } else {
-        columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
-        grupoGap = [g];
+    let umbralGap = 20;
+    if (gaps.length > 0) {
+      const gs = gaps.slice().sort((a, b) => a - b);
+      const mediana = gs[Math.floor(gs.length / 2)];
+      umbralGap = Math.max(6, mediana * 1.8);
+    }
+
+    const fronterasCand = [];
+    for (const fila of filas) {
+      if (fila.length < 2) continue;
+      for (let i = 0; i < fila.length - 1; i++) {
+        const gap = fila[i + 1].absLeft - fila[i].absRight;
+        if (gap > umbralGap) {
+          fronterasCand.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
+        }
       }
     }
-    if (grupoGap.length > 0) columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
+    if (fronterasCand.length === 0) {
+      return { matriz: filas.map(f => f.map(e => e.text)), tipos: [], filas };
+    }
+
+    fronterasCand.sort((a, b) => a - b);
+    const clustersFrontera = [];
+    let grupoF = [fronterasCand[0]];
+    for (let i = 1; i < fronterasCand.length; i++) {
+      if (fronterasCand[i] - grupoF[grupoF.length - 1] < umbralGap) {
+        grupoF.push(fronterasCand[i]);
+      } else {
+        clustersFrontera.push(grupoF.reduce((s, v) => s + v, 0) / grupoF.length);
+        grupoF = [fronterasCand[i]];
+      }
+    }
+    clustersFrontera.push(grupoF.reduce((s, v) => s + v, 0) / grupoF.length);
+
+    const fronteras = [];
+    let prev = -Infinity;
+    for (const f of clustersFrontera) {
+      if (f - prev > umbralGap * 0.8) { fronteras.push(f); prev = f; }
+    }
+
+    const maxFronteras = Math.max(1, Math.floor(ancho / 40));
+    const fronterasFinales = fronteras.slice(0, maxFronteras);
+
+    const numCols = fronterasFinales.length + 1;
+    const centrosCol = [];
+    let inicio = 0;
+    for (let c = 0; c < numCols; c++) {
+      const fin = (c < fronterasFinales.length) ? fronterasFinales[c] : ancho;
+      centrosCol.push((inicio + fin) / 2);
+      inicio = fin;
+    }
 
     const matriz = [];
     for (const fila of filas) {
-      const filaArr = new Array(Math.max(1, columnas.length + 1)).fill('');
+      const filaArr = new Array(numCols).fill('');
       for (const el of fila) {
-        let col = 0;
-        for (let c = 0; c < columnas.length; c++) if (el.cx > columnas[c]) col = c + 1;
+        let col = 0, mejorDist = Infinity;
+        for (let c = 0; c < numCols; c++) {
+          const d = Math.abs(el.cx - centrosCol[c]);
+          if (d < mejorDist) { mejorDist = d; col = c; }
+        }
         filaArr[col] = (filaArr[col] ? filaArr[col] + ' ' : '') + el.text;
       }
       matriz.push(filaArr);
@@ -365,7 +407,7 @@
 
     const tipos = [];
     for (let c = 0; c < (matriz[0] ? matriz[0].length : 0); c++) {
-      const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
+      const valores = matriz.map(f => f[c]).filter(v => v);
       tipos.push(window.tipoDetectarColumna ? window.tipoDetectarColumna(valores) : { tipo: 'texto_libre' });
     }
 
@@ -377,14 +419,14 @@
       }
     }
 
-    const matrizLimpia = matriz.filter(function(fila) {
-      return fila.some(function(celda) { return celda && celda.trim().length > 0; });
-    });
+    const matrizLimpia = matriz.filter(fila => fila.some(c => c && c.trim().length > 0));
+
+    console.log('[DIAG-COLS] gaps: ' + gaps.length + ', umbralGap: ' + umbralGap.toFixed(1) + ', fronteras: ' + fronterasFinales.length + ', columnas: ' + numCols);
 
     return { matriz: matrizLimpia, tipos, filas };
   }
 
-  async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
+async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
