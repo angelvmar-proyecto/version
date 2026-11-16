@@ -1,8 +1,7 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo de OCR.
-// Construcción de tabla usando SOLO coordenadas de texto.
-// Con log de diagnóstico de agrupación de filas.
+// Pipeline completo con gestión de archivos temporales (Offloading).
+// Versión restaurada (leía bien) + logs + guardia de memoria unificado.
 // ==============================================
 
 (function() {
@@ -13,18 +12,23 @@
   function diagnosticarImagen(brillo, ancho, alto) {
     const problemas = [];
     const metricas = {};
+
     metricas.iluminacion = window.metricaIluminacionDesigual(brillo, ancho, alto);
     if (metricas.iluminacion > CONFIG.DIAG_UMBRAL_ILUMINACION) problemas.push('iluminacion');
+
     metricas.nitidez = window.metricaNitidez(brillo, ancho, alto);
     if (metricas.nitidez < CONFIG.DIAG_UMBRAL_NITIDEZ) problemas.push('desenfoque');
+
     metricas.ruido = window.metricaRuido(brillo, ancho, alto);
     if (metricas.ruido > CONFIG.DIAG_UMBRAL_RUIDO) problemas.push('ruido');
+
     metricas.contraste = window.metricaContrasteRMS(brillo, ancho, alto);
     if (metricas.contraste < CONFIG.DIAG_UMBRAL_CONTRASTE) problemas.push('contraste');
+
     const est = window.estimarTamanoTexto(brillo, ancho, alto);
     metricas.tamTexto = est.tamTexto;
     if (est.tamTexto < CONFIG.DIAG_UMBRAL_TEXTO_CHICO && est.tamTexto < 999) problemas.push('texto_chico');
-    
+
     let pixelesBrillantes = 0;
     for (let y = 0; y < alto; y += 4) {
       for (let x = 0; x < ancho; x += 4) {
@@ -34,6 +38,7 @@
     const totalMuestreado = Math.ceil(alto / 4) * Math.ceil(ancho / 4);
     metricas.brillo = pixelesBrillantes / totalMuestreado;
     if (metricas.brillo > 0.02) problemas.push('brillo');
+
     return { problemas, metricas };
   }
 
@@ -53,6 +58,7 @@
   function aplicarPreprocesamientoSelectivo(brillo, ancho, alto, problemas) {
     let resultado = brillo;
     const aplicados = [];
+
     if (problemas.indexOf('brillo') >= 0) {
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'quitar_brillos',
         function(b) { return window.restaurarQuitarBrillos(b, ancho, alto); }, aplicados);
@@ -78,6 +84,7 @@
       resultado = aplicarFiltroConValidacion(resultado, ancho, alto, 'contraste',
         function(b) { return window.restaurarContrast(b, ancho, alto, 5, 95); }, aplicados);
     }
+
     return { brillo: resultado, aplicados };
   }
 
@@ -107,9 +114,10 @@
     return extraerElementos(result, 0, 1);
   }
 
-    async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
+  async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
+
     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
       FS = Capacitor.Plugins.Filesystem;
     } else {
@@ -132,10 +140,22 @@
     const todosElementos = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
     const angulos = [0, -3, 3];
-    const MAX_PX_ROT = 8000000; // presupuesto: ~32 MB RGBA por canvas rotado
+    const MAX_PX_ROT = 8000000;
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
+      const diag = Math.ceil(Math.sqrt(ancho * ancho + f.alto * f.alto));
+
+      // --- factor UNICO por franja (peor caso de los 3 angulos) ---
+      let factorRot = factorFinal;
+      const pxPeor = (diag * factorRot) * (diag * factorRot);
+      if (pxPeor > MAX_PX_ROT) {
+        factorRot = Math.sqrt(MAX_PX_ROT) / diag;
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
+      } else {
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
+      }
+
       const canvasFranja = document.createElement('canvas');
       canvasFranja.width = ancho;
       canvasFranja.height = f.alto;
@@ -150,24 +170,11 @@
       const lecturasFranja = [];
 
       for (const angulo of angulos) {
-        // Bounding box real del rectangulo ancho x f.alto rotado por angulo
-        const rad = Math.abs(angulo) * Math.PI / 180;
-        const bbAncho = ancho * Math.cos(rad) + f.alto * Math.sin(rad);
-        const bbAlto  = ancho * Math.sin(rad) + f.alto * Math.cos(rad);
-
-        // Presupuesto de memoria: si con factorFinal se pasa, bajar factorRot
-        let factorRot = factorFinal;
-        const pxConUpscale = (bbAncho * factorRot) * (bbAlto * factorRot);
-        if (pxConUpscale > MAX_PX_ROT) {
-          factorRot = Math.sqrt(MAX_PX_ROT / (bbAncho * bbAlto));
-          console.log('[DIAG-MEM] franja ' + i + ' ang ' + angulo + ': factorRot bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2));
-        }
-
         const canvasRot = document.createElement('canvas');
-        canvasRot.width  = Math.max(1, Math.round(bbAncho * factorRot));
-        canvasRot.height = Math.max(1, Math.round(bbAlto  * factorRot));
+        canvasRot.width = Math.max(1, Math.round(diag * factorRot));
+        canvasRot.height = Math.max(1, Math.round(diag * factorRot));
 
-        console.log('[DIAG-MEM] franja ' + i + '/' + franjas.length + ' ang ' + angulo + ' canvasRot=' + canvasRot.width + 'x' + canvasRot.height + ' (' + ((canvasRot.width * canvasRot.height) / 1e6).toFixed(2) + ' MPx)');
+        console.log('[DIAG-MEM] franja ' + i + '/' + franjas.length + ' ang ' + angulo + ' canvasRot=' + canvasRot.width + 'x' + canvasRot.height + ' (' + ((canvasRot.width * canvasRot.height) / 1e6).toFixed(2) + ' MPx) factor=' + factorRot.toFixed(2));
 
         const ctxRot = canvasRot.getContext('2d');
         ctxRot.imageSmoothingEnabled = true;
@@ -191,12 +198,14 @@
         try {
           const uri = await FS.getUri({ path: nombreRot, directory: 'CACHE' });
           const result = await TextRec.processImage({ path: uri.uri });
-          const diagLado = Math.max(Math.round(bbAncho * factorRot), Math.round(bbAlto * factorRot));
-          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diagLado);
+          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diag);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
+          console.log('[EXP-FRANJA] franja ' + i + ' ang ' + angulo + ' -> ' + elementos.length + ' elementos');
         } catch (e) {
           console.warn('Fallo angulo ' + angulo + ' en franja ' + i + ': ' + (e && e.message ? e.message : e));
         } finally {
+          canvasRot.width = 0;
+          canvasRot.height = 0;
           try { await FS.deleteFile({ path: nombreRot, directory: 'CACHE' }); } catch (e) {}
         }
       }
@@ -204,12 +213,15 @@
       try { await FS.deleteFile({ path: nombreBase, directory: 'CACHE' }); } catch (e) {}
 
       const elementosVotados = votarElementos(lecturasFranja);
+      const totalLecturas = lecturasFranja.reduce(function(s, l) { return s + l.elementos.length; }, 0);
+      console.log('[EXP-VOTO] franja ' + i + ': totalLecturas=' + totalLecturas + ' salida=' + elementosVotados.length);
       todosElementos.push.apply(todosElementos, elementosVotados);
     }
+
     return deduplicarElementos(todosElementos);
   }
 
-function votarElementos(lecturas) {
+  function votarElementos(lecturas) {
     const votos = [];
     for (const lectura of lecturas) {
       for (const el of lectura.elementos) {
@@ -267,16 +279,16 @@ function votarElementos(lecturas) {
         for (const el of line.elements) {
           if (!el.boundingBox) continue;
           const bb = el.boundingBox;
-          const cxRot = ((bb.left + bb.right) / 2) - (diag * factor)/2;
-          const cyRot = ((bb.top + bb.bottom) / 2) - (diag * factor)/2;
-          const cxOrig = (cxRot * cos - cyRot * sin) + anchoOrig/2;
-          const cyOrig = (cxRot * sin + cyRot * cos) + altoOrig/2;
+          const cxRot = ((bb.left + bb.right) / 2) - (diag * factor) / 2;
+          const cyRot = ((bb.top + bb.bottom) / 2) - (diag * factor) / 2;
+          const cxOrig = (cxRot * cos - cyRot * sin) + anchoOrig / 2;
+          const cyOrig = (cxRot * sin + cyRot * cos) + altoOrig / 2;
           const w = (bb.right - bb.left) / factor;
           const h = (bb.bottom - bb.top) / factor;
-          
-          const left = (cxOrig / factor) - (w/2);
+
+          const left = (cxOrig / factor) - (w / 2);
           const right = left + w;
-          const top = (cyOrig / factor) + offsetY - (h/2);
+          const top = (cyOrig / factor) + offsetY - (h / 2);
           const bottom = top + h;
 
           elementos.push({
@@ -287,6 +299,43 @@ function votarElementos(lecturas) {
       }
     }
     return elementos;
+  }
+
+  function agruparEnFilas(elementos) {
+    if (elementos.length === 0) return [];
+    let sumaAltura = 0;
+    for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
+    const alturaProm = sumaAltura / elementos.length;
+    const umbralVertical = Math.max(25, alturaProm * 1.8);
+
+    const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
+    const filas = [];
+    let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
+
+    for (let i = 1; i < ordenados.length; i++) {
+      if (Math.abs(ordenados[i].cy - grupoY) < umbralVertical) {
+        grupo.push(ordenados[i]);
+        grupoY = grupo.reduce((s, e) => s + e.cy, 0) / grupo.length;
+      } else {
+        grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+        filas.push(grupo);
+        grupo = [ordenados[i]]; grupoY = ordenados[i].cy;
+      }
+    }
+    if (grupo.length > 0) {
+      grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
+      filas.push(grupo);
+    }
+
+    console.log('[DIAG-FILAS] Altura promedio: ' + alturaProm.toFixed(1) + 'px, Umbral: ' + umbralVertical.toFixed(1) + 'px');
+    console.log('[DIAG-FILAS] Filas detectadas: ' + filas.length);
+    for (let i = 0; i < filas.length; i++) {
+      if (filas[i].length > 15) {
+        console.warn('[DIAG-FILAS] ALERTA: Fila ' + (i + 1) + ' tiene ' + filas[i].length + ' palabras (posible fusión)');
+      }
+    }
+
+    return filas;
   }
 
   function deduplicarElementos(elementos) {
@@ -304,46 +353,6 @@ function votarElementos(lecturas) {
     return limpios;
   }
 
-    // --- AGRUPACIÓN POR FILAS (ANCLA FIJA) ---
-  function agruparEnFilas(elementos) {
-    if (elementos.length === 0) return [];
-
-    let sumaAltura = 0;
-    for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
-    const alturaProm = sumaAltura / elementos.length;
-    const umbralVertical = Math.max(20, alturaProm * 1.5);
-
-    const ordenados = elementos.slice().sort((a, b) => a.cy - b.cy);
-    const filas = [];
-    let grupo = [ordenados[0]];
-    let anclaY = ordenados[0].cy;
-
-    for (let i = 1; i < ordenados.length; i++) {
-      if (Math.abs(ordenados[i].cy - anclaY) < umbralVertical) {
-        grupo.push(ordenados[i]);
-      } else {
-        grupo.sort((a, b) => a.absLeft - b.absLeft);
-        filas.push(grupo);
-        grupo = [ordenados[i]];
-        anclaY = ordenados[i].cy;
-      }
-    }
-    if (grupo.length > 0) {
-      grupo.sort((a, b) => a.absLeft - b.absLeft);
-      filas.push(grupo);
-    }
-
-    console.log('[DIAG-FILAS] Altura promedio: ' + alturaProm.toFixed(1) + 'px, Umbral: ' + umbralVertical.toFixed(1) + 'px');
-    console.log('[DIAG-FILAS] Filas detectadas: ' + filas.length);
-    for (let i = 0; i < filas.length; i++) {
-      if (filas[i].length > 15) {
-        console.warn('[DIAG-FILAS] ALERTA: Fila ' + (i + 1) + ' tiene ' + filas[i].length + ' palabras (posible fusión)');
-      }
-    }
-    return filas;
-  }
-
-  // --- INFERENCIA DE COLUMNAS ADAPTATIVA + CONSTRUCCIÓN DE MATRIZ ---
   function organizarEnMatriz(elementos, ancho, alto) {
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
@@ -353,71 +362,29 @@ function votarElementos(lecturas) {
       if (fila.length < 2) continue;
       for (let i = 0; i < fila.length - 1; i++) {
         const gap = fila[i + 1].absLeft - fila[i].absRight;
-        if (gap > 0) gaps.push(gap);
+        if (gap > 20) gaps.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
       }
     }
 
-    let umbralGap = 20;
-    if (gaps.length > 0) {
-      const gs = gaps.slice().sort((a, b) => a - b);
-      const mediana = gs[Math.floor(gs.length / 2)];
-      umbralGap = Math.max(6, mediana * 1.8);
-    }
-
-    const fronterasCand = [];
-    for (const fila of filas) {
-      if (fila.length < 2) continue;
-      for (let i = 0; i < fila.length - 1; i++) {
-        const gap = fila[i + 1].absLeft - fila[i].absRight;
-        if (gap > umbralGap) {
-          fronterasCand.push((fila[i].absRight + fila[i + 1].absLeft) / 2);
-        }
-      }
-    }
-    if (fronterasCand.length === 0) {
-      return { matriz: filas.map(f => f.map(e => e.text)), tipos: [], filas };
-    }
-
-    fronterasCand.sort((a, b) => a - b);
-    const clustersFrontera = [];
-    let grupoF = [fronterasCand[0]];
-    for (let i = 1; i < fronterasCand.length; i++) {
-      if (fronterasCand[i] - grupoF[grupoF.length - 1] < umbralGap) {
-        grupoF.push(fronterasCand[i]);
+    gaps.sort(function(a, b) { return a - b; });
+    const columnas = [];
+    let grupoGap = [];
+    for (const g of gaps) {
+      if (grupoGap.length === 0 || Math.abs(g - grupoGap[grupoGap.length - 1]) < 30) {
+        grupoGap.push(g);
       } else {
-        clustersFrontera.push(grupoF.reduce((s, v) => s + v, 0) / grupoF.length);
-        grupoF = [fronterasCand[i]];
+        columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
+        grupoGap = [g];
       }
     }
-    clustersFrontera.push(grupoF.reduce((s, v) => s + v, 0) / grupoF.length);
-
-    const fronteras = [];
-    let prev = -Infinity;
-    for (const f of clustersFrontera) {
-      if (f - prev > umbralGap * 0.8) { fronteras.push(f); prev = f; }
-    }
-
-    const maxFronteras = Math.max(1, Math.floor(ancho / 40));
-    const fronterasFinales = fronteras.slice(0, maxFronteras);
-
-    const numCols = fronterasFinales.length + 1;
-    const centrosCol = [];
-    let inicio = 0;
-    for (let c = 0; c < numCols; c++) {
-      const fin = (c < fronterasFinales.length) ? fronterasFinales[c] : ancho;
-      centrosCol.push((inicio + fin) / 2);
-      inicio = fin;
-    }
+    if (grupoGap.length > 0) columnas.push(grupoGap.reduce(function(s, v) { return s + v; }, 0) / grupoGap.length);
 
     const matriz = [];
     for (const fila of filas) {
-      const filaArr = new Array(numCols).fill('');
+      const filaArr = new Array(Math.max(1, columnas.length + 1)).fill('');
       for (const el of fila) {
-        let col = 0, mejorDist = Infinity;
-        for (let c = 0; c < numCols; c++) {
-          const d = Math.abs(el.cx - centrosCol[c]);
-          if (d < mejorDist) { mejorDist = d; col = c; }
-        }
+        let col = 0;
+        for (let c = 0; c < columnas.length; c++) if (el.cx > columnas[c]) col = c + 1;
         filaArr[col] = (filaArr[col] ? filaArr[col] + ' ' : '') + el.text;
       }
       matriz.push(filaArr);
@@ -425,7 +392,7 @@ function votarElementos(lecturas) {
 
     const tipos = [];
     for (let c = 0; c < (matriz[0] ? matriz[0].length : 0); c++) {
-      const valores = matriz.map(f => f[c]).filter(v => v);
+      const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
       tipos.push(window.tipoDetectarColumna ? window.tipoDetectarColumna(valores) : { tipo: 'texto_libre' });
     }
 
@@ -437,14 +404,16 @@ function votarElementos(lecturas) {
       }
     }
 
-    const matrizLimpia = matriz.filter(fila => fila.some(c => c && c.trim().length > 0));
+    const matrizLimpia = matriz.filter(function(fila) {
+      return fila.some(function(celda) { return celda && celda.trim().length > 0; });
+    });
 
-    console.log('[DIAG-COLS] gaps: ' + gaps.length + ', umbralGap: ' + umbralGap.toFixed(1) + ', fronteras: ' + fronterasFinales.length + ', columnas: ' + numCols);
+    console.log('[DIAG-COLS] gaps: ' + gaps.length + ', columnas: ' + columnas.length);
 
     return { matriz: matrizLimpia, tipos, filas };
   }
 
-async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
+  async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
@@ -457,10 +426,10 @@ async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, ancho, alto);
     const brillo = window.calcularBrillo(imageData);
-    
+
     notificar('Diagnosticando imagen...', 15);
     const diag = diagnosticarImagen(brillo, ancho, alto);
-    
+
     notificar('Aplicando filtros (validando)...', 30);
     const preproc = aplicarPreprocesamientoSelectivo(brillo, ancho, alto, diag.problemas);
 
@@ -484,7 +453,7 @@ async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
 
     if (forzarDirecto) {
       modoOCR = 'directo_forzado';
-      console.log('[EXP] Forzando modo DIRECT0 (sin franjas, sin rotaciones, sin upscale)');
+      console.log('[EXP] Forzando modo DIRECTO');
       elementos = await ocrDirecto(canvasProcesado);
     } else if (ancho > umbralFranjas || alto > umbralFranjas || factorUpscale > 1) {
       modoOCR = 'franjas_perspectivas_disco';
@@ -494,7 +463,7 @@ async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
       elementos = await ocrDirecto(canvasProcesado);
     }
 
-    console.log('[EXP] Modo: ' + modoOCR + ' | elementos devueltos por OCR: ' + (elementos ? elementos.length : 0));
+    console.log('[EXP] Modo: ' + modoOCR + ' | elementos: ' + (elementos ? elementos.length : 0));
 
     notificar('Organizando matriz...', 85);
     const organizado = organizarEnMatriz(elementos, ancho, alto);
@@ -527,5 +496,5 @@ async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (con log de diagnostico de filas)');
+  console.log('[core] pipeline_ocr.js cargado (version restaurada + logs + guardia memoria unificado)');
 })();
