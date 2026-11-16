@@ -208,7 +208,7 @@
           const uri = await FS.getUri({ path: nombreRot, directory: 'CACHE' });
           const result = await TextRec.processImage({ path: uri.uri });
           const diagLado = Math.max(Math.round(bbAncho * factorRot), Math.round(bbAlto * factorRot));
-          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diagLado);
+          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, canvasRot.width, canvasRot.height);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
           console.log('[EXP-FRANJA] franja ' + i + ' ang ' + angulo + ' -> ' + elementos.length + ' elementos');
         } catch (e) {
@@ -276,11 +276,15 @@ function votarElementos(lecturas) {
     return elementos;
   }
 
-  function extraerElementosRotados(result, offsetY, factor, angulo, anchoOrig, altoOrig, diag) {
+  function extraerElementosRotados(result, offsetY, factor, angulo, anchoOrig, altoOrig, anchoCanvas, altoCanvas) {
     const elementos = [];
     if (!result || !result.blocks) return elementos;
     const rad = angulo * Math.PI / 180;
     const cos = Math.cos(-rad), sin = Math.sin(-rad);
+
+    // Centro real del canvas rotado (puede ser rectangular)
+    const centroX = anchoCanvas / 2;
+    const centroY = altoCanvas / 2;
 
     for (const block of result.blocks) {
       if (!block.lines) continue;
@@ -289,16 +293,22 @@ function votarElementos(lecturas) {
         for (const el of line.elements) {
           if (!el.boundingBox) continue;
           const bb = el.boundingBox;
-          const cxRot = ((bb.left + bb.right) / 2) - (diag * factor) / 2;
-          const cyRot = ((bb.top + bb.bottom) / 2) - (diag * factor) / 2;
-          const cxOrig = (cxRot * cos - cyRot * sin) + anchoOrig / 2;
-          const cyOrig = (cxRot * sin + cyRot * cos) + altoOrig / 2;
+
+          // Coordenadas en el canvas rotado, relativas al centro real
+          const cxRot = ((bb.left + bb.right) / 2) - centroX;
+          const cyRot = ((bb.top + bb.bottom) / 2) - centroY;
+
+          // Des-rotar para volver al espacio de la franja original
+          const cxFranja = (cxRot * cos - cyRot * sin) + anchoOrig / 2;
+          const cyFranja = (cxRot * sin + cyRot * cos) + altoOrig / 2;
+
+          // Volver a escala original (el canvas estaba escalado por factor)
           const w = (bb.right - bb.left) / factor;
           const h = (bb.bottom - bb.top) / factor;
 
-          const left = (cxOrig / factor) - (w / 2);
+          const left = cxFranja / factor - (w / 2);
           const right = left + w;
-          const top = (cyOrig / factor) + offsetY - (h / 2);
+          const top = cyFranja / factor + offsetY - (h / 2);
           const bottom = top + h;
 
           elementos.push({
