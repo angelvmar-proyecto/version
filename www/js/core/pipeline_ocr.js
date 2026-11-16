@@ -107,7 +107,7 @@
     return extraerElementos(result, 0, 1);
   }
 
-  async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
+    async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
@@ -132,6 +132,7 @@
     const todosElementos = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
     const angulos = [0, -3, 3];
+    const MAX_PX_ROT = 8000000; // presupuesto: ~32 MB RGBA por canvas rotado
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
@@ -139,7 +140,7 @@
       canvasFranja.width = ancho;
       canvasFranja.height = f.alto;
       canvasFranja.getContext('2d').drawImage(canvas, 0, f.y0, ancho, f.alto, 0, 0, ancho, f.alto);
-      
+
       const franjaBase64 = canvasFranja.toDataURL('image/jpeg', 0.95).split(',')[1];
       const nombreBase = 'franja_' + i + '.jpg';
       await FS.writeFile({ path: nombreBase, data: franjaBase64, directory: 'CACHE' });
@@ -149,23 +150,38 @@
       const lecturasFranja = [];
 
       for (const angulo of angulos) {
-        const diag = Math.ceil(Math.sqrt(ancho*ancho + f.alto*f.alto));
+        // Bounding box real del rectangulo ancho x f.alto rotado por angulo
+        const rad = Math.abs(angulo) * Math.PI / 180;
+        const bbAncho = ancho * Math.cos(rad) + f.alto * Math.sin(rad);
+        const bbAlto  = ancho * Math.sin(rad) + f.alto * Math.cos(rad);
+
+        // Presupuesto de memoria: si con factorFinal se pasa, bajar factorRot
+        let factorRot = factorFinal;
+        const pxConUpscale = (bbAncho * factorRot) * (bbAlto * factorRot);
+        if (pxConUpscale > MAX_PX_ROT) {
+          factorRot = Math.sqrt(MAX_PX_ROT / (bbAncho * bbAlto));
+          console.log('[DIAG-MEM] franja ' + i + ' ang ' + angulo + ': factorRot bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2));
+        }
+
         const canvasRot = document.createElement('canvas');
-        canvasRot.width = Math.round(diag * factorFinal);
-        canvasRot.height = Math.round(diag * factorFinal);
+        canvasRot.width  = Math.max(1, Math.round(bbAncho * factorRot));
+        canvasRot.height = Math.max(1, Math.round(bbAlto  * factorRot));
+
+        console.log('[DIAG-MEM] franja ' + i + '/' + franjas.length + ' ang ' + angulo + ' canvasRot=' + canvasRot.width + 'x' + canvasRot.height + ' (' + ((canvasRot.width * canvasRot.height) / 1e6).toFixed(2) + ' MPx)');
+
         const ctxRot = canvasRot.getContext('2d');
         ctxRot.imageSmoothingEnabled = true;
         ctxRot.imageSmoothingQuality = 'high';
-        
+
         const imgFranja = new Image();
         imgFranja.src = 'data:image/jpeg;base64,' + franjaBase64;
         await new Promise(r => imgFranja.onload = r);
-        
-        ctxRot.translate(canvasRot.width/2, canvasRot.height/2);
+
+        ctxRot.translate(canvasRot.width / 2, canvasRot.height / 2);
         ctxRot.rotate(angulo * Math.PI / 180);
-        ctxRot.scale(factorFinal, factorFinal);
-        ctxRot.drawImage(imgFranja, -ancho/2, -f.alto/2);
-        
+        ctxRot.scale(factorRot, factorRot);
+        ctxRot.drawImage(imgFranja, -ancho / 2, -f.alto / 2);
+
         const rotBase64 = canvasRot.toDataURL('image/jpeg', 0.95).split(',')[1];
         const nombreRot = 'franja_' + i + '_rot_' + angulo + '.jpg';
         await FS.writeFile({ path: nombreRot, data: rotBase64, directory: 'CACHE' });
@@ -175,15 +191,17 @@
         try {
           const uri = await FS.getUri({ path: nombreRot, directory: 'CACHE' });
           const result = await TextRec.processImage({ path: uri.uri });
-          const elementos = extraerElementosRotados(result, f.y0, factorFinal, angulo, ancho, f.alto, diag);
+          const diagLado = Math.max(Math.round(bbAncho * factorRot), Math.round(bbAlto * factorRot));
+          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diagLado);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
-        } catch(e) {
-          console.warn('Falló ángulo ' + angulo + ' en franja ' + i);
+        } catch (e) {
+          console.warn('Fallo angulo ' + angulo + ' en franja ' + i + ': ' + (e && e.message ? e.message : e));
         } finally {
-          try { await FS.deleteFile({ path: nombreRot, directory: 'CACHE' }); } catch(e) {}
+          try { await FS.deleteFile({ path: nombreRot, directory: 'CACHE' }); } catch (e) {}
         }
       }
-      try { await FS.deleteFile({ path: nombreBase, directory: 'CACHE' }); } catch(e) {}
+
+      try { await FS.deleteFile({ path: nombreBase, directory: 'CACHE' }); } catch (e) {}
 
       const elementosVotados = votarElementos(lecturasFranja);
       todosElementos.push.apply(todosElementos, elementosVotados);
@@ -191,7 +209,7 @@
     return deduplicarElementos(todosElementos);
   }
 
-  function votarElementos(lecturas) {
+function votarElementos(lecturas) {
     const votos = [];
     for (const lectura of lecturas) {
       for (const el of lectura.elementos) {
