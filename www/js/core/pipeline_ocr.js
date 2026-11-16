@@ -1,7 +1,7 @@
 // ==============================================
 // core/pipeline_ocr.js
-// Pipeline completo con superposición de imágenes para líneas.
-// Fallback a agrupación por centros si falla.
+// Pipeline completo de OCR.
+// Construcción de tabla usando SOLO las coordenadas del texto.
 // ==============================================
 
 (function() {
@@ -270,7 +270,22 @@
     return elementos;
   }
 
-  // --- AGRUPACIÓN POR CENTROS (FALLBACK SEGURO) ---
+  function deduplicarElementos(elementos) {
+    const limpios = [];
+    for (const el of elementos) {
+      let dup = false;
+      for (const d of limpios) {
+        if (Math.abs(d.cx - el.cx) < 20 && Math.abs(d.cy - el.cy) < 20) {
+          const sim = (typeof window.ocrSimilitud === 'function') ? window.ocrSimilitud(el.text, d.text) : (el.text === d.text ? 1 : 0);
+          if (sim > 0.8) { dup = true; break; }
+        }
+      }
+      if (!dup) limpios.push(el);
+    }
+    return limpios;
+  }
+
+  // --- AGRUPACIÓN POR FILAS (CENTROS) ---
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
     let sumaAltura = 0;
@@ -299,22 +314,8 @@
     return filas;
   }
 
-  function deduplicarElementos(elementos) {
-    const limpios = [];
-    for (const el of elementos) {
-      let dup = false;
-      for (const d of limpios) {
-        if (Math.abs(d.cx - el.cx) < 20 && Math.abs(d.cy - el.cy) < 20) {
-          const sim = (typeof window.ocrSimilitud === 'function') ? window.ocrSimilitud(el.text, d.text) : (el.text === d.text ? 1 : 0);
-          if (sim > 0.8) { dup = true; break; }
-        }
-      }
-      if (!dup) limpios.push(el);
-    }
-    return limpios;
-  }
-
-  function organizarEnMatrizFallback(elementos, ancho, alto) {
+  // --- INFERENCIA DE COLUMNAS (GAPS) Y CONSTRUCCIÓN DE MATRIZ ---
+  function organizarEnMatriz(elementos, ancho, alto) {
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
 
@@ -372,73 +373,6 @@
     return { matriz: matrizLimpia, tipos, filas };
   }
 
-  // --- ORGANIZAR USANDO LÍNEAS (SUPERPOSICIÓN) ---
-  function organizarEnMatrizConLineas(elementos, lineasH, lineasV, ancho, alto) {
-    if (elementos.length === 0) return { matriz: [], tipos: [], filas: [] };
-
-    // Si no se detectaron líneas suficientes, usar fallback
-    if (lineasH.length < 2 || lineasV.length < 2) {
-      console.warn('Pocas líneas detectadas. Usando fallback.');
-      return organizarEnMatrizFallback(elementos, ancho, alto);
-    }
-
-    const elementosFiltrados = [];
-    for (const el of elementos) {
-      let dentroH = false;
-      for (let i = 0; i < lineasH.length; i++) {
-        if (el.cy >= lineasH[i] && el.cy <= (lineasH[i+1] || alto)) {
-          dentroH = true;
-          break;
-        }
-      }
-      if (!dentroH) continue;
-      elementosFiltrados.push(el);
-    }
-
-    const matriz = [];
-    const numFilas = lineasH.length - 1;
-    const numCols = lineasV.length - 1;
-
-    for (let f = 0; f < numFilas; f++) {
-      const fila = new Array(numCols).fill('');
-      const y1 = lineasH[f];
-      const y2 = lineasH[f + 1];
-
-      for (const el of elementosFiltrados) {
-        if (el.cy < y1 || el.cy > y2) continue;
-        for (let c = 0; c < numCols; c++) {
-          const x1 = lineasV[c];
-          const x2 = lineasV[c + 1];
-          if (el.cx >= x1 && el.cx <= x2) {
-            fila[c] = (fila[c] ? fila[c] + ' ' : '') + el.text;
-            break;
-          }
-        }
-      }
-      matriz.push(fila);
-    }
-
-    const tipos = [];
-    for (let c = 0; c < numCols; c++) {
-      const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
-      tipos.push(window.tipoDetectarColumna ? window.tipoDetectarColumna(valores) : { tipo: 'texto_libre' });
-    }
-
-    for (let f = 0; f < matriz.length; f++) {
-      for (let c = 0; c < matriz[f].length; c++) {
-        if (matriz[f][c] && tipos[c] && window.correctorAplicarPorTipo) {
-          matriz[f][c] = window.correctorAplicarPorTipo(matriz[f][c], tipos[c]);
-        }
-      }
-    }
-
-    const matrizLimpia = matriz.filter(function(fila) {
-      return fila.some(function(celda) { return celda && celda.trim().length > 0; });
-    });
-
-    return { matriz: matrizLimpia, tipos, filas: lineasH };
-  }
-
   async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -482,29 +416,8 @@
       elementos = await ocrDirecto(canvasProcesado);
     }
 
-    notificar('Detectando líneas (superposición)...', 75);
-    
-    // LLAMADA A LA SUPERPOSICIÓN (TU IDEA)
-    let lineasDetectadas = null;
-    if (typeof window.obtenerLineasSuperpuestas === 'function') {
-      try {
-        lineasDetectadas = await window.obtenerLineasSuperpuestas(canvasProcesado);
-      } catch(e) {
-        console.warn('Falló superposición:', e.message);
-      }
-    }
-
     notificar('Organizando matriz...', 85);
-    let organizado;
-    
-    // SI LA SUPERPOSICIÓN ENCONTRÓ LÍNEAS, USARLAS. SINO, FALLBACK.
-    if (lineasDetectadas && lineasDetectadas.lineasH.length >= 2 && lineasDetectadas.lineasV.length >= 2) {
-      console.log('[PIPELINE] Usando líneas reales por superposición.');
-      organizado = organizarEnMatrizConLineas(elementos, lineasDetectadas.lineasH, lineasDetectadas.lineasV, ancho, alto);
-    } else {
-      console.log('[PIPELINE] Superposición sin éxito. Usando fallback (agrupación por centros).');
-      organizado = organizarEnMatrizFallback(elementos, ancho, alto);
-    }
+    const organizado = organizarEnMatriz(elementos, ancho, alto);
 
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
       for (let f = 0; f < organizado.matriz.length; f++) {
@@ -533,5 +446,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (superposición + fallback)');
+  console.log('[core] pipeline_ocr.js cargado (solo texto)');
 })();
