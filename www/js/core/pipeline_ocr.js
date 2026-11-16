@@ -114,10 +114,9 @@
     return extraerElementos(result, 0, 1);
   }
 
-  async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
+    async function ocrPorFranjas(canvas, ancho, alto, tamTexto, factorUpscale) {
     const TextRec = Capacitor.Plugins.TextRecognition;
     if (!TextRec) throw new Error('TextRecognition no disponible');
-
     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
       FS = Capacitor.Plugins.Filesystem;
     } else {
@@ -144,16 +143,22 @@
 
     for (let i = 0; i < franjas.length; i++) {
       const f = franjas[i];
-      const diag = Math.ceil(Math.sqrt(ancho * ancho + f.alto * f.alto));
 
-      // --- factor UNICO por franja (peor caso de los 3 angulos) ---
+      // --- BOUNDING BOX REAL + FACTOR UNICO POR FRANJA (peor caso de los 3 angulos) ---
+      const radMax = 3 * Math.PI / 180;
+      const bbMaxAncho = ancho * Math.cos(radMax) + f.alto * Math.sin(radMax);
+      const bbMaxAlto  = ancho * Math.sin(radMax) + f.alto * Math.cos(radMax);
+
       let factorRot = factorFinal;
-      const pxPeor = (diag * factorRot) * (diag * factorRot);
-      if (pxPeor > MAX_PX_ROT) {
-        factorRot = Math.sqrt(MAX_PX_ROT) / diag;
-        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
+      const pxConUpscale = (bbMaxAncho * factorRot) * (bbMaxAlto * factorRot);
+      if (pxConUpscale > MAX_PX_ROT) {
+        factorRot = Math.sqrt(MAX_PX_ROT / (bbMaxAncho * bbMaxAlto));
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico bajado ' + factorFinal + ' -> ' + factorRot.toFixed(2) + ' (bbMax=' + bbMaxAncho.toFixed(0) + 'x' + bbMaxAlto.toFixed(0) + ')');
       } else {
-        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico ' + factorRot.toFixed(2) + ' (diag=' + diag + ')');
+        console.log('[DIAG-MEM] franja ' + i + ': factorRot unico ' + factorRot.toFixed(2) + ' (bbMax=' + bbMaxAncho.toFixed(0) + 'x' + bbMaxAlto.toFixed(0) + ')');
+      }
+      if (factorRot < 1) {
+        console.warn('[DIAG-MEM] franja ' + i + ': factorRot < 1 (' + factorRot.toFixed(2) + '). La imagen se reducira.');
       }
 
       const canvasFranja = document.createElement('canvas');
@@ -170,9 +175,13 @@
       const lecturasFranja = [];
 
       for (const angulo of angulos) {
+        const rad = Math.abs(angulo) * Math.PI / 180;
+        const bbAncho = ancho * Math.cos(rad) + f.alto * Math.sin(rad);
+        const bbAlto  = ancho * Math.sin(rad) + f.alto * Math.cos(rad);
+
         const canvasRot = document.createElement('canvas');
-        canvasRot.width = Math.max(1, Math.round(diag * factorRot));
-        canvasRot.height = Math.max(1, Math.round(diag * factorRot));
+        canvasRot.width  = Math.max(1, Math.round(bbAncho * factorRot));
+        canvasRot.height = Math.max(1, Math.round(bbAlto  * factorRot));
 
         console.log('[DIAG-MEM] franja ' + i + '/' + franjas.length + ' ang ' + angulo + ' canvasRot=' + canvasRot.width + 'x' + canvasRot.height + ' (' + ((canvasRot.width * canvasRot.height) / 1e6).toFixed(2) + ' MPx) factor=' + factorRot.toFixed(2));
 
@@ -198,7 +207,8 @@
         try {
           const uri = await FS.getUri({ path: nombreRot, directory: 'CACHE' });
           const result = await TextRec.processImage({ path: uri.uri });
-          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diag);
+          const diagLado = Math.max(Math.round(bbAncho * factorRot), Math.round(bbAlto * factorRot));
+          const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diagLado);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
           console.log('[EXP-FRANJA] franja ' + i + ' ang ' + angulo + ' -> ' + elementos.length + ' elementos');
         } catch (e) {
@@ -221,7 +231,7 @@
     return deduplicarElementos(todosElementos);
   }
 
-  function votarElementos(lecturas) {
+function votarElementos(lecturas) {
     const votos = [];
     for (const lectura of lecturas) {
       for (const el of lectura.elementos) {
