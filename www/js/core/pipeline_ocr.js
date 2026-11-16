@@ -212,6 +212,21 @@
     return votos.filter(v => v.contador >= 2);
   }
 
+  function deduplicarElementos(elementos) {
+    const limpios = [];
+    for (const el of elementos) {
+      let dup = false;
+      for (const d of limpios) {
+        if (Math.abs(d.cx - el.cx) < 20 && Math.abs(d.cy - el.cy) < 20) {
+          const sim = (typeof window.ocrSimilitud === "function") ? window.ocrSimilitud(el.text, d.text) : (el.text === d.text ? 1 : 0);
+          if (sim > 0.8) { dup = true; break; }
+        }
+      }
+      if (!dup) limpios.push(el);
+    }
+    return limpios;
+  }
+
   function extraerElementos(result, offsetY, factor) {
     offsetY = offsetY || 0; factor = factor || 1;
     const elementos = [];
