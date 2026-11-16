@@ -1,7 +1,8 @@
 // ==============================================
 // core/pipeline_ocr.js
 // Pipeline completo de OCR.
-// Construcción de tabla usando SOLO las coordenadas del texto.
+// Construcción de tabla usando SOLO coordenadas de texto.
+// Con log de diagnóstico de agrupación de filas.
 // ==============================================
 
 (function() {
@@ -285,9 +286,10 @@
     return limpios;
   }
 
-  // --- AGRUPACIÓN POR FILAS (CENTROS) ---
+  // --- AGRUPACIÓN POR FILAS CON DIAGNÓSTICO ---
   function agruparEnFilas(elementos) {
     if (elementos.length === 0) return [];
+    
     let sumaAltura = 0;
     for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
     const alturaProm = sumaAltura / elementos.length;
@@ -295,10 +297,6 @@
 
     const ordenados = elementos.slice().sort(function(a, b) { return a.cy - b.cy; });
     const filas = [];
-  let sumaAltura = 0;
-  for (const el of elementos) sumaAltura += (el.absBottom - el.absTop);
-  const alturaProm = sumaAltura / elementos.length;
-  console.log("[DIAG-FILAS] Altura promedio: " + alturaProm.toFixed(1) + "px, Umbral: " + umbralVertical.toFixed(1) + "px");
     let grupo = [ordenados[0]], grupoY = ordenados[0].cy;
 
     for (let i = 1; i < ordenados.length; i++) {
@@ -315,10 +313,19 @@
       grupo.sort(function(a, b) { return a.absLeft - b.absLeft; });
       filas.push(grupo);
     }
+
+    // LOG DE DIAGNÓSTICO
+    console.log('[DIAG-FILAS] Altura promedio: ' + alturaProm.toFixed(1) + 'px, Umbral: ' + umbralVertical.toFixed(1) + 'px');
+    console.log('[DIAG-FILAS] Filas detectadas: ' + filas.length);
+    for (let i = 0; i < filas.length; i++) {
+      if (filas[i].length > 15) {
+        console.warn('[DIAG-FILAS] ALERTA: Fila ' + (i+1) + ' tiene ' + filas[i].length + ' palabras (posible fusión)');
+      }
+    }
+
     return filas;
   }
 
-  // --- INFERENCIA DE COLUMNAS (GAPS) Y CONSTRUCCIÓN DE MATRIZ ---
   function organizarEnMatriz(elementos, ancho, alto) {
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
@@ -450,5 +457,5 @@
   window.aplicarPreprocesamientoSelectivo = aplicarPreprocesamientoSelectivo;
   window.ejecutarPipelineOCR = ejecutarPipelineOCR;
 
-  console.log('[core] pipeline_ocr.js cargado (solo texto)');
+  console.log('[core] pipeline_ocr.js cargado (con log de diagnostico de filas)');
 })();
