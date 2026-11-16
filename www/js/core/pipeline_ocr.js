@@ -323,7 +323,7 @@
   }
 
   // --- CONSTRUCCIÓN DE MATRIZ USANDO LÍNEAS REALES ---
-  function organizarEnMatrizConLineas(elementos, lineasH, lineasV) {
+  function organizarEnMatrizConLineas(elementos, lineasH, lineasV, ancho, alto) {
     if (elementos.length === 0) return { matriz: [], tipos: [] };
 
     // Si no se detectaron líneas suficientes, usar fallback
@@ -524,7 +524,7 @@
     console.log('[LÍNEAS] H=' + lineas.lineasH.length + ', V=' + lineas.lineasV.length);
 
     notificar('Organizando matriz...', 85);
-    const organizado = organizarEnMatrizConLineas(elementos, lineas.lineasH, lineas.lineasV);
+    const organizado = organizarEnMatrizConLineas(elementos, lineas.lineasH, lineas.lineasV, ancho, alto);
 
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
       for (let f = 0; f < organizado.matriz.length; f++) {
