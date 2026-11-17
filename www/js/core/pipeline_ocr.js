@@ -138,6 +138,7 @@
     }
 
     const todosElementos = [];
+    const todosElementosCeroGrados = [];
     const factorFinal = factorUpscale > 1 ? factorUpscale : 1;
     const angulos = [0, -1.5, 1.5];
     const MAX_PX_ROT = 8000000;
@@ -200,6 +201,9 @@
           const result = await TextRec.processImage({ path: uri.uri });
           const elementos = extraerElementosRotados(result, f.y0, factorRot, angulo, ancho, f.alto, diag);
           lecturasFranja.push({ angulo: angulo, elementos: elementos });
+          if (angulo === 0) {
+            todosElementosCeroGrados.push.apply(todosElementosCeroGrados, elementos);
+          }
           console.log('[EXP-FRANJA] franja ' + i + ' ang ' + angulo + ' -> ' + elementos.length + ' elementos');
         } catch (e) {
           console.warn('Fallo angulo ' + angulo + ' en franja ' + i + ': ' + (e && e.message ? e.message : e));
@@ -218,7 +222,10 @@
       todosElementos.push.apply(todosElementos, elementosVotados);
     }
 
-    return deduplicarElementos(todosElementos);
+    return {
+      elementosVotados: deduplicarElementos(todosElementos),
+      elementosCeroGrados: deduplicarElementos(todosElementosCeroGrados)
+    };
   }
 
   function votarElementos(lecturas) {
@@ -448,27 +455,35 @@
 
     notificar('Ejecutando OCR...', 50);
     const umbralFranjas = CONFIG.OCR_IMAGEN_UMBRAL_FRANJAS || 2048;
-    let elementos, modoOCR;
+    let modoOCR;
 
     const forzarDirecto = (typeof window !== 'undefined' && window.__EXPERIMENTO_DIRECTO === true);
     console.log('[EXP] Imagen ' + ancho + 'x' + alto + ' | texto_chico=' + (diag.problemas.indexOf('texto_chico') >= 0) + ' | tamTexto=' + (diag.metricas.tamTexto ? diag.metricas.tamTexto.toFixed(1) : 'n/a') + ' | factorUpscale=' + factorUpscale + ' | forzarDirecto=' + forzarDirecto);
 
+    let elementosVotados, elementosCeroGrados;
+
     if (forzarDirecto) {
       modoOCR = 'directo_forzado';
       console.log('[EXP] Forzando modo DIRECTO');
-      elementos = await ocrDirecto(canvasProcesado);
+      elementosVotados = await ocrDirecto(canvasProcesado);
+      elementosCeroGrados = elementosVotados;
     } else if (ancho > umbralFranjas || alto > umbralFranjas || factorUpscale > 1) {
       modoOCR = 'franjas_perspectivas_disco';
-      elementos = await ocrPorFranjas(canvasProcesado, ancho, alto, diag.metricas.tamTexto, factorUpscale);
+      const resultadoFranjas = await ocrPorFranjas(canvasProcesado, ancho, alto, diag.metricas.tamTexto, factorUpscale);
+      elementosVotados = resultadoFranjas.elementosVotados;
+      elementosCeroGrados = resultadoFranjas.elementosCeroGrados;
     } else {
       modoOCR = 'directo';
-      elementos = await ocrDirecto(canvasProcesado);
+      elementosVotados = await ocrDirecto(canvasProcesado);
+      elementosCeroGrados = elementosVotados;
     }
 
-    console.log('[EXP] Modo: ' + modoOCR + ' | elementos: ' + (elementos ? elementos.length : 0));
+    const elementos = elementosVotados;
+    console.log('[EXP] Modo: ' + modoOCR + ' | votados: ' + (elementosVotados ? elementosVotados.length : 0) + ' | ceroGrados: ' + (elementosCeroGrados ? elementosCeroGrados.length : 0));
 
     notificar('Organizando matriz...', 85);
-    const organizado = organizarEnMatriz(elementos, ancho, alto);
+    const organizado = organizarEnMatriz(elementosCeroGrados, ancho, alto);
+
     console.log('[EXP] Matriz: ' + (organizado.matriz ? organizado.matriz.length : 0) + ' filas x ' + (organizado.matriz && organizado.matriz[0] ? organizado.matriz[0].length : 0) + ' cols');
 
     if (CONFIG.OCR_USAR_HOMOGLIFOS || CONFIG.OCR_USAR_DICCIONARIO) {
