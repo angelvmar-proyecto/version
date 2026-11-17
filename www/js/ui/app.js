@@ -217,7 +217,7 @@
       _origLog.apply(console, arguments);
       try {
         const msg = Array.prototype.slice.call(arguments).join(' ');
-        if (msg.indexOf('[DIAG-') === 0 || msg.indexOf('[EXP]') === 0) window.__DIAG_LOG.push(msg);
+        if (msg.indexOf('[DIAG-') === 0 || msg.indexOf('[EXP]') === 0 || msg.indexOf('[MATRIZ]') === 0 || msg.indexOf('[PROY]') === 0) window.__DIAG_LOG.push(msg);
       } catch (e) {}
     };
     console.warn = function() {

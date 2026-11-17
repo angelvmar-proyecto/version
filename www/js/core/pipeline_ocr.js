@@ -424,10 +424,9 @@
 
   // --- NUEVA: Organizar matriz por proyección global de coordenadas ---
   // Estrategia: "entramado + tetris" (Surya + TableCV)
-  // 1. Proyectar todos los cx en un histograma de densidad.
-  // 2. Suavizar y encontrar valles (zonas de baja densidad).
-  // 3. Esos valles son las fronteras de columna.
-  // 4. Asignar cada elemento a la columna cuyo rango contiene su cx.
+  // 1. Proyectar el ancho (absLeft a absRight) de todos los cuadros en un arreglo de cobertura.
+  // 2. Encontrar los huecos reales (donde la cobertura es 0).
+  // 3. Esos huecos son las fronteras de columna.
   function organizarEnMatrizPorProyeccion(elementos, ancho, alto) {
     if (elementos.length === 0) return { matriz: [], tipos: [], filas: [] };
 
@@ -435,68 +434,51 @@
     const filas = agruparEnFilas(elementos);
     if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
 
-    // Paso 2: Histograma de densidad de cx (proyección global)
-    const hist = new Array(ancho).fill(0);
+    // Paso 2: Arreglo de cobertura (0 = vacío, >0 = hay texto)
+    const cobertura = new Int32Array(ancho);
     for (const el of elementos) {
-      const c = Math.max(0, Math.min(ancho - 1, Math.round(el.cx)));
-      hist[c]++;
-    }
-
-    // Paso 3: Suavizar (media movil con ventana proporcional al ancho)
-    const ventana = Math.max(3, Math.round(ancho * 0.008));
-    const suave = new Array(ancho).fill(0);
-    for (let x = 0; x < ancho; x++) {
-      let suma = 0, cuenta = 0;
-      for (let k = -ventana; k <= ventana; k++) {
-        const xi = x + k;
-        if (xi >= 0 && xi < ancho) { suma += hist[xi]; cuenta++; }
+      const izq = Math.max(0, Math.floor(el.absLeft));
+      const der = Math.min(ancho - 1, Math.ceil(el.absRight));
+      for (let x = izq; x <= der; x++) {
+        cobertura[x]++;
       }
-      suave[x] = cuenta > 0 ? suma / cuenta : 0;
     }
 
-    // Paso 4: Umbral de "valle" = 15% de la densidad maxima
-    let maxDens = 0;
-    for (let x = 0; x < ancho; x++) if (suave[x] > maxDens) maxDens = suave[x];
-    const umbralValle = maxDens * 0.15;
+    // Paso 3: Encontrar "valles" (zonas de cobertura 0)
+    const minGap = Math.max(10, Math.round(ancho * 0.015)); // hueco mínimo 1.5% del ancho
+    const fronteras = [];
+    let enGap = false, inicioGap = 0;
 
-    // Paso 5: Encontrar valles (zonas consecutivas donde suave[x] < umbral)
-    const valles = [];
-    let enValle = false, inicioValle = 0;
     for (let x = 0; x < ancho; x++) {
-      if (suave[x] < umbralValle) {
-        if (!enValle) { enValle = true; inicioValle = x; }
+      if (cobertura[x] === 0) {
+        if (!enGap) { enGap = true; inicioGap = x; }
       } else {
-        if (enValle) {
-          enValle = false;
-          const centroValle = Math.round((inicioValle + x - 1) / 2);
-          valles.push(centroValle);
+        if (enGap) {
+          enGap = false;
+          const anchoGap = x - inicioGap;
+          if (anchoGap >= minGap) {
+            fronteras.push(Math.round((inicioGap + x - 1) / 2));
+          }
         }
       }
     }
-    if (enValle) valles.push(Math.round((inicioValle + ancho - 1) / 2));
-
-    // Paso 6: Filtrar valles demasiado cerca entre si (fusionar)
-    const minDist = Math.max(20, Math.round(ancho * 0.01));
-    const fronteras = [];
-    for (const v of valles) {
-      if (fronteras.length === 0 || (v - fronteras[fronteras.length - 1]) >= minDist) {
-        fronteras.push(v);
-      } else {
-        // Fusionar: promedio
-        fronteras[fronteras.length - 1] = Math.round((fronteras[fronteras.length - 1] + v) / 2);
+    if (enGap) {
+      const anchoGap = ancho - inicioGap;
+      if (anchoGap >= minGap) {
+        fronteras.push(Math.round((inicioGap + ancho - 1) / 2));
       }
     }
 
-    // Paso 7: Descartar fronteras muy cerca del borde
+    // Paso 4: Filtrar fronteras muy cerca del borde
     const margenBorde = Math.max(10, Math.round(ancho * 0.005));
     const fronterasFiltradas = fronteras.filter(function(f) { return f > margenBorde && f < ancho - margenBorde; });
 
-    console.log('[PROY] ancho=' + ancho + ' vallesBrutos=' + valles.length + ' fronteras=' + fronterasFiltradas.length + ' columnas=' + (fronterasFiltradas.length + 1));
+    console.log('[PROY] ancho=' + ancho + ' gapsBrutos=' + fronteras.length + ' fronteras=' + fronterasFiltradas.length + ' columnas=' + (fronterasFiltradas.length + 1));
     if (fronterasFiltradas.length > 0) {
       console.log('[PROY] fronteras: ' + fronterasFiltradas.join(', '));
     }
 
-    // Paso 8: Asignar cada elemento a su columna (el "tetris")
+    // Paso 5: Asignar cada elemento a su columna (el "tetris")
     const numCols = fronterasFiltradas.length + 1;
     const matriz = [];
     for (const fila of filas) {
@@ -511,7 +493,7 @@
       matriz.push(filaArr);
     }
 
-    // Paso 9: Tipos y corrección (igual que organizarEnMatriz)
+    // Paso 6: Tipos y corrección (igual que organizarEnMatriz)
     const tipos = [];
     for (let c = 0; c < (matriz[0] ? matriz[0].length : 0); c++) {
       const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
