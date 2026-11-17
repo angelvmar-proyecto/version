@@ -233,6 +233,11 @@
       console.log('[EXP] Modo directo forzado: ' + window.__EXPERIMENTO_DIRECTO);
     };
 
+    el('chkProyeccionGlobal').onchange = function(e) {
+      window.__USAR_PROYECCION_GLOBAL = !!e.target.checked;
+      console.log('[PROY] Usar proyección global: ' + window.__USAR_PROYECCION_GLOBAL);
+    };
+
     el('btnVerLog').onclick = function() {
       const pre = el('logContenido');
       pre.textContent = (window.__DIAG_LOG && window.__DIAG_LOG.length)

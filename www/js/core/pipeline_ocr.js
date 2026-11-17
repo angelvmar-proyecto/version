@@ -422,6 +422,117 @@
     return { matriz: matrizLimpia, tipos, filas };
   }
 
+  // --- NUEVA: Organizar matriz por proyección global de coordenadas ---
+  // Estrategia: "entramado + tetris" (Surya + TableCV)
+  // 1. Proyectar todos los cx en un histograma de densidad.
+  // 2. Suavizar y encontrar valles (zonas de baja densidad).
+  // 3. Esos valles son las fronteras de columna.
+  // 4. Asignar cada elemento a la columna cuyo rango contiene su cx.
+  function organizarEnMatrizPorProyeccion(elementos, ancho, alto) {
+    if (elementos.length === 0) return { matriz: [], tipos: [], filas: [] };
+
+    // Paso 1: Filas (mantenemos agruparEnFilas con ancla fija)
+    const filas = agruparEnFilas(elementos);
+    if (filas.length === 0) return { matriz: [], tipos: [], filas: [] };
+
+    // Paso 2: Histograma de densidad de cx (proyección global)
+    const hist = new Array(ancho).fill(0);
+    for (const el of elementos) {
+      const c = Math.max(0, Math.min(ancho - 1, Math.round(el.cx)));
+      hist[c]++;
+    }
+
+    // Paso 3: Suavizar (media movil con ventana proporcional al ancho)
+    const ventana = Math.max(3, Math.round(ancho * 0.008));
+    const suave = new Array(ancho).fill(0);
+    for (let x = 0; x < ancho; x++) {
+      let suma = 0, cuenta = 0;
+      for (let k = -ventana; k <= ventana; k++) {
+        const xi = x + k;
+        if (xi >= 0 && xi < ancho) { suma += hist[xi]; cuenta++; }
+      }
+      suave[x] = cuenta > 0 ? suma / cuenta : 0;
+    }
+
+    // Paso 4: Umbral de "valle" = 15% de la densidad maxima
+    let maxDens = 0;
+    for (let x = 0; x < ancho; x++) if (suave[x] > maxDens) maxDens = suave[x];
+    const umbralValle = maxDens * 0.15;
+
+    // Paso 5: Encontrar valles (zonas consecutivas donde suave[x] < umbral)
+    const valles = [];
+    let enValle = false, inicioValle = 0;
+    for (let x = 0; x < ancho; x++) {
+      if (suave[x] < umbralValle) {
+        if (!enValle) { enValle = true; inicioValle = x; }
+      } else {
+        if (enValle) {
+          enValle = false;
+          const centroValle = Math.round((inicioValle + x - 1) / 2);
+          valles.push(centroValle);
+        }
+      }
+    }
+    if (enValle) valles.push(Math.round((inicioValle + ancho - 1) / 2));
+
+    // Paso 6: Filtrar valles demasiado cerca entre si (fusionar)
+    const minDist = Math.max(20, Math.round(ancho * 0.01));
+    const fronteras = [];
+    for (const v of valles) {
+      if (fronteras.length === 0 || (v - fronteras[fronteras.length - 1]) >= minDist) {
+        fronteras.push(v);
+      } else {
+        // Fusionar: promedio
+        fronteras[fronteras.length - 1] = Math.round((fronteras[fronteras.length - 1] + v) / 2);
+      }
+    }
+
+    // Paso 7: Descartar fronteras muy cerca del borde
+    const margenBorde = Math.max(10, Math.round(ancho * 0.005));
+    const fronterasFiltradas = fronteras.filter(function(f) { return f > margenBorde && f < ancho - margenBorde; });
+
+    console.log('[PROY] ancho=' + ancho + ' vallesBrutos=' + valles.length + ' fronteras=' + fronterasFiltradas.length + ' columnas=' + (fronterasFiltradas.length + 1));
+    if (fronterasFiltradas.length > 0) {
+      console.log('[PROY] fronteras: ' + fronterasFiltradas.join(', '));
+    }
+
+    // Paso 8: Asignar cada elemento a su columna (el "tetris")
+    const numCols = fronterasFiltradas.length + 1;
+    const matriz = [];
+    for (const fila of filas) {
+      const filaArr = new Array(numCols).fill('');
+      for (const el of fila) {
+        let col = 0;
+        for (let c = 0; c < fronterasFiltradas.length; c++) {
+          if (el.cx > fronterasFiltradas[c]) col = c + 1;
+        }
+        filaArr[col] = (filaArr[col] ? filaArr[col] + ' ' : '') + el.text;
+      }
+      matriz.push(filaArr);
+    }
+
+    // Paso 9: Tipos y corrección (igual que organizarEnMatriz)
+    const tipos = [];
+    for (let c = 0; c < (matriz[0] ? matriz[0].length : 0); c++) {
+      const valores = matriz.map(function(f) { return f[c]; }).filter(function(v) { return v; });
+      tipos.push(window.tipoDetectarColumna ? window.tipoDetectarColumna(valores) : { tipo: 'texto_libre' });
+    }
+
+    for (let f = 0; f < matriz.length; f++) {
+      for (let c = 0; c < matriz[f].length; c++) {
+        if (matriz[f][c] && tipos[c] && window.correctorAplicarPorTipo) {
+          matriz[f][c] = window.correctorAplicarPorTipo(matriz[f][c], tipos[c]);
+        }
+      }
+    }
+
+    const matrizLimpia = matriz.filter(function(fila) {
+      return fila.some(function(celda) { return celda && celda.trim().length > 0; });
+    });
+
+    return { matriz: matrizLimpia, tipos, filas };
+  }
+
   async function ejecutarPipelineOCR(canvas, opciones, onProgress) {
     opciones = opciones || {};
     const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -482,7 +593,11 @@
     console.log('[EXP] Modo: ' + modoOCR + ' | votados: ' + (elementosVotados ? elementosVotados.length : 0) + ' | ceroGrados: ' + (elementosCeroGrados ? elementosCeroGrados.length : 0));
 
     notificar('Organizando matriz...', 85);
-    const organizado = organizarEnMatriz(elementosCeroGrados, ancho, alto);
+    const usarProyeccion = (typeof window !== 'undefined' && window.__USAR_PROYECCION_GLOBAL === true);
+    console.log('[MATRIZ] Estrategia: ' + (usarProyeccion ? 'PROYECCION_GLOBAL' : 'GAPS_LOCALES'));
+    const organizado = usarProyeccion
+      ? organizarEnMatrizPorProyeccion(elementosCeroGrados, ancho, alto)
+      : organizarEnMatriz(elementosCeroGrados, ancho, alto);
 
     console.log('[EXP] Matriz: ' + (organizado.matriz ? organizado.matriz.length : 0) + ' filas x ' + (organizado.matriz && organizado.matriz[0] ? organizado.matriz[0].length : 0) + ' cols');
 
